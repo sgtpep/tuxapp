@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2034
 set -eu -o pipefail
 
 declare -r base_path=~/.tuxapp
@@ -118,18 +119,48 @@ function check_nested_file_list {
 }
 
 function check_firejail {
-  declare -r firejail_options=$1
+  declare -n result_is_firejail_enabled=$1
+  declare -n result_firejail_options=$2
+
+  if [[ -v TUXAPP_FIREJAIL ]]; then
+    if [[ ! $TUXAPP_FIREJAIL || $TUXAPP_FIREJAIL == on ]]; then
+      result_is_firejail_enabled=1
+      result_firejail_options=
+    elif [[ $TUXAPP_FIREJAIL == off ]]; then
+      result_is_firejail_enabled=
+      result_firejail_options=
+    else
+      result_is_firejail_enabled=1
+      result_firejail_options=$TUXAPP_FIREJAIL
+    fi
+  else
+    result_is_firejail_enabled=${result_is_firejail_enabled-}
+    result_firejail_options=${result_firejail_options-}
+  fi
+  readonly result_is_firejail_enabled
+  readonly result_firejail_options
 
   if ! type firejail &> /dev/null; then
-    [[ ${TUXAPP_TEST-} ]] || echo "Warning: firejail is not installed on your system. It is used to reduce risks from running untrusted applications by isolating them in a sandbox. Install firejail from your system packages or use other options: https://firejail.wordpress.com/download-2/" >&2
+    echo "Firejail is not installed on your system" >&2
     return
   fi
 
-  if [[ $firejail_options == off ]]; then
-    echo "Warning: firejail is disabled for this app which will run unsandboxed. Running untrusted applications without isolation may have security implications." >&2
+  if [[ $result_is_firejail_enabled ]]; then
+    if [[ $result_firejail_options ]]; then
+      echo "Firejail is enabled for this app with options: $result_firejail_options" >&2
+    else
+      echo "Firejail is enabled for this app" >&2
+    fi
   else
-    [[ $firejail_options =~ ^(|off|on)$ ]] || echo "Warning: following firejail options are set: $firejail_options" >&2
-    [[ ${WAYLAND_DISPLAY-} || " $firejail_options " == *\ --x11[\ =]* ]] || echo "Warning: X11 sandboxing is not enabled. Without it an untrusted application may read any window contents and input events. You could enable it adding an option like --firejail=--x11=xorg. See 'man firejail' for other supported X11 isolation methods and possible values of '--x11'." >&2
+    echo "Firejail is disabled for this app" >&2
+  fi
+
+  if [[ ! ${WAYLAND_DISPLAY-} && $result_is_firejail_enabled ]]; then
+    if [[ " $result_firejail_options " == *\ --x11[\ =]* ]]; then
+      echo "X11 sandboxing is enabled for this app" >&2
+    else
+      echo "X11 sandboxing is not enabled for this app" >&2
+    fi
   fi
 }
 
@@ -173,7 +204,7 @@ function configure_fontconfig {
       [[ -h $config_path ]] || continue
       
       output=$(readlink "$config_path")
-      decalre config_target_path=$output
+      declare config_target_path=$output
 
       [[ $config_target_path != /* ]] || ln -fs ../../.."$config_target_path" "$config_path"
     done
@@ -244,29 +275,30 @@ function create_app_run_script {
 
   declare -r run_path=$base_path/$app_id/run
 
+  declare is_firejail_enabled
+  declare firejail_options
   if [[ ! -v TUXAPP_FIREJAIL && -f $run_path ]]; then
     output=$(< "$run_path")
     declare -r run_contents=$output
 
+    is_firejail_enabled=${run_contents##*is_firejail_enabled=}
+    is_firejail_enabled=${is_firejail_enabled%%$'\n'*}
+
     declare quoted_firejail_options=${run_contents##*user_firejail_options=}
     quoted_firejail_options=${quoted_firejail_options%%$'\n'*}
     readonly quoted_firejail_options
-  else
-    if [[ ${TUXAPP_FIREJAIL-} == on ]]; then
-      declare -r firejail_options=
-    else
-      declare -r firejail_options=${TUXAPP_FIREJAIL-}
-    fi
-    declare -r quoted_firejail_options=${firejail_options@Q}
+
+    eval firejail_options="$quoted_firejail_options"
   fi
 
-  eval check_firejail "$quoted_firejail_options"
+  check_firejail is_firejail_enabled firejail_options
 
   write_file "$run_path" << EOF
 #!/bin/bash
 app_firejail_options=${appfile_firejail_options@Q}
 executable_arguments=(${executable_arguments[@]@Q})
-user_firejail_options=$quoted_firejail_options
+is_firejail_enabled=$is_firejail_enabled
+user_firejail_options=${firejail_options@Q}
 
 . "\${0%/*/*}"/common/run.sh
 EOF
@@ -291,10 +323,14 @@ function create_common_run_script {
 
   write_file "$run_path" << \EOF
 #!/bin/bash
+# shellcheck disable=SC2034
 set -eu -o pipefail
 
+declare -r app_dist_path=${0%/*}/dist
+declare -r app_firejail_options=${app_firejail_options-}
 declare -r app_path=${0%/*}
-declare -r root_path=${0%/*/*}/common/root
+declare -r common_root_path=${0%/*/*}/common/root
+declare -r executable_arguments=("${executable_arguments[@]}")
 
 declare -r blacklisted_paths=(
   ~/.electron-cash
@@ -306,88 +342,130 @@ EOF
 
   cat >> "$run_path" << 'EOF'
 
-function build_paths {
-  declare -n result_built_paths=$1
+function build_language_value {
+  declare -n result_language_value=$1
+
+  declare language_value
+  if [[ ${LANGUAGE-} ]]; then
+    language_value=$LANGUAGE
+  elif [[ ${LANG-} ]]; then
+    language_value=${LANG%%.*}
+    [[ $language_value != *_* ]] || language_value=$language_value:${language_value%%_*}
+  fi
+  readonly language_value
+
+  [[ ${language_value-} ]] || return 0
+
+  declare language_paths=(${language_value//:/ })
+  language_paths=("${language_paths[@]/#//usr/share/locale/}")
+  readonly language_paths
+
+  declare language_path_list
+  build_path_list language_path_list "${language_paths[@]}"
+  readonly language_path_list
+
+  # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=114461
+  [[ ! $language_path_list ]] || result_language_value=../../..${language_path_list//:/:../../..}
+}
+
+function build_path_list {
+  declare -n result_path_list=$1
   shift
 
-  declare detected_paths=()
-  declare base_path
-  for base_path in '' "$root_path" "$app_path"/root; do
+  declare existing_paths=()
+  declare root_path
+  for root_path in '' "$common_root_path" "$app_path"/root; do
     declare relative_path
     for relative_path; do
-      declare absolute_path=$base_path$relative_path
-      [[ ! -d $absolute_path ]] || detected_paths+=("$absolute_path")
+      declare absolute_path=$root_path$relative_path
+      [[ ! -d $absolute_path ]] || existing_paths+=("$absolute_path")
     done
   done
-  readonly detected_paths
+  readonly existing_paths
 
   declare ifs=$IFS
   IFS=:
-  # shellcheck disable=SC2034
-  result_built_paths=${detected_paths[*]}
+  result_path_list=${existing_paths[*]}
   IFS=$ifs
 }
 
-declare -A exported_variables
-declare -r dist_path=$app_path/dist
+function get_command_arguments {
+  declare -n result_command_arguments=$1
 
-[[ ${executable_arguments[0]} != AppRun ]] || exported_variables[APPDIR]=$dist_path
-[[ -d /usr/share/X11/xkb ]] || exported_variables[QT_XKB_CONFIG_ROOT]=$root_path/usr/share/X11/xkb
-[[ -f /etc/fonts/fonts.conf ]] || exported_variables[FONTCONFIG_PATH]=$root_path/etc/fonts
-build_paths exported_variables\[LD_LIBRARY_PATH\] {,/usr}/lib{,32,64} {,/usr}/lib/{i386,x86_64}-linux-gnu /usr/lib/x86_64-linux-gnu/alsa-lib
+  result_command_arguments=()
 
-declare language_value=${LANGUAGE-}
-if [[ ! $language_value && ${LANG-} ]]; then
-  language_value=${LANG%%.*}
-  [[ $language_value != *_* ]] || language_value=$language_value:${language_value%%_*}
-fi
-readonly language_value
+  [[ ! ${TUXAPP_STRACE-} ]] || result_command_arguments+=(strace -e open)
 
-if [[ $language_value ]]; then
-  declare language_items=(${language_value//:/ })
-  language_items=("${language_items[@]/#//usr/share/locale/}")
-  readonly language_items
+  if [[ ${executable_arguments[0]} == ./* ]]; then
+    cd "$app_dist_path"
+    result_command_arguments+=("${executable_arguments[@]}")
+  else
+    result_command_arguments+=("$app_dist_path/${executable_arguments[0]}")
+    result_command_arguments+=("${executable_arguments[@]:1}")
+  fi
 
-  declare new_language_value
-  build_paths new_language_value "${language_items[@]}"
-  readonly new_language_value
+  readonly result_command_arguments
+}
 
-  # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=114461
-  [[ ! $new_language_value ]] || exported_variables[LANGUAGE]=../../..${new_language_value//:/:../../..}
-fi
+function get_exported_variables {
+  declare -r is_firejail_active=$1
+  declare -n result_exported_variables=$2
 
-declare command_arguments=()
+  result_exported_variables=()
 
-declare user_firejail_options=${TUXAPP_FIREJAIL-${user_firejail_options-}}
-[[ $user_firejail_options != on ]] || user_firejail_options=
-readonly user_firejail_options
+  [[ ${executable_arguments[0]} != AppRun ]] || result_exported_variables[APPDIR]=$app_dist_path
+  [[ -d /usr/share/X11/xkb ]] || result_exported_variables[QT_XKB_CONFIG_ROOT]=$common_root_path/usr/share/X11/xkb
+  [[ -f /etc/fonts/fonts.conf ]] || result_exported_variables[FONTCONFIG_PATH]=$common_root_path/etc/fonts
+  build_path_list result_exported_variables\[LD_LIBRARY_PATH\] {,/usr}/lib{,32,64} {,/usr}/lib/{i386,x86_64}-linux-gnu /usr/lib/x86_64-linux-gnu/alsa-lib
+  build_language_value result_exported_variables\[LANGUAGE\]
 
-check_firejail "$user_firejail_options"
+  if [[ $is_firejail_active ]]; then
+    result_exported_variables[BROWSER]=$common_root_path/usr/local/bin/browser
+    result_exported_variables[TUXAPP_URLS]=$app_path/urls
+  fi
 
-if [[ $user_firejail_options != off ]] && type firejail &> /dev/null; then
-  exported_variables[BROWSER]=$root_path/usr/local/bin/browser
-  exported_variables[TUXAPP_URLS]=$app_path/urls
-  readonly exported_variables
+  declare -r gdk_pixbuf_paths=(/usr/lib/*-linux-gnu/gdk-pixbuf-2.0)
+  if [[ ! -d ${gdk_pixbuf_paths[0]} ]]; then
+    declare gdk_pixbuf_path
+    for gdk_pixbuf_path in "$common_root_path"/usr/lib/*-linux-gnu/gdk-pixbuf-2.0/*; do
+      [[ -d $gdk_pixbuf_path ]] || continue
 
-  command_arguments+=(firejail "--protocol=unix,inet,inet6,netlink")
+      declare loaders_cache_path=$gdk_pixbuf_path/loaders.cache
+      [[ -f $loaders_cache_path ]] || LD_LIBRARY_PATH=${result_exported_variables[LD_LIBRARY_PATH]} "${gdk_pixbuf_path%/*}"/gdk-pixbuf-query-loaders "$gdk_pixbuf_path"/loaders/* > "$loaders_cache_path"
+      result_exported_variables[GDK_PIXBUF_MODULE_FILE]=$loaders_cache_path
+    done
+  fi
+
+  readonly result_exported_variables
+}
+
+function get_firejail_arguments {
+  declare -n argument_exported_variables=$1
+  declare -r argument_app_firejail_options=$2
+  declare -r argument_user_firejail_options=$3
+  declare -n result_firejail_arguments=$4
+
+  result_firejail_arguments=(firejail "--protocol=unix,inet,inet6,netlink")
+
+  [[ ! ${TUXAPP_STRACE-} ]] || result_firejail_arguments+=(--allow-debuggers)
 
   declare variable_name
-  for variable_name in "${!exported_variables[@]}"; do
-    command_arguments+=(--env="$variable_name"="${exported_variables[$variable_name]}")
+  for variable_name in "${!argument_exported_variables[@]}"; do
+    result_firejail_arguments+=(--env="$variable_name"="${argument_exported_variables[$variable_name]}")
   done
+
+  declare -r cache_path=${XDG_CACHE_HOME-~/.cache}/tuxapp
+  result_firejail_arguments+=(--blacklist="$cache_path")
 
   declare -r base_path=${app_path%/*}
   declare directory_path
   for directory_path in "$base_path"/*; do
-    [[ ! -d $directory_path || $directory_path == "$app_path" ]] || command_arguments+=(--blacklist="$directory_path")
+    [[ ! -d $directory_path || $directory_path == "$app_path" ]] || result_firejail_arguments+=(--blacklist="$directory_path")
   done
-
-  declare -r cache_path=${XDG_CACHE_HOME-~/.cache}/tuxapp
-  command_arguments+=(--blacklist="$cache_path")
 
   declare blacklisted_path
   for blacklisted_path in "${blacklisted_paths[@]}"; do
-    command_arguments+=(--blacklist="$blacklisted_path")
+    result_firejail_arguments+=(--blacklist="$blacklisted_path")
   done
 
   declare -r profile_path=/etc/firejail/${executable_arguments[0]##*/}.profile
@@ -400,60 +478,53 @@ if [[ $user_firejail_options != off ]] && type firejail &> /dev/null; then
     fi
     readonly profile_contents
 
-    [[ $profile_contents != *whitelist\ * ]] || command_arguments+=(--whitelist="$dist_path")
+    [[ $profile_contents != *whitelist\ * ]] || result_firejail_arguments+=(--whitelist="$app_dist_path")
   fi
 
-  readonly app_firejail_options
-  eval command_arguments+=("${app_firejail_options-}")
+  eval "result_firejail_arguments+=($argument_app_firejail_options)"
+  eval "result_firejail_arguments+=($argument_user_firejail_options)"
 
-  eval command_arguments+=("$user_firejail_options")
+  readonly result_firejail_arguments
+}
 
-  touch "${exported_variables[TUXAPP_URLS]}"
-  while read -r; do
-    setsid xdg-open "$REPLY" &
-  done < <(tail -f -n 0 --pid=$$ "${exported_variables[TUXAPP_URLS]}" 2> /dev/null) &
-else
-  readonly exported_variables
+function main {
+  check_firejail is_firejail_enabled user_firejail_options
 
-  declare variable_name
-  for variable_name in "${!exported_variables[@]}"; do
-    export "$variable_name"="${exported_variables[$variable_name]}"
-  done
-fi
+  # shellcheck disable=SC2154
+  if [[ $is_firejail_enabled ]] && type firejail &> /dev/null; then
+    declare -r is_firejail_active=1
+  else
+    declare -r is_firejail_active=
+  fi
 
-declare -r gdk_pixbuf_paths=(/usr/lib/*-linux-gnu/gdk-pixbuf-2.0)
-if [[ ! -d ${gdk_pixbuf_paths[0]} ]]; then
-  declare gdk_pixbuf_path
-  for gdk_pixbuf_path in "$root_path"/usr/lib/*-linux-gnu/gdk-pixbuf-2.0/*; do
-    [[ -d $gdk_pixbuf_path ]] || continue
+  declare -A exported_variables
+  get_exported_variables "$is_firejail_active" exported_variables
 
-    declare loaders_cache_path=$gdk_pixbuf_path/loaders.cache
+  if [[ $is_firejail_active ]]; then
+    declare firejail_arguments
+    # shellcheck disable=SC2154
+    get_firejail_arguments exported_variables "$app_firejail_options" "$user_firejail_options" firejail_arguments
 
-    [[ -f $loaders_cache_path ]] || "${gdk_pixbuf_path%/*}"/gdk-pixbuf-query-loaders "$gdk_pixbuf_path"/loaders/* > "$loaders_cache_path"
+    touch "${exported_variables[TUXAPP_URLS]}"
+    while read -r; do
+      setsid xdg-open "$REPLY" &
+    done < <(tail -f -n 0 --pid=$$ "${exported_variables[TUXAPP_URLS]}" 2> /dev/null) &
+  else
+    declare -r firejail_arguments
 
-    if [[ ${command_arguments[0]-} == firejail ]]; then
-      command_arguments+=(--env=GDK_PIXBUF_MODULE_FILE="$loaders_cache_path")
-    else
-      export GDK_PIXBUF_MODULE_FILE=$loaders_cache_path
-    fi
-  done
-fi
+    declare variable_name
+    for variable_name in "${!exported_variables[@]}"; do
+      export "$variable_name"="${exported_variables[$variable_name]}"
+    done
+  fi
 
-if [[ ${TUXAPP_STRACE-} ]]; then
-  [[ ${command_arguments[0]-} != firejail ]] || command_arguments+=(--allow-debuggers)
-  command_arguments+=(strace -e open)
-fi
+  declare command_arguments
+  get_command_arguments command_arguments
 
-readonly command_arguments
+  exec "${firejail_arguments[@]}" "${command_arguments[@]}" "$@"
+}
 
-if [[ ${executable_arguments[0]} == ./* ]]; then
-  cd "$dist_path"
-else
-  executable_arguments[0]=$dist_path/${executable_arguments[0]}
-fi
-readonly executable_arguments
-
-exec "${command_arguments[@]}" "${executable_arguments[@]}" "$@"
+main "$@"
 EOF
 }
 
@@ -818,7 +889,6 @@ function install_app {
     declare excluded_common_package_names
     get_excluded_package_names excluded_package_names
 
-    # shellcheck disable=SC2034
     declare -r package_names=(${appfile[tuxapp-packages]})
     declare package_url_paths
     resolve_package_url_paths package_names excluded_package_names package_url_paths
@@ -1292,7 +1362,6 @@ function update_common_package_list {
   readonly is_package_list_stale
 
   if [[ $is_package_list_stale || $cache_path/packages-security -nt $package_list_path || $cache_path/packages -nt $package_list_path ]]; then
-    # shellcheck disable=SC2034
     declare -r excluded_package_names=("${ignored_package_names[@]}" "${ignored_common_package_names[@]}")
     declare package_url_paths
     resolve_package_url_paths common_package_names excluded_package_names package_url_paths
