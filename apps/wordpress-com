@@ -1,0 +1,15 @@
+category=office
+description=Create a website or easily build a blog on WordPress.com. Hundreds of free, customizable, mobile-ready designs and themes. Free hosting and support.
+download-deb-64-url=https://public-api.wordpress.com/rest/v1.1/desktop/linux/download?type=deb
+download-tarball-64-url=https://public-api.wordpress.com/rest/v1.1/desktop/linux/download
+downloads-url=https://apps.wordpress.com/desktop/
+free-license=yes
+homepage-url=https://wordpress.com/
+icon-url=https://s1.wp.com/i/favicon.ico?v=1447321881
+image-url=https://0.gravatar.com/blavatar/653166773dc88127bd3afe0b6dfe5ea7.png?s=200
+name=WordPress.com
+screenshot-urls=https://en-blog.files.wordpress.com/2015/12/01-writing-with-dock.png
+title=Create a website or blog
+tuxapp-executable=WordPress.com
+version-regex=/tag/v([^"]+)
+version-url=https://github.com/Automattic/wp-desktop/releases

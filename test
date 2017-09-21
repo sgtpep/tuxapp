@@ -1,0 +1,268 @@
+#!/bin/bash
+set -eu -o pipefail
+
+# shellcheck source=./tuxapp
+. "${0%/*}"/tuxapp
+
+declare -r arch_mirror_url=https://mirrors.kernel.org/archlinux/
+declare -r debian_archive_url=https://download.openvz.org/template/precreated/contrib/debian-9.0-\{architecture\}-minimal.tar.gz
+
+function check_bwrap {
+  ! type bwrap &> /dev/null || return 0
+  type apt &> /dev/null || raise_error "bubblewrap is required but not installed"
+
+  sudo apt update
+  sudo apt install -y bubblewrap
+}
+
+function install_arch_container {
+  declare -r distribution_name=$1
+
+  output=$(fetch_url "$arch_mirror_url"iso/latest/ \
+    | grep -Po -m 1 "(?<=\")archlinux-bootstrap-[^\"]+") || raise_error "Failed to find the download URL of Arch Linux"
+  declare -r archive_url_path=$output
+
+  declare -r archive_url=${arch_mirror_url}iso/latest/$archive_url_path
+  declare -r archive_path=$cache_path/${archive_url##*/}
+
+  download_file "$archive_url" "$archive_path"
+
+  declare -r root_path=$base_path/$distribution_name
+
+  echo "Unpacking ${archive_path##*/}" >&2
+  extract_tarball "$archive_path" "$root_path" --checkpoint=.250 --strip-components=1
+
+  chmod -R +w "$root_path"/etc/ca-certificates/extracted/cadir
+
+  declare package_name
+  for package_name in fakechroot fakeroot sed; do
+    install_arch_package "$package_name" "$root_path"
+  done
+
+  sed -i "s|^#\(Server = $arch_mirror_url\)|\1|" "$root_path"/etc/pacman.d/mirrorlist
+
+  run_bwrap_root "$distribution_name" "
+  pacman-key --init
+  pacman-key --populate archlinux
+
+  pacman -Sy --force --needed --noconfirm base strace
+  "
+}
+
+function install_arch_package {
+  declare -r package_name=$1
+  declare -r root_path=$2
+
+  if [[ $package_name == fakechroot ]]; then
+    declare -r arch_repository_name=extra
+  else
+    declare -r arch_repository_name=core
+  fi
+
+  output=$(fetch_url "$arch_mirror_url""$arch_repository_name"/os/x86_64/ \
+    | grep -Po -m 1 "(?<=\")$package_name-[^\"]+") || raise_error "Failed to find the download URL of $package_name"
+  declare -r package_url_path=$output
+
+  declare -r package_url=$arch_mirror_url$arch_repository_name/os/x86_64/$package_url_path
+  declare -r package_path=$cache_path/${package_url##*/}
+
+  download_file "$package_url" "$package_path"
+  extract_tarball "$package_path" "$root_path" --exclude=.\* --warning=no-unknown-keyword
+}
+
+function install_container {
+  declare -r distribution_name=$1
+
+  declare -r check_path=$base_path/$distribution_name/var/lib/tuxapp
+  [[ ! -f $check_path ]] || return 0
+
+  if [[ $distribution_name == arch ]]; then
+    install_arch_container "$distribution_name"
+  elif [[ $distribution_name == debian ]]; then
+    install_debian_container "$distribution_name"
+  else
+    raise_error "Unknown distribution: $distribution_name"
+  fi
+
+  touch "$check_path"
+}
+
+function install_debian_container {
+  declare -r distribution_name=$1
+
+  declare -A architecture
+  detect_architecture architecture
+
+  if [[ ${architecture[debian]} == i386 ]]; then
+    declare -r archive_architecture=x86
+  elif [[ ${architecture[debian]} == amd64 ]]; then
+    declare -r archive_architecture=x86_64
+  else
+    raise_error "Unsupported architecture: ${architecture[debian]}"
+  fi
+
+  declare -r archive_url=${debian_archive_url/{architecture\}/$archive_architecture}
+  declare -r archive_path=$cache_path/${archive_url##*/}
+
+  download_file "$archive_url" "$archive_path"
+
+  declare -r root_path=$base_path/$distribution_name
+
+  echo "Unpacking ${archive_path##*/}" >&2
+  extract_tarball "$archive_path" "$root_path" --checkpoint=.250 --exclude=./dev
+
+  declare package_name
+  for package_name in {,lib}fakeroot; do
+    install_debian_package "$package_name" "${architecture[debian]}" "$root_path"
+  done
+
+  cat > "$root_path"/etc/apt/sources.list << EOF
+deb http://deb.debian.org/debian $debian_release_name main
+deb http://security.debian.org/ $debian_release_name/updates main
+EOF
+
+  run_bwrap_root "$distribution_name" "
+  apt update
+  DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y
+  apt install -y strace
+  "
+}
+
+function install_debian_package {
+  declare -r package_name=$1
+  declare -r package_architecture=$2
+  declare -r root_path=$3
+
+  output=$(fetch_url https://packages.debian.org/"$debian_release_name"/"$package_architecture"/"$package_name"/download \
+    | grep -o -m 1 "[^/]*/pool/[^\"]*") || raise_error "Failed to find the download URL of $package_name"
+  declare -r package_url_path=$output
+
+  declare -r package_url=$debian_mirror_url$package_url_path
+  declare -r package_path=$cache_path/${package_url##*/}
+
+  download_file "$package_url" "$package_path"
+  extract_debian_package "$package_path" "$root_path"
+}
+
+function parse_arguments {
+  declare -n result_options=$1
+  declare -n result_arguments=$2
+  shift 2
+
+  result_options=(
+    [distribution_name]=debian
+    [is_root]=
+  )
+
+  declare option
+  while getopts d:r option; do
+    case $option in
+      d)
+        result_options[distribution_name]=$OPTARG
+        ;;
+      r)
+        result_options[is_root]=1
+        ;;
+      \?)
+        exit 1
+    esac
+  done
+  readonly result_options
+
+  declare -r shift_number=$((OPTIND - 1))
+  shift "$shift_number"
+
+  result_arguments=("$@")
+  readonly result_arguments
+}
+
+function main {
+  declare -A options
+  declare arguments
+  parse_arguments options arguments "$@"
+
+  check_bwrap
+  install_container "${options[distribution_name]}"
+  run_bwrap "${options[distribution_name]}" "${options[is_root]}" "${arguments[@]}"
+}
+
+function run_bwrap {
+  declare -r distribution_name=$1
+  declare -r is_root=$2
+  shift 2
+
+  if [[ $is_root ]]; then
+    run_bwrap_root "$distribution_name" "$@"
+  else
+    run_bwrap_app "$distribution_name" "$@"
+  fi
+}
+
+function run_bwrap_app {
+  declare -r distribution_name=$1
+  shift
+
+  declare bwrap_options=()
+
+  declare -r ro_bind_paths=(
+    /usr/lib/*-linux-gnu/alsa-lib
+    /usr/lib/*-linux-gnu/pulseaudio
+    /usr/lib/locale
+    /usr/share/alsa
+  )
+  declare ro_bind_path
+  for ro_bind_path in "${ro_bind_paths[@]}"; do
+    [[ ! -d $ro_bind_path ]] || bwrap_options+=(--ro-bind "$ro_bind_path"{,})
+  done
+
+  if [[ $@ ]]; then
+    declare -r app_id=${1##*/}
+    shift
+
+    declare -r app_path=$base_path/$app_id
+    [[ -d $app_path ]] || raise_error "$app_id is not installed"
+
+    bwrap_options+=(--bind "$app_path"{,})
+    set -- "$app_path"/run "$@"
+  fi
+
+  readonly bwrap_options
+
+  declare -r bash_option=${-//[^x]}
+  exec bwrap --bind "$base_path"/"$distribution_name" / \
+    --bind "$base_path"/common{,} \
+    --bind /run{,} \
+    --dev-bind /dev{,} \
+    --proc /proc \
+    --ro-bind /etc/resolv.conf{,} \
+    --ro-bind /sys{,} \
+    --setenv TUXAPP_TEST 1 \
+    --tmpfs /tmp \
+    "${bwrap_options[@]}" \
+    bash -l"$bash_option" "$@"
+}
+
+function run_bwrap_root {
+  declare -r distribution_name=$1
+  shift
+
+  if [[ $distribution_name == arch ]]; then
+    declare -r fakeroot_arguments=(fakechroot fakeroot)
+  elif [[ $distribution_name == debian ]]; then
+    declare -r fakeroot_arguments=(env -u LANG fakeroot-sysv)
+  fi
+
+  [[ ! $@ ]] || set -- -eu -o pipefail -c "$@"
+
+  declare -r bash_option=${-//[^x]}
+  bwrap \
+    --bind "$base_path"/"$distribution_name" / \
+    --dev /dev \
+    --proc /proc \
+    --ro-bind /etc/resolv.conf{,} \
+    --tmpfs /tmp \
+    "${fakeroot_arguments[@]}" \
+    bash -l"$bash_option" "$@"
+}
+
+main "$@"

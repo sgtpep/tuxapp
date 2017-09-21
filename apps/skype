@@ -1,0 +1,14 @@
+category=network
+description=Stay in touch with family and friends for free. Get international calling, free online calls and Skype for Business on desktop and mobile.
+download-deb-64-url=https://go.skype.com/skypeforlinux-64.deb
+download-rpm-64-url=https://go.skype.com/skypeforlinux-64.rpm
+downloads-url=https://www.skype.com/en/download-skype/
+homepage-url=https://www.skype.com/en/
+icon-url=https://secure.skypeassets.com/i/common/images/icons/favicon.ico
+image-url=https://secure.skypeassets.com/i/common/images/icons/skype-logo-open-graph.png
+name=Skype
+note=GNOME Keyring needs to be installed for automatic sign-in
+screenshot-urls=https://secure.skypeassets.com/content/dam/scom/images/newhome/bottom/bottom-bg.jpg
+title=Free calls to friends and family
+version-regex=/skypeforlinux_([^_]+)
+version-url=https://repo.skype.com/deb/dists/stable/main/binary-amd64/Packages

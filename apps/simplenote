@@ -1,0 +1,12 @@
+category=office
+changelog-url=https://github.com/Automattic/simplenote-electron/releases
+description=Light, clean, and free. Simplenote is now available for iOS, Android, Mac, Windows, Linux, and the web.
+download-deb-64-url=https://github.com/Automattic/simplenote-electron/releases/download/v{version}/simplenote-{version}.deb
+download-tarball-64-url=https://github.com/Automattic/simplenote-electron/releases/download/v{version}/Simplenote-linux-x64.{version}.tar.gz
+free-license=yes
+homepage-url=https://simplenote.com/
+icon-url=https://s0.wp.com/wp-content/themes/a8c/simplenote/images/chrome/favicon.ico
+image-url=https://simplenoteblog.files.wordpress.com/2012/12/simplenote-featured-image.png?w=1200
+name=Simplenote
+title=The simplest way to keep notes
+version-regex=/download/v([^/]+)

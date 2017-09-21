@@ -1,0 +1,17 @@
+category=network
+changelog-url=https://github.com/SchizoDuckie/DuckieTV/releases
+description=DuckieTV is an application that takes care of TV-Show addicts by providing a personalized TV-Show calendar. DuckieTV makes sure the information is always up-to-date and gives you an integrated blocking-resistant torrent search to help you get to the right download as easy as possible.
+download-deb-32-url=https://github.com/SchizoDuckie/DuckieTV/releases/download/{version}/DuckieTV-{version}-ubuntu-x32.deb
+download-deb-64-url=https://github.com/SchizoDuckie/DuckieTV/releases/download/{version}/DuckieTV-{version}-ubuntu-x64.deb
+download-tarball-32-url=https://github.com/SchizoDuckie/DuckieTV/releases/download/{version}/DuckieTV-{version}-linux-x32.tar.gz
+download-tarball-64-url=https://github.com/SchizoDuckie/DuckieTV/releases/download/{version}/DuckieTV-{version}-linux-x64.tar.gz
+downloads-url=https://github.com/SchizoDuckie/DuckieTV/releases
+homepage-url=https://schizoduckie.github.io/DuckieTV/
+icon-url=https://schizoduckie.github.io/DuckieTV/img/icon256.png
+image-url=https://schizoduckie.github.io/DuckieTV/img/background.jpg
+name=DuckieTV
+screenshots-selector=.screenshots a
+title=TV show tracker
+tuxapp-executable=DuckieTV/DuckieTV
+version-regex=/download/([^/]+)
+video-url=https://www.youtube.com/watch?v=cipuVrQU0UU

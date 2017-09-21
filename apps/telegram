@@ -1,0 +1,14 @@
+category=network
+changelog-url=https://desktop.telegram.org/changelog
+description=Telegram is a cloud-based mobile and desktop messaging app with a focus on security and speed.
+download-tarball-32-url=https://telegram.org/dl/desktop/linux32
+download-tarball-64-url=https://telegram.org/dl/desktop/linux
+downloads-url=https://desktop.telegram.org/
+free-license=yes
+homepage-url=https://telegram.org/
+icon-url=https://telegram.org/img/t_logo.png
+image-url=https://telegram.org/img/t_logo.png
+name=Telegram
+title=Messenger
+version-regex=/download/v([^/]+)
+version-url=https://github.com/telegramdesktop/tdesktop/releases

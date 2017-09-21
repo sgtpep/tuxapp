@@ -1,0 +1,16 @@
+category=video
+changelog-url=https://github.com/jaruba/PowderPlayer/releases
+description=Hybrid between a Torrent Client and a Player. It can be used to stream torrents with subtitles and much more.
+download-tarball-64-url=https://github.com/jaruba/PowderPlayer/releases/download/v{version}/PowderPlayer_v{version}.tar.gz
+downloads-url=http://powder.media/download
+free-license=yes
+homepage-url=http://powder.media/
+icon-url=https://raw.githubusercontent.com/jaruba/PowderPlayer/react-polymer/images/icons/powder-icon.png
+image-url=http://powder.media/powder-logo.png
+name=Powder Player
+screenshots-selector=img[src^="screenshots/"]
+title=Bringing The torrent universe closer to you
+tuxapp-executable=Powder
+tuxapp-packages=libnotify4
+version-regex=/download/v([^/]+)
+video-url=https://www.youtube.com/watch?v=8tuFLQcjfMg

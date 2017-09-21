@@ -1,0 +1,15 @@
+category=network
+changelog-url=https://www.mozilla.org/en-US/firefox/releases/
+description=Firefox is a powerful, extensible web browser with support for modern web application technologies.
+download-tarball-32-url=https://download-installer.cdn.mozilla.net/pub/firefox/releases/{version}/linux-i686/en-US/firefox-{version}.tar.bz2
+download-tarball-64-url=https://download-installer.cdn.mozilla.net/pub/firefox/releases/{version}/linux-x86_64/en-US/firefox-{version}.tar.bz2
+free-license=yes
+homepage-url=https://www.mozilla.org/en-US/firefox/
+icon-url=https://www.mozilla.org/media/img/firefox/favicon-196.223e1bcaf067.png
+image-url=https://www.mozilla.org/media/img/logos/firefox/logo-wordmark-large.f1831564f64e.png
+name=Firefox
+screenshots-selector=.features-list img
+screenshots-url=https://www.mozilla.org/en-US/firefox/desktop/
+title=The 100% fresh, free-range, ethical browser
+tuxapp-packages=libgtk-3-0 libxt6
+version-regex= data-latest-firefox="([^"]+)

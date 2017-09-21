@@ -1,0 +1,15 @@
+category=development
+changelog-url=https://insomnia.rest/changelog/
+description=A powerful REST API Client with cookie management, environment variables, code generation, and authentication.
+download-appimage-64-url=https://builds.insomnia.rest/downloads/linux/latest
+download-deb-64-url=https://builds.insomnia.rest/downloads/ubuntu/latest
+downloads-url=https://insomnia.rest/download/
+free-license=yes
+homepage-url=https://insomnia.rest/
+icon-url=https://insomnia.rest/favicon/favicon-32x32.png
+image-url=https://insomnia.rest/images/twitter-promo-3.png
+name=Insomnia
+screenshots-selector=img[src^="/images/screens/"]
+title=REST client
+version-regex=/download/v([^/]+)
+version-url=https://github.com/getinsomnia/insomnia/releases
