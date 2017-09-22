@@ -1,14 +1,15 @@
 category=development
-changelog-url=https://support.gitkraken.com/release-notes/current
 description=GitKraken is the most popular Git GUI for Windows, Mac and Linux. Unleash your repo by downloading GitKraken for free now!
-download-deb-64-url=https://release.gitkraken.com/linux/gitkraken-amd64.deb
-download-tarball-64-url=https://release.gitkraken.com/linux/gitkraken-amd64.tar.gz
-downloads-url=https://www.gitkraken.com/download
+download-x86-64-url=https://release.gitkraken.com/linux/gitkraken-amd64.tar.gz
+download-x86-url=
+free-license=
 homepage-url=https://www.gitkraken.com/
 icon-url=https://www.gitkraken.com/android-chrome-192x192.png
-image-url=https://www.gitkraken.com/img/og-image.jpg
 name=GitKraken
+note=
 title=Git GUI
+tuxapp-executable=
+tuxapp-firejail=
 tuxapp-packages=libcurl3 libgnome-keyring0
 version-regex= release: ([^<]+)
-video-url=https://www.youtube.com/watch?v=ZKkMwTeAij4
+version-url=https://www.gitkraken.com/download

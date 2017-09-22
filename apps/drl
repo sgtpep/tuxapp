@@ -1,17 +1,15 @@
-category=games
-changelog-url=https://drl.chaosforge.org/category/releases/
+category=game
 description=DRL (D**m, the Roguelike) is a fast and furious coffee-break roguelike game, that is heavily inspired by the popular FPS game Doom by ID Software.
-download-tarball-32-url=https://drl.chaosforge.org/file_download/33/doomrl-linux-i386-{version}.tar.gz
-download-tarball-64-url=https://drl.chaosforge.org/file_download/32/doomrl-linux-x64-{version}.tar.gz
-downloads-url=https://drl.chaosforge.org/downloads
+download-x86-64-url=https://drl.chaosforge.org/file_download/32/doomrl-linux-x64-{version}.tar.gz
+download-x86-url=https://drl.chaosforge.org/file_download/33/doomrl-linux-i386-{version}.tar.gz
 free-license=yes
 homepage-url=https://drl.chaosforge.org/
 icon-url=https://drl.chaosforge.org/images/19.png
-image-url=https://drl.chaosforge.org/images/19.png
 name=DRL
-screenshots-selector=#content a[rel=lightboxsmd]
-screenshots-url=https://drl.chaosforge.org/screenshots
+note=
 title=D**m, the Roguelike
 tuxapp-executable=./doomrl
+tuxapp-firejail=
 tuxapp-packages=libsdl-image1.2 libsdl-mixer1.2
 version-regex=-linux-x64-([^.]+)
+version-url=https://drl.chaosforge.org/downloads

@@ -1,16 +1,15 @@
 category=development
-changelog-url=https://atom.io/releases
 description=Atom is a text editor that's modern, approachable, yet hackable to the core—a tool you can customize to do anything but also use productively without ever touching a config file.
-download-deb-64-url=https://github.com/atom/atom/releases/download/v{version}/atom-amd64.deb
-download-rpm-64-url=https://github.com/atom/atom/releases/download/v{version}/atom.x86_64.rpm
-download-tarball-64-url=https://github.com/atom/atom/releases/download/v{version}/atom-amd64.tar.gz
-downloads-url=https://github.com/atom/atom/releases/latest
+download-x86-64-url=https://github.com/atom/atom/releases/download/v{version}/atom-amd64.tar.gz
+download-x86-url=
 free-license=yes
 homepage-url=https://atom.io/
 icon-url=https://atom.io/favicon.ico
-image-url=https://og.github.com/atom-mark/atom-mark@1200x630.png
 name=Atom
-screenshot-urls=https://github-atom-io-herokuapp-com.global.ssl.fastly.net/assets/screenshot-main-04d5696e786a54803aa385acbc7c9ba3.png https://github-atom-io-herokuapp-com.global.ssl.fastly.net/assets/screenshot-native-web-ec0dd3d6a69245749560c1712d618941.gif
+note=
 title=A hackable text editor for the 21st Century
+tuxapp-executable=
+tuxapp-firejail=
+tuxapp-packages=
 version-regex=/download/v([^/]+)
-video-url=https://www.youtube.com/watch?v=Y7aEiVwBAdk
+version-url=https://github.com/atom/atom/releases/latest
