@@ -11,5 +11,5 @@ title=The text editor you'll fall in love with
 tuxapp-executable=sublime_text
 tuxapp-firejail=
 tuxapp-packages=
-version-regex=Build ([^\)]+)
+version-regex=\(Build ([^\)]+)
 version-url=https://www.sublimetext.com/
