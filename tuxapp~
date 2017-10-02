@@ -2,22 +2,6 @@
 # shellcheck disable=SC2034
 set -eu -o pipefail
 
-declare -r common_package_names=(
-  libarchive-tools
-  libasound2
-  libgconf-2-4
-  libgl1-mesa-dri
-  libglu1-mesa
-  libgtk2.0-0
-  libnss3
-  libpulse0
-  libx11-xcb1
-  libxkbfile1
-  libxss1
-  libxtst6
-  xkb-data
-)
-
 declare -Ar desktop_entry_categories=(
   [audio]="AudioVideo;Audio;"
   [development]="Development;"
@@ -30,21 +14,6 @@ declare -Ar desktop_entry_categories=(
   [system]="System;"
   [utilities]="Utility;"
   [video]="AudioVideo;Video;"
-)
-
-declare -r ignored_common_package_names=(
-  libicu57
-  libllvm3.9
-)
-
-declare -r ignored_package_names=(
-  adwaita-icon-theme
-  coreutils
-  dpkg
-  gnome-icon-theme
-  hicolor-icon-theme
-  libc6
-  passwd
 )
 
 function check_nested_file_list {
@@ -704,8 +673,6 @@ function install_app {
 }
 
 function install_common {
-  update_common_package_list
-
   output=$(< "$cache_path"/common-packages)
   declare -r package_url_paths=($output)
 
@@ -803,79 +770,3 @@ function move_directory {
 
   rm -r "$source_path"
 }
-
-function resolve_package_url_paths {
-  declare -n argument_package_names=$1
-  declare -n argument_excluded_package_names=$2
-  declare -n result_package_url_paths=$3
-
-  declare -Ag global_excluded_package_names=()
-  declare -Ag global_resolved_package_names=()
-  declare -g global_package_url_paths=()
-
-  for argument_excluded_package_name in "${argument_excluded_package_names[@]}"; do
-    global_excluded_package_names[$argument_excluded_package_name]=1
-  done
-
-  resolve_package_url_paths_recursive "${argument_package_names[@]}"
-
-  result_package_url_paths=("${global_package_url_paths[@]}")
-  readonly result_package_url_paths
-
-  unset global_excluded_package_names
-  unset global_package_url_paths
-  unset global_resolved_package_names
-}
-
-function resolve_package_url_paths_recursive {
-  declare package_name
-  for package_name; do
-    [[ ! ${global_excluded_package_names[$package_name]-} ]] || continue
-
-    [[ ! ${global_resolved_package_names[$package_name]-} ]] || continue
-    global_resolved_package_names[$package_name]=1
-
-    output=$(grep -Fh -C 1 -m 1 "/${package_name}_" "$cache_path"/packages{-security,}) || raise_error "Unknown package: $package_name"
-    declare package_info=$output
-
-    declare key
-    declare value
-    while read -r key value; do
-      [[ $key != -- ]] || break
-
-      if [[ $key == Depends: ]]; then
-        declare depends_package_names=($value)
-        resolve_package_url_paths_recursive "${depends_package_names[@]}"
-      elif [[ $key == Filename: ]]; then
-        global_package_url_paths+=("$value")
-      fi
-    done <<< "$package_info"
-  done
-}
-
-function update_common_package_list {
-  declare -r package_list_path=$cache_path/common-packages
-
-  declare is_package_list_stale=
-  if [[ -f $package_list_path ]]; then
-    output=$(< "$package_list_path")
-    declare package_url_paths=($output)
-
-    declare common_package_name
-    for common_package_name in "${common_package_names[@]}"; do
-      [[ ${package_url_paths[@]} != */${common_package_name}_* ]] || continue
-
-      is_package_list_stale=1
-      break
-    done
-  fi
-  readonly is_package_list_stale
-
-  if [[ $is_package_list_stale || $cache_path/packages-security -nt $package_list_path || $cache_path/packages -nt $package_list_path ]]; then
-    declare -r excluded_package_names=("${ignored_package_names[@]}" "${ignored_common_package_names[@]}")
-    declare package_url_paths
-    resolve_package_url_paths common_package_names excluded_package_names package_url_paths
-
-    write_file "$package_list_path" "${package_url_paths[@]}"
-  fi
- 

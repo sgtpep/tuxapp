@@ -22,6 +22,8 @@ try:
 except ImportError:
   from urlparse import urlparse
 
+__version__ = "1.0.0"
+
 map(lambda environment_variable: os.environ.setdefault(environment_variable[0], os.path.expanduser(environment_variable[1])), {
   'XDG_CACHE_HOME': "~/.cache",
   'XDG_DATA_HOME': "~/.local/share",
@@ -35,7 +37,37 @@ DEBIAN_MIRROR_URL = "https://cdn-aws.deb.debian.org/"
 DEBIAN_RELEASE_NAME = 'stretch'
 GITHUB_REPOSITORY = "sgtpep/tuxapp"
 WGET_OPTIONS = ['-T', '10', '-t', '3', '-nv', '--header', "Accept-Language: en"]
-__version__ = "1.0.0"
+
+PACKAGE_NAMES_COMMON = [
+  'libarchive-tools',
+  'libasound2',
+  'libgconf-2-4',
+  'libgl1-mesa-dri',
+  'libglu1-mesa',
+  'libgtk2.0-0',
+  'libnss3',
+  'libpulse0',
+  'libx11-xcb1',
+  'libxkbfile1',
+  'libxss1',
+  'libxtst6',
+  'xkb-data',
+]
+
+PACKAGE_NAMES_IGNORED = [
+  'adwaita-icon-theme',
+  'coreutils',
+  'dpkg',
+  'gnome-icon-theme',
+  'hicolor-icon-theme',
+  'libc6',
+  'passwd',
+]
+
+PACKAGE_NAMES_IGNORED_COMMON = [
+  'libicu57',
+  'libllvm3.9',
+]
 
 class TuxappException(Exception):
   pass
@@ -360,6 +392,7 @@ def read_file(file_path): # pylint: disable=imperative-function-body
   if os.path.isfile(file_path):
     with open(file_path) as file_file:
       return file_file.read()
+  return ''
 
 def remove_directory(directory_path): # pylint: disable=imperative-function-body
   os.path.isdir(directory_path) \
@@ -375,6 +408,26 @@ def rename_file(source_path, destination_path): # pylint: disable=imperative-fun
   target_path = make_file_directories(destination_path)
   os.rename(source_path, target_path)
   return target_path
+
+def resolve_package_url_path(package_name, package_names_ignored=[], package_names_resolved=None):
+  command_arguments = ['grep', '-Fh', '-C', '1', '-m', '1', "/{}_".format(package_name),
+    "{}/packages-security".format(CACHE_PATH),
+    "{}/packages".format(CACHE_PATH),
+  ]
+  command_output = run_command(command_arguments, None, "Unknown package: {}".format(package_name), is_output=True)
+  package_info_lines = re.sub(r"\n--\n.+$", '', command_output, flags=re.S).strip('\n').splitlines()
+  package_info = dict(package_info_line.split(": ", 1) for package_info_line in package_info_lines)
+  package_depends_names = package_info['Depends'].split(' ') if 'Depends' in package_info \
+    else []
+  package_names_resolved_updated = package_names_resolved if not package_names_resolved is None \
+    else {}
+  package_names_resolved_updated[package_name] = True
+  package_url_paths_resolved = [package_url_path_resolved for package_depends_name in package_depends_names if not package_depends_name in package_names_ignored and not package_depends_name in package_names_resolved_updated for package_url_path_resolved in resolve_package_url_path(package_depends_name, package_names_ignored, package_names_resolved_updated)]
+  return package_url_paths_resolved + [package_info['Filename']]
+
+def resolve_package_url_paths(package_names, package_names_ignored=[]):
+  package_names_resolved = {}
+  return [package_url_path for package_name in package_names for package_url_path in resolve_package_url_path(package_name, package_names_ignored, package_names_resolved)]
 
 def run_app(app_id, app_arguments=[]):
   app_id_installed = check_installed_app(app_id)
@@ -417,31 +470,51 @@ def uninstall_apps(app_ids):
   return all(map(check_installed_app, app_ids)) \
     and all(map(uninstall_app, app_ids))
 
-def update_package_list(package_list_url_path, package_list_path):
-  package_list_url = "{}{}".format(DEBIAN_MIRROR_URL, package_list_url_path)
-  package_list_headers = fetch_url_headers(package_list_url)
+def update_package_list(package_list_archive_url_path, package_list_path):
+  package_list_archive_url = "{}{}".format(DEBIAN_MIRROR_URL, package_list_archive_url_path)
+  package_list_headers = fetch_url_headers(package_list_archive_url)
   package_list_last_modified_match = re.search(r"\sLast-Modified: ([^\n]+)", package_list_headers) \
     or raise_exception("No 'Last-Modified' header")
   package_list_last_modified_timestamp = time.mktime(email.utils.parsedate(package_list_last_modified_match.group(1)))
   package_list_archive_path = "{}.xz".format(package_list_path)
-  is_package_list_changed = get_file_mtime(package_list_archive_path) != package_list_last_modified_timestamp
-  package_list_downloaded_archive_path = download_file(package_list_url, package_list_archive_path) \
-    and touch_file(package_list_archive_path, package_list_last_modified_timestamp) if is_package_list_changed \
+  is_package_list_archive_url_changed = package_list_last_modified_timestamp > get_file_mtime(package_list_archive_path)
+  package_list_downloaded_archive_path = download_file(package_list_archive_url, package_list_archive_path) if is_package_list_archive_url_changed \
     else package_list_archive_path
-  is_package_list_archive_changed = get_file_mtime(package_list_downloaded_archive_path) != get_file_mtime(package_list_path)
-  shell_command = r"""xzgrep "^\(\(Depends\|Filename\): \|$\)" {} | sed "s/ ([^)]\+)//g; s/ | [^,]\+//g; s/:any//g; s/, / /g; s/^Filename: /\0{}\//" > {}""".format(quote(package_list_downloaded_archive_path), package_list_url_path.split('/')[0], quote(package_list_path))
-  return not is_package_list_archive_changed \
-    or run_command(shell_command)
+  is_package_list_archive_changed = get_file_mtime(package_list_downloaded_archive_path) > get_file_mtime(package_list_path)
+  shell_command = r"""xzgrep "^\(\(Depends\|Filename\): \|$\)" {} | sed "s/ ([^)]\+)//g; s/ | [^,]\+//g; s/:any//g; s/, / /g; s/^Filename: /\0{}\//" > {}""".format(quote(package_list_downloaded_archive_path), package_list_archive_url_path.split('/')[0], quote(package_list_path))
+  return (not is_package_list_archive_changed \
+    or run_command(shell_command)) \
+    and package_list_path
+
+def update_package_list_common():
+  common_package_url_paths = resolve_package_url_paths(PACKAGE_NAMES_COMMON, PACKAGE_NAMES_IGNORED + PACKAGE_NAMES_IGNORED_COMMON)
+  return write_file("{}/packages-common".format(CACHE_PATH), '\n'.join(common_package_url_paths))
+
+def update_package_list_common_needed():
+  package_list_common_path = "{}/packages-common".format(CACHE_PATH)
+  package_names_common = [package_list_common_line.rsplit('/', 1)[-1].split('_', 1)[0] for package_list_common_line in read_file(package_list_common_path).splitlines()]
+  is_package_list_common_changed = any(not package_name_common in package_names_common for package_name_common in PACKAGE_NAMES_COMMON)
+  package_list_common_mtime = get_file_mtime(package_list_common_path)
+  is_package_list_changed = any(get_file_mtime("{}/{}".format(CACHE_PATH, package_list_filename)) > package_list_common_mtime for package_list_filename in ['packages-security', 'packages'])
+  return not is_package_list_common_changed \
+    and not is_package_list_changed \
+    and package_list_common_path \
+    or update_package_list_common() \
+    and touch_file(package_list_common_path)
+
+def update_package_list_needed(package_list_archive_url_path, package_list_path):
+  return update_package_list(package_list_archive_url_path, package_list_path) if is_file_old(package_list_path, 60) \
+    else package_list_path
 
 def update_package_lists():
   debian_architecture_name = detect_debian_architecture_name()
   package_lists = [
-    ("{}/packages-security".format(CACHE_PATH), "debian-security/dists/{}/updates/main/binary-{}/Packages.xz".format(DEBIAN_RELEASE_NAME, debian_architecture_name)),
-    ("{}/packages".format(CACHE_PATH), "debian/dists/{}/main/binary-{}/Packages.xz".format(DEBIAN_RELEASE_NAME, debian_architecture_name)),
+    ('packages-security', "debian-security/dists/{}/updates/main/binary-{}/Packages.xz".format(DEBIAN_RELEASE_NAME, debian_architecture_name)),
+    ('packages', "debian/dists/{}/main/binary-{}/Packages.xz".format(DEBIAN_RELEASE_NAME, debian_architecture_name)),
   ]
-  return all(update_package_list(package_list_url_path, package_list_path) \
-    and touch_file(package_list_path) \
-    for package_list_path, package_list_url_path in package_lists if is_file_old(package_list_path, 60))
+  package_list_paths_changed = [update_package_list_needed(package_list_archive_url_path, "{}/{}".format(CACHE_PATH, package_list_filename)) for package_list_filename, package_list_archive_url_path in package_lists]
+  return update_package_list_common_needed() \
+    and package_list_paths_changed
 
 def write_file(file_path, file_contents=''): # pylint: disable=imperative-function-body
   if read_file(file_path) != file_contents:
