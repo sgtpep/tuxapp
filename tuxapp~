@@ -600,23 +600,6 @@ function extract_zip_download {
   [[ ! $is_file_list_nested ]] || move_directory "$extract_path"/* "$extract_path"
 }
 
-function fetch_url_headers {
-  declare -r url=$1
-
-  echo "Fetching $url" >&2
-
-  declare status=0
-  if type wget &> /dev/null && [[ ! ${TUXAPP_CURL-} ]]; then
-    wget "${wget_options[@]}" -Sq -O - --spider "$url" 2>&1 || status=$?
-    [[ $status != 8 ]] || status=0
-  else
-    curl "${curl_options[@]}" -ISs -X GET "$url" || status=$?
-  fi
-  readonly status
-
-  [[ $status == 0 ]] || raise_error "Failed to fetch $url"
-}
-
 function get_app_download_urls {
   declare -r app_id=$1
   declare -n argument_appfile=$2
@@ -721,7 +704,6 @@ function install_app {
 }
 
 function install_common {
-  update_package_lists
   update_common_package_list
 
   output=$(< "$cache_path"/common-packages)
@@ -896,53 +878,4 @@ function update_common_package_list {
 
     write_file "$package_list_path" "${package_url_paths[@]}"
   fi
-}
-
-function update_package_list {
-  declare -r url_path=$1
-
-  if [[ $url_path == debian-security/* ]]; then
-    declare -r package_list_path=$cache_path/packages-security
-  else
-    declare -r package_list_path=$cache_path/packages
-  fi
-
-  check_mtime_age 60 "$package_list_path" || return 0
-
-  output=$(fetch_url_headers "$debian_mirror_url""$url_path")
-  declare -r package_list_headers=$output
-
-  [[ $package_list_headers =~ Last-Modified:\ ([^$'\n']+) ]] || raise_error "No 'Last-Modified' header"
-
-  output=$(date -d "${BASH_REMATCH[1]}")
-  declare -r last_modified_date=$output
-
-  declare -r archive_path=$package_list_path.xz
-
-  if [[ -f $archive_path ]]; then
-    output=$(date -r "$archive_path")
-    declare -r download_date=$output
-  else
-    declare -r download_date=
-  fi
-
-  [[ $last_modified_date == "$download_date" ]] || download_file "$debian_mirror_url""$url_path" "$archive_path"
-
-  if [[ $archive_path -nt $package_list_path ]]; then
-    xzgrep "^\(\(Depends\|Filename\): \|$\)" "$archive_path" \
-      | sed "s/ ([^)]\+)//g; s/ | [^,]\+//g; s/:any//g; s/, / /g; s/^Filename: /\0${url_path%%/*}\//" \
-      | write_file "$package_list_path"
-  fi
-
-  touch "$package_list_path"
-}
-
-function update_package_lists {
-  declare -A architecture
-  detect_architecture architecture
-
-  declare package_list_url_path
-  for package_list_url_path in {debian-security/dists/"$debian_release_name"/updates,debian/dists/"$debian_release_name"}/main/binary-"${architecture[debian]}"/Packages.xz; do
-    update_package_list "$package_list_url_path"
-  done
-}
+ 

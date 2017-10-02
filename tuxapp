@@ -2,6 +2,7 @@
 from __future__ import print_function
 import argparse
 import distutils.spawn
+import email.utils
 import glob
 import mmap
 import os
@@ -191,12 +192,22 @@ def fetch_url_grep(url, grep_arguments, exception_text=None):
   return command_output[:-1] if is_string(command_output) \
     else command_output
 
+def fetch_url_headers(url, exception_text=None):
+  request_arguments = get_request_arguments(['-ISs', '-X', 'GET', url], ['-Sq', '-O', '-', '--spider', url])
+  request_command = quote_command_arguments(request_arguments)
+  request_command_redirect = " 2>&1" if request_arguments[0] == 'wget' \
+    else ''
+  command_exception_text = "Failed to fetch {}".format(url) if exception_text is None \
+    else exception_text
+  return run_command("{}{}".format(request_command, request_command_redirect), "Fetching {}".format(url), command_exception_text, is_output=True)
+
 def fetch_url_match_version(url, version_pattern, exception_text=None):
   request_arguments = get_request_arguments(['-Ss', '-D', '-', url], ['-Sq', '-O', '-', url])
-  request_command_redirect = "2>&1" if request_arguments[0] == 'wget' \
+  request_command = quote_command_arguments(request_arguments)
+  request_command_redirect = " 2>&1" if request_arguments[0] == 'wget' \
     else ''
   grep_pattern = re.sub(r"^(.*?)(?<!\\)\(", r"(?<=\1)", re.sub(r"(?<!\\)\)(.*?)$", r"(?=\1)", version_pattern, 1), 1)
-  shell_command = "{} {} | head -c 1000000 2> /dev/null | grep -Pao -m 1 {}".format(quote_command_arguments(request_arguments), request_command_redirect, quote(grep_pattern))
+  shell_command = "{}{} | head -c 1000000 2> /dev/null | grep -Pao -m 1 {}".format(request_command, request_command_redirect, quote(grep_pattern))
   command_exception_text = "Unable to determine an app version from {}".format(url) if exception_text is None \
     else exception_text
   command_output = run_command(shell_command, "Fetching {}".format(url), command_exception_text, is_output=True)
@@ -205,7 +216,7 @@ def fetch_url_match_version(url, version_pattern, exception_text=None):
 
 def fetch_url_match_version_throttled(app_id, url, version_pattern, exception_text=None):
   app_version_path = "{}/{}/version".format(BASE_PATH, app_id)
-  is_app_version_old = time.time() - os.path.getmtime(app_version_path) > 60
+  is_app_version_old = is_file_old(app_version_path, 60)
   app_version_installed = read_app_version(app_id)
   app_version_released = fetch_url_match_version(url, version_pattern, exception_text) if is_app_version_old \
     else app_version_installed
@@ -216,6 +227,10 @@ def fetch_url_match_version_throttled(app_id, url, version_pattern, exception_te
 
 def filter_app_id(app):
   return app.split('/')[-1]
+
+def get_file_mtime(file_path):
+  return os.path.getmtime(file_path) if os.path.isfile(file_path) \
+    else 0
 
 def get_installed_apps():
   return [os.path.basename(os.path.dirname(app_version_path)) for app_version_path in glob.glob("{}/*/version".format(BASE_PATH))] \
@@ -242,7 +257,6 @@ def handle_exceptions(function): # pylint: disable=imperative-function-body
   return wrapper
 
 def install_app(app_id):
-  print(app_id)
   return True
 
 def install_apps(app_ids=[]):
@@ -252,11 +266,13 @@ def install_apps(app_ids=[]):
     and all(map(install_app, app_ids_install))
 
 def install_common():
-  print('common')
-  return True
+  return update_package_lists()
 
 def is_command_executable(executable_name):
   return bool(distutils.spawn.find_executable(executable_name))
+
+def is_file_old(file_path, old_file_age):
+  return time.time() - get_file_mtime(file_path) > old_file_age
 
 def is_string(value):
   return isinstance(value, (''.__class__, u''.__class__))
@@ -383,10 +399,12 @@ def run_command_try(command_arguments, message_text=None, is_output=False):
     else subprocess.check_call(command_arguments, shell=is_shell_command) == 0)
 
 def touch_file(file_path, file_timestamp=None): # pylint: disable=imperative-function-body
+  file_path_existing = file_path if os.path.isfile(file_path) \
+    else write_file(file_path)
   file_timestamps = None if file_timestamp is None \
     else (file_timestamp, file_timestamp)
-  os.utime(file_path, file_timestamps)
-  return True
+  os.utime(file_path_existing, file_timestamps)
+  return file_path_existing
 
 def uninstall_app(app_id):
   app_id_installed = check_installed_app(app_id)
@@ -398,6 +416,32 @@ def uninstall_app(app_id):
 def uninstall_apps(app_ids):
   return all(map(check_installed_app, app_ids)) \
     and all(map(uninstall_app, app_ids))
+
+def update_package_list(package_list_url_path, package_list_path):
+  package_list_url = "{}{}".format(DEBIAN_MIRROR_URL, package_list_url_path)
+  package_list_headers = fetch_url_headers(package_list_url)
+  package_list_last_modified_match = re.search(r"\sLast-Modified: ([^\n]+)", package_list_headers) \
+    or raise_exception("No 'Last-Modified' header")
+  package_list_last_modified_timestamp = time.mktime(email.utils.parsedate(package_list_last_modified_match.group(1)))
+  package_list_archive_path = "{}.xz".format(package_list_path)
+  is_package_list_changed = get_file_mtime(package_list_archive_path) != package_list_last_modified_timestamp
+  package_list_downloaded_archive_path = download_file(package_list_url, package_list_archive_path) \
+    and touch_file(package_list_archive_path, package_list_last_modified_timestamp) if is_package_list_changed \
+    else package_list_archive_path
+  is_package_list_archive_changed = get_file_mtime(package_list_downloaded_archive_path) != get_file_mtime(package_list_path)
+  shell_command = r"""xzgrep "^\(\(Depends\|Filename\): \|$\)" {} | sed "s/ ([^)]\+)//g; s/ | [^,]\+//g; s/:any//g; s/, / /g; s/^Filename: /\0{}\//" > {}""".format(quote(package_list_downloaded_archive_path), package_list_url_path.split('/')[0], quote(package_list_path))
+  return not is_package_list_archive_changed \
+    or run_command(shell_command)
+
+def update_package_lists():
+  debian_architecture_name = detect_debian_architecture_name()
+  package_lists = [
+    ("{}/packages-security".format(CACHE_PATH), "debian-security/dists/{}/updates/main/binary-{}/Packages.xz".format(DEBIAN_RELEASE_NAME, debian_architecture_name)),
+    ("{}/packages".format(CACHE_PATH), "debian/dists/{}/main/binary-{}/Packages.xz".format(DEBIAN_RELEASE_NAME, debian_architecture_name)),
+  ]
+  return all(update_package_list(package_list_url_path, package_list_path) \
+    and touch_file(package_list_path) \
+    for package_list_path, package_list_url_path in package_lists if is_file_old(package_list_path, 60))
 
 def write_file(file_path, file_contents=''): # pylint: disable=imperative-function-body
   if read_file(file_path) != file_contents:
