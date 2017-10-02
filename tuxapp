@@ -362,7 +362,7 @@ def rename_file(source_path, destination_path): # pylint: disable=imperative-fun
 def run_app(app_id, app_arguments=[]):
   app_id_installed = check_installed_app(app_id)
   command_arguments = ["{}/{}/run".format(BASE_PATH, app_id_installed)] + app_arguments
-  return tuxapp.exec_command(command_arguments)
+  return exec_command(command_arguments)
 
 def run_command(command_arguments, message_text=None, exception_text=None, is_output=False): # pylint: disable=imperative-function-body
   try:
