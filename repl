@@ -1,0 +1,2 @@
+#!/bin/sh
+PYTHONSTARTUP=${0%/*}/lib/repl.py REPL_PATH=$1 exec python
