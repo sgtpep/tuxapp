@@ -240,11 +240,11 @@ def handle_exceptions(function): # pylint: disable=imperative-function-body
         and sys.exit(1)
   return wrapper
 
-def install_app(app_id, firejail_value=None):
+def install_app(app_id):
   print(app_id)
   return True
 
-def install_apps(app_ids=[], firejail_value=None):
+def install_apps(app_ids=[]):
   app_ids_install = app_ids \
     or get_installed_apps()
   return install_common() \
@@ -281,16 +281,12 @@ def log_message(message_text='', is_silent=False): # pylint: disable=imperative-
 def main():
   parsed_arguments = parse_arguments(sys.argv[1:])
   app_ids = map(filter_app_id, parsed_arguments.apps)
-  firejail_options = True if parsed_arguments.firejail_options in ('', 'on') \
-    else False if parsed_arguments.firejail_options == 'off' \
-    else parsed_arguments.firejail_options
-  print(firejail_options)
   return check_updated_apps(app_ids) if parsed_arguments.is_check_updated_apps \
-    else install_apps(app_ids, parsed_arguments.firejail_options) if parsed_arguments.is_install_apps \
+    else install_apps(app_ids) if parsed_arguments.is_install_apps \
     else list_all_apps() if parsed_arguments.is_list_all_apps \
     else list_installed_apps() if parsed_arguments.is_list_installed_apps \
     else purge_cache() if parsed_arguments.is_purge_cache \
-    else run_app(app_ids[0], parsed_arguments.apps[1:], parsed_arguments.firejail_options) if parsed_arguments.is_run_app \
+    else run_app(app_ids[0], parsed_arguments.apps[1:]) if parsed_arguments.is_run_app \
     else uninstall_apps(app_ids) if parsed_arguments.is_uninstall_apps \
     else raise_exception("Unknown action")
 
@@ -312,7 +308,6 @@ def parse_arguments(arguments): # pylint: disable=imperative-function-body
   argument_parser = argparse.ArgumentParser(description=u"%(prog)s downloads and installs the latest official releases of Linux\N{COPYRIGHT SIGN} applications including dependencies without root permissions and allows to run them sandboxed.", epilog="ISC License, (c) 2017 Danil Semelenov, https://github.com/{}".format(GITHUB_REPOSITORY))
   argument_parser.add_argument('-a', '--all', action='store_true', dest='is_list_all_apps', help="list apps available for installation")
   argument_parser.add_argument('-c', '--check', action='store_true', dest='is_check_updated_apps', help="check installed apps for updates")
-  argument_parser.add_argument('-f', '--firejail', dest='firejail_options', help="set permanent firejail options for apps on --install, or set temporary firejail options for an app on --run; pass 'off' to disable firejail or 'on' to enable it")
   argument_parser.add_argument('-i', '--install', action='store_true', dest='is_install_apps', help="install or update apps; update all installed apps if no arguments are provided")
   argument_parser.add_argument('-l', '--list', action='store_true', dest='is_list_installed_apps', help="list installed apps")
   argument_parser.add_argument('-p', '--purge', action='store_true', dest='is_purge_cache', help="purge cache")
@@ -364,7 +359,7 @@ def rename_file(source_path, destination_path): # pylint: disable=imperative-fun
   os.rename(source_path, target_path)
   return target_path
 
-def run_app(app_id, app_arguments=[], firejail_value=None):
+def run_app(app_id, app_arguments=[]):
   app_id_installed = check_installed_app(app_id)
   command_arguments = ["{}/{}/run".format(BASE_PATH, app_id_installed)] + app_arguments
   return tuxapp.exec_command(command_arguments)
