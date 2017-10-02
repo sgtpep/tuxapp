@@ -1,0 +1,948 @@
+#!/bin/bash
+# shellcheck disable=SC2034
+set -eu -o pipefail
+
+declare -r common_package_names=(
+  libarchive-tools
+  libasound2
+  libgconf-2-4
+  libgl1-mesa-dri
+  libglu1-mesa
+  libgtk2.0-0
+  libnss3
+  libpulse0
+  libx11-xcb1
+  libxkbfile1
+  libxss1
+  libxtst6
+  xkb-data
+)
+
+declare -Ar desktop_entry_categories=(
+  [audio]="AudioVideo;Audio;"
+  [development]="Development;"
+  [education]="Education;"
+  [games]="Game;"
+  [graphics]="Graphics;"
+  [network]="Network;"
+  [office]="Office;"
+  [science]="Science;"
+  [system]="System;"
+  [utilities]="Utility;"
+  [video]="AudioVideo;Video;"
+)
+
+declare -r ignored_common_package_names=(
+  libicu57
+  libllvm3.9
+)
+
+declare -r ignored_package_names=(
+  adwaita-icon-theme
+  coreutils
+  dpkg
+  gnome-icon-theme
+  hicolor-icon-theme
+  libc6
+  passwd
+)
+
+function check_nested_file_list {
+  declare -n argument_file_list_arguments=$1
+  declare -n result_is_file_list_nested=$2
+
+  result_is_file_list_nested=1
+  declare directory_name
+  while read -r; do
+    [[ ${directory_name-} ]] || declare -r directory_name=${REPLY%%/*}
+    [[ $REPLY != $directory_name/* ]] || continue
+
+    result_is_file_list_nested=
+    break
+  done < <("${argument_file_list_arguments[@]}")
+  readonly result_is_file_list_nested
+}
+
+function check_firejail {
+  declare -n result_is_firejail_enabled=$1
+  declare -n result_firejail_options=$2
+
+  if [[ -v TUXAPP_FIREJAIL ]]; then
+    if [[ ! $TUXAPP_FIREJAIL || $TUXAPP_FIREJAIL == on ]]; then
+      result_is_firejail_enabled=1
+      result_firejail_options=
+    elif [[ $TUXAPP_FIREJAIL == off ]]; then
+      result_is_firejail_enabled=
+      result_firejail_options=
+    else
+      result_is_firejail_enabled=1
+      result_firejail_options=$TUXAPP_FIREJAIL
+    fi
+  else
+    result_is_firejail_enabled=${result_is_firejail_enabled-}
+    result_firejail_options=${result_firejail_options-}
+  fi
+  readonly result_is_firejail_enabled
+  readonly result_firejail_options
+
+  if ! type firejail &> /dev/null && [[ ! ${TUXAPP_TEST-} ]]; then
+    echo "Firejail is not installed on your system" >&2
+    return
+  fi
+
+  if [[ $result_is_firejail_enabled ]]; then
+    if [[ $result_firejail_options ]]; then
+      echo "Firejail is enabled for this app with options: $result_firejail_options" >&2
+    else
+      echo "Firejail is enabled for this app" >&2
+    fi
+  else
+    echo "Firejail is disabled for this app" >&2
+  fi
+
+  if [[ ! ${WAYLAND_DISPLAY-} && $result_is_firejail_enabled ]]; then
+    if [[ " $result_firejail_options " == *\ --x11[\ =]* ]]; then
+      echo "X11 sandboxing is enabled for this app" >&2
+    else
+      echo "X11 sandboxing is not enabled for this app" >&2
+    fi
+  fi
+}
+
+function check_mtime_age {
+  declare -r mtime_age=$1
+  declare -r file_path=$2
+
+  [[ -f $file_path ]] || return 0
+
+  output=$(date +%s)
+  declare -r current_timestamp=$output
+
+  output=$(date -r "$file_path" +%s)
+  declare -r check_timestamp=output
+
+  declare -r timestamp_difference=$((current_timestamp - check_timestamp))
+  ((timestamp_difference > mtime_age))
+}
+
+function configure_fontconfig {
+  declare -r root_path=$base_path/common/root
+
+  declare -r fontconfig_path=$root_path/etc/fonts/conf.d
+
+  if [[ ! -f $fontconfig_path/50-tuxapp.conf ]]; then
+    declare config_path
+    for config_path in "$fontconfig_path"/*; do
+      [[ -h $config_path ]] || continue
+      
+      output=$(readlink "$config_path")
+      declare config_target_path=$output
+
+      [[ $config_target_path != /* ]] || ln -fs ../../.."$config_target_path" "$config_path"
+    done
+  fi
+
+  write_file "$fontconfig_path"/50-tuxapp.conf << EOF
+<fontconfig>
+  <dir>${root_path/~/\~}/usr/share/fonts</dir>
+</fontconfig>
+EOF
+}
+
+function create_app_desktop_entry {
+  declare -r app_id=$1
+  declare -n argument_appfile=$2
+
+  declare -r desktop_entry_path=$data_path/applications/tuxapp-$app_id.desktop
+
+  if [[ -f $desktop_entry_path ]]; then
+    declare -r is_desktop_entry_existing=1
+  else
+    declare -r is_desktop_entry_existing=
+  fi
+
+  declare -r app_name=${argument_appfile[name]-$app_id}
+
+  declare -r desktop_entry_category=${desktop_entry_categories[${argument_appfile[category]-}]-}
+  declare -r icon_path=$data_path/icons/tuxapp-$app_id
+  declare -r run_path=$base_path/$app_id/run
+  write_file "$desktop_entry_path" << EOF
+[Desktop Entry]
+Categories=$desktop_entry_category
+Comment=${argument_appfile[title]-}
+Exec=$run_path %U
+Icon=$icon_path
+Name=$app_name
+TryExec=$run_path
+Type=Application
+EOF
+
+  [[ $is_desktop_entry_existing ]] || echo "Added the menu item '$app_name'" >&2
+}
+
+function create_app_icon {
+  declare -r app_id=$1
+  declare -r is_app_updated=$2
+  declare -r appfile_icon_url=$3
+
+  [[ $appfile_icon_url ]] || return 0
+
+  declare -r icon_path=$data_path/icons/tuxapp-$app_id
+  if [[ ! -f $icon_path || $is_app_updated ]]; then
+    download_file "$appfile_icon_url" "$icon_path" || :
+  fi
+}
+
+function create_app_run_script {
+  declare -r app_id=$1
+  declare -r appfile_executable_arguments=$2
+  declare -r appfile_firejail_options=$3
+
+  if [[ $appfile_executable_arguments ]]; then
+    declare -r executable_arguments=($appfile_executable_arguments)
+  else
+    declare executable_arguments
+    detect_app_executable "$app_id" executable_arguments
+  fi
+
+  declare -r run_path=$base_path/$app_id/run
+
+  if [[ ! -v TUXAPP_FIREJAIL && -f $run_path ]]; then
+    output=$(< "$run_path")
+    declare -r run_contents=$output
+
+    declare is_firejail_enabled=${run_contents##*is_firejail_enabled=}
+    is_firejail_enabled=${is_firejail_enabled%%$'\n'*}
+
+    declare quoted_firejail_options=${run_contents##*user_firejail_options=}
+    quoted_firejail_options=${quoted_firejail_options%%$'\n'*}
+    readonly quoted_firejail_options
+
+    eval declare firejail_options="$quoted_firejail_options"
+  else
+    declare is_firejail_enabled=1
+    declare firejail_options=
+  fi
+
+  check_firejail is_firejail_enabled firejail_options
+
+  write_file "$run_path" << EOF
+#!/bin/bash
+app_firejail_options=${appfile_firejail_options@Q}
+executable_arguments=(${executable_arguments[@]@Q})
+is_firejail_enabled=$is_firejail_enabled
+user_firejail_options=${firejail_options@Q}
+
+. "\${0%/*/*}"/common/run.sh
+EOF
+  chmod +x "$run_path"
+}
+
+function create_browser_script {
+  declare -r browser_path=$base_path/common/root/usr/local/bin/browser
+  write_file "$browser_path" << \EOF
+#!/bin/sh
+echo "$1" > "$TUXAPP_URLS"
+EOF
+  chmod +x "$browser_path"
+}
+
+function create_common_run_script {
+  run_path=$base_path/common/run.sh
+
+  write_file "$run_path" << \EOF
+#!/bin/bash
+# shellcheck disable=SC2034
+set -eu -o pipefail
+
+declare -r app_firejail_options=${app_firejail_options-}
+declare -r app_path=${0%/*}
+declare -r common_root_path=${0%/*/*}/common/root
+declare -r dist_path=${0%/*}/dist
+declare -r executable_arguments=("${executable_arguments[@]}")
+
+declare -r blacklisted_paths=(
+  ~/.electron-cash
+)
+
+EOF
+
+  declare -f check_firejail >> "$run_path"
+
+  cat >> "$run_path" << 'EOF'
+
+function build_language_value {
+  declare -n result_language_value=$1
+
+  declare language_value
+  if [[ ${LANGUAGE-} ]]; then
+    language_value=$LANGUAGE
+  elif [[ ${LANG-} ]]; then
+    language_value=${LANG%%.*}
+    [[ $language_value != *_* ]] || language_value=$language_value:${language_value%%_*}
+  fi
+  readonly language_value
+
+  [[ ${language_value-} ]] || return 0
+
+  declare language_paths=(${language_value//:/ })
+  language_paths=("${language_paths[@]/#//usr/share/locale/}")
+  readonly language_paths
+
+  declare language_path_list
+  build_path_list language_path_list "${language_paths[@]}"
+  readonly language_path_list
+
+  # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=114461
+  [[ ! $language_path_list ]] || result_language_value=../../..${language_path_list//:/:../../..}
+}
+
+function build_path_list {
+  declare -n result_path_list=$1
+  shift
+
+  declare existing_paths=()
+  declare root_path
+  for root_path in '' "$common_root_path" "$app_path"/root; do
+    declare relative_path
+    for relative_path; do
+      declare absolute_path=$root_path$relative_path
+      [[ ! -d $absolute_path ]] || existing_paths+=("$absolute_path")
+    done
+  done
+  readonly existing_paths
+
+  declare ifs=$IFS
+  IFS=:
+  result_path_list=${existing_paths[*]}
+  IFS=$ifs
+}
+
+function get_command_arguments {
+  declare -n result_command_arguments=$1
+
+  result_command_arguments=()
+
+  [[ ! ${TUXAPP_STRACE-} ]] || result_command_arguments+=(strace -e open)
+
+  if [[ ${executable_arguments[0]} == ./* ]]; then
+    cd "$dist_path"
+    result_command_arguments+=("${executable_arguments[@]}")
+  else
+    result_command_arguments+=("$dist_path/${executable_arguments[0]}")
+    result_command_arguments+=("${executable_arguments[@]:1}")
+  fi
+
+  readonly result_command_arguments
+}
+
+function get_exported_variables {
+  declare -r is_firejail_active=$1
+  declare -n result_exported_variables=$2
+
+  result_exported_variables=()
+
+  [[ ${executable_arguments[0]} != AppRun ]] || result_exported_variables[APPDIR]=$dist_path
+  [[ -d /usr/share/X11/xkb ]] || result_exported_variables[QT_XKB_CONFIG_ROOT]=$common_root_path/usr/share/X11/xkb
+  [[ -f /etc/fonts/fonts.conf ]] || result_exported_variables[FONTCONFIG_PATH]=$common_root_path/etc/fonts
+  build_path_list result_exported_variables\[LD_LIBRARY_PATH\] {,/usr}/lib{,32,64} {,/usr}/lib/{i386,x86_64}-linux-gnu /usr/lib/x86_64-linux-gnu/alsa-lib
+  build_language_value result_exported_variables\[LANGUAGE\]
+
+  if [[ $is_firejail_active ]]; then
+    result_exported_variables[BROWSER]=$common_root_path/usr/local/bin/browser
+    result_exported_variables[TUXAPP_URLS]=$app_path/urls
+  fi
+
+  declare -r gdk_pixbuf_paths=(/usr/lib/*-linux-gnu/gdk-pixbuf-2.0)
+  if [[ ! -d ${gdk_pixbuf_paths[0]} ]]; then
+    declare gdk_pixbuf_path
+    for gdk_pixbuf_path in "$common_root_path"/usr/lib/*-linux-gnu/gdk-pixbuf-2.0/*; do
+      [[ -d $gdk_pixbuf_path ]] || continue
+
+      declare loaders_cache_path=$gdk_pixbuf_path/loaders.cache
+      [[ -f $loaders_cache_path ]] || LD_LIBRARY_PATH=${result_exported_variables[LD_LIBRARY_PATH]} "${gdk_pixbuf_path%/*}"/gdk-pixbuf-query-loaders "$gdk_pixbuf_path"/loaders/* > "$loaders_cache_path"
+      result_exported_variables[GDK_PIXBUF_MODULE_FILE]=$loaders_cache_path
+    done
+  fi
+
+  readonly result_exported_variables
+}
+
+function get_firejail_arguments {
+  declare -n argument_exported_variables=$1
+  declare -r argument_app_firejail_options=$2
+  declare -r argument_user_firejail_options=$3
+  declare -n result_firejail_arguments=$4
+
+  result_firejail_arguments=(firejail "--protocol=unix,inet,inet6,netlink")
+
+  [[ ! ${TUXAPP_STRACE-} ]] || result_firejail_arguments+=(--allow-debuggers)
+
+  declare variable_name
+  for variable_name in "${!argument_exported_variables[@]}"; do
+    result_firejail_arguments+=(--env="$variable_name"="${argument_exported_variables[$variable_name]}")
+  done
+
+  declare -r cache_path=${XDG_CACHE_HOME-~/.cache}/tuxapp
+  result_firejail_arguments+=(--blacklist="$cache_path")
+
+  declare -r base_path=${app_path%/*}
+  declare directory_path
+  for directory_path in "$base_path"/*; do
+    [[ ! -d $directory_path || $directory_path == "$app_path" ]] || result_firejail_arguments+=(--blacklist="$directory_path")
+  done
+
+  declare blacklisted_path
+  for blacklisted_path in "${blacklisted_paths[@]}"; do
+    result_firejail_arguments+=(--blacklist="$blacklisted_path")
+  done
+
+  declare -r profile_path=/etc/firejail/${executable_arguments[0]##*/}.profile
+  if [[ -f $profile_path ]]; then
+    output=$(< "$profile_path")
+    declare profile_contents=$output
+    if [[ $profile_contents =~ include\ ([^$'\n']) ]]; then
+      declare -r included_profile_path=/etc/firejail/${BASH_REMATCH[1]}.profile
+      [[ ! -f $included_profile_path ]] || profile_contents=$(< "$included_profile_path")
+    fi
+    readonly profile_contents
+
+    [[ $profile_contents != *whitelist\ * ]] || result_firejail_arguments+=(--whitelist="$dist_path")
+  fi
+
+  eval "result_firejail_arguments+=($argument_app_firejail_options)"
+  eval "result_firejail_arguments+=($argument_user_firejail_options)"
+
+  readonly result_firejail_arguments
+}
+
+function main {
+  check_firejail is_firejail_enabled user_firejail_options
+
+  # shellcheck disable=SC2154
+  if [[ $is_firejail_enabled ]] && type firejail &> /dev/null; then
+    declare -r is_firejail_active=1
+  else
+    declare -r is_firejail_active=
+  fi
+
+  declare -A exported_variables
+  get_exported_variables "$is_firejail_active" exported_variables
+
+  if [[ $is_firejail_active ]]; then
+    declare firejail_arguments
+    # shellcheck disable=SC2154
+    get_firejail_arguments exported_variables "$app_firejail_options" "$user_firejail_options" firejail_arguments
+
+    touch "${exported_variables[TUXAPP_URLS]}"
+    while read -r; do
+      setsid xdg-open "$REPLY" &
+    done < <(tail -f -n 0 --pid=$$ "${exported_variables[TUXAPP_URLS]}" 2> /dev/null) &
+  else
+    declare -r firejail_arguments
+
+    declare variable_name
+    for variable_name in "${!exported_variables[@]}"; do
+      export "$variable_name"="${exported_variables[$variable_name]}"
+    done
+  fi
+
+  declare command_arguments
+  get_command_arguments command_arguments
+
+  exec "${firejail_arguments[@]}" "${command_arguments[@]}" "$@"
+}
+
+main "$@"
+EOF
+}
+
+function detect_app_executable {
+  declare -r app_id=$1
+  declare -n result_executable_arguments=$2
+
+  declare -r dist_path=$base_path/$app_id/dist
+
+  if [[ -x $dist_path/AppRun ]]; then
+    result_executable_arguments=(AppRun)
+  elif [[ -d $dist_path/usr/bin ]]; then
+    result_executable_arguments=()
+    declare -r bin_paths=("$dist_path"/usr/bin/*)
+    if [[ ${#bin_paths[@]} == 1 && -x ${bin_paths[0]} ]]; then
+      declare -r executable_argument="${bin_paths[0]#$dist_path/}"
+      result_executable_arguments=("$executable_argument")
+    fi
+  else
+    result_executable_arguments=()
+    declare test_path
+    for test_path in "$dist_path"/*; do
+      declare test_filename=${test_path##*/}
+      declare lowercase_test_filename=${test_filename,,}
+      [[ $lowercase_test_filename == "$app_id" && -x $test_path ]] || continue
+
+      result_executable_arguments=("$test_filename")
+      break
+    done
+  fi
+  readonly result_executable_arguments
+
+  [[ ${result_executable_arguments-} ]] || raise_error "Unable to determine the executable file"
+}
+
+function download_files {
+  declare -r download_directory_path=$1
+  shift
+
+  [[ $@ ]] || return 0
+
+  declare -r downloads_path=$cache_path/downloads
+
+  declare output_paths=("${@##*/}")
+  output_paths=("${output_paths[@]/#/$downloads_path/}")
+  readonly output_paths
+
+  declare status=0
+  make_directory "$downloads_path"
+  if type wget &> /dev/null && [[ ! ${TUXAPP_CURL-} ]]; then
+    rm -f "${output_paths[@]}"
+    wget "${wget_options[@]}" -P "$downloads_path" --show-progress "$@" || status=$?
+  else
+    declare -r urls=("$@")
+    declare extra_curl_options=()
+    declare index
+    for index in "${!output_paths[@]}"; do
+      extra_curl_options+=(-o "${output_paths[$index]}" "${urls[$index]}")
+    done
+    readonly extra_curl_options
+
+    curl "${curl_options[@]}" "${extra_curl_options[@]}" || status=$?
+  fi
+  readonly status
+
+  if [[ $status == 0 ]]; then
+    mv "${output_paths[@]}" "$download_directory_path"
+  else
+    rm -f "${output_paths[@]}"
+    raise_error "Failed to download files"
+  fi
+}
+
+function extract_app_download {
+  declare -r download_path=$1
+  declare -r extract_path=$2
+
+  output=$(head -c 3 "$download_path")
+  declare -r download_signature=$output
+
+  if [[ $download_signature == ?EL ]]; then
+    extract_appimage_download "$download_path" "$extract_path"
+  elif [[ $download_signature == !\<a ]]; then
+    extract_debian_package "$download_path" "$extract_path" --checkpoint=.250
+  elif [[ $download_signature == PK? ]]; then
+    extract_zip_download "$download_path" "$extract_path"
+  else
+    extract_tarball_download "$download_path" "$extract_path"
+  fi
+}
+
+function extract_appimage_download {
+  declare -r download_path=$1
+  declare -r extract_path=$2
+
+  declare -r root_path=$base_path/common/root
+
+  declare -r bsdtar_path=$root_path/usr/bin/bsdtar
+  declare -r ld_library_path=$root_path/usr/lib/x86_64-linux-gnu
+  if LD_LIBRARY_PATH=$ld_library_path "$bsdtar_path" -t -f "$download_path" &> /dev/null; then
+    make_directory "$dist_path"
+    LD_LIBRARY_PATH=$ld_library_path "$bsdtar_path" -x -C "$dist_path" -f "$download_path"
+  else
+    chmod +x "$download_path"
+
+    declare command_arguments=()
+    ! type firejail &> /dev/null || command_arguments+=(firejail)
+    command_arguments+=("$download_path" --appimage-extract)
+    readonly command_arguments
+
+    declare -r parent_path=${extract_path%/*}
+
+    make_directory "$parent_path"
+    cd "$parent_path" || raise_error "Unable to change the directory"
+    "${command_arguments[@]}"
+    cd - > /dev/null
+
+    move_directory "$parent_path"/squashfs-root "$extract_path"
+  fi
+}
+
+function extract_tarball_download {
+  declare -r download_path=$1
+  declare -r extract_path=$2
+
+  declare -r file_list_arguments=(tar -t -f "$download_path")
+  declare is_file_list_nested
+  check_nested_file_list file_list_arguments is_file_list_nested
+
+  extract_tarball "$download_path" "$extract_path" --checkpoint=.250 ${is_file_list_nested:+--strip-components=1}
+}
+
+function extract_zip_download {
+  declare -r download_path=$1
+  declare -r extract_path=$2
+
+  make_directory "$dist_path"
+  unzip -o -d "$extract_path" "$download_path"
+
+  declare -r file_list_arguments=(zipinfo -1 "$download_path")
+  declare is_file_list_nested
+  check_nested_file_list file_list_arguments is_file_list_nested
+
+  [[ ! $is_file_list_nested ]] || move_directory "$extract_path"/* "$extract_path"
+}
+
+function fetch_url_headers {
+  declare -r url=$1
+
+  echo "Fetching $url" >&2
+
+  declare status=0
+  if type wget &> /dev/null && [[ ! ${TUXAPP_CURL-} ]]; then
+    wget "${wget_options[@]}" -Sq -O - --spider "$url" 2>&1 || status=$?
+    [[ $status != 8 ]] || status=0
+  else
+    curl "${curl_options[@]}" -ISs -X GET "$url" || status=$?
+  fi
+  readonly status
+
+  [[ $status == 0 ]] || raise_error "Failed to fetch $url"
+}
+
+function get_app_download_urls {
+  declare -r app_id=$1
+  declare -n argument_appfile=$2
+  declare -r app_version=$3
+  declare -n result_download_urls=$4
+
+  declare -A architecture
+  detect_architecture architecture
+
+  result_download_urls=()
+  declare key
+  for key in download-{tarball,appimage,deb}-${architecture[tuxapp]}-url; do
+    [[ ${argument_appfile[$key]-} ]] || continue
+
+    result_download_urls=(${argument_appfile[$key]})
+    break
+  done
+
+  [[ ${result_download_urls-} ]] || raise_error "No suitable release download URL for $app_id"
+
+  result_download_urls=("${result_download_urls[@]//{version\}/$app_version}")
+  readonly result_download_urls
+}
+
+function get_excluded_package_names {
+  declare -n result_excluded_package_names=$1
+
+  output=$(< "$cache_path"/common-packages)
+  declare -r common_package_url_paths=($output)
+
+  declare excluded_common_package_names=("${common_package_url_paths[@]##*/}")
+  excluded_common_package_names=("${excluded_common_package_names[@]%%_*}")
+  readonly excluded_common_package_names
+
+  result_excluded_package_names=("${ignored_package_names[@]}" "${excluded_common_package_names[@]}")
+  readonly result_excluded_package_names
+}
+
+function install_app {
+  declare -A appfile
+  read_appfile "$app_id" appfile
+
+  declare installed_app_version
+  declare released_app_version
+  read_app_versions "$app_id" appfile installed_app_version released_app_version
+
+  declare -r app_path=$base_path/$app_id
+
+  if [[ -d $app_path ]]; then
+    declare -r is_app_existing=1
+  else
+    declare -r is_app_existing=
+  fi
+
+  if [[ $installed_app_version != "$released_app_version" ]]; then
+    declare download_urls
+    get_app_download_urls "$app_id" appfile "$released_app_version" download_urls
+
+    declare download_url
+    for download_url in "${download_urls[@]}"; do
+      declare download_path=$cache_path/$app_id-$released_app_version
+
+      download_file "$download_url" "$download_path"
+
+      echo "Unpacking $app_id $released_app_version" >&2
+      extract_app_download "$download_path" "$app_path"/dist
+    done
+
+    write_file "$app_path"/version "$released_app_version"
+  fi
+
+  if [[ ${appfile[tuxapp-packages]-} ]]; then
+    declare excluded_common_package_names
+    get_excluded_package_names excluded_package_names
+
+    declare -r package_names=(${appfile[tuxapp-packages]})
+    declare package_url_paths
+    resolve_package_url_paths package_names excluded_package_names package_url_paths
+
+    install_packages "$app_id" "${package_url_paths[@]}"
+  fi
+
+  if [[ $installed_app_version == "$released_app_version" ]]; then
+    declare -r is_app_updated=
+  else
+    declare -r is_app_updated=1
+  fi
+
+  create_app_icon "$app_id" "$is_app_updated" "${appfile[icon-url]-}"
+  create_app_run_script "$app_id" "${appfile[tuxapp-executable]-}" "${appfile[tuxapp-firejail]-}"
+  create_app_desktop_entry "$app_id" appfile
+
+  if [[ $is_app_updated ]]; then
+    if [[ $is_app_existing ]]; then
+      echo "Updated $app_id to $released_app_version" >&2
+    else
+      echo "Installed $app_id $released_app_version" >&2
+    fi
+  else
+    echo "$app_id $installed_app_version is up to date" >&2
+  fi
+}
+
+function install_common {
+  update_package_lists
+  update_common_package_list
+
+  output=$(< "$cache_path"/common-packages)
+  declare -r package_url_paths=($output)
+
+  install_packages common "${package_url_paths[@]}"
+
+  configure_fontconfig
+  create_browser_script
+  create_common_run_script
+}
+
+function install_package_prepare {
+  declare -r app_id=$1
+  declare -r package_url_path=$2
+  declare -n argument_package_paths=$3
+  declare -n argument_package_urls=$4
+
+  declare package_name=${package_url_path##*/}
+  package_name=${package_name%%_*}
+  readonly package_name
+
+  declare -r package_version_path=$base_path/$app_id/packages/$package_name
+  if [[ -f $package_version_path ]]; then
+    output=$(< "$package_version_path")
+    declare -r package_version=$output
+  else
+    declare -r package_version=
+  fi
+
+  declare package_release_version=${package_url_path%_*}
+  package_release_version=${package_release_version##*_}
+  readonly package_release_version
+
+  [[ $package_version != "$package_release_version" ]] || return 0
+
+  declare -r package_path=$cache_path/${package_url_path##*/}
+  argument_package_paths+=("$package_path")
+
+  declare -r package_url=$debian_mirror_url$package_url_path
+  [[ -f $package_path ]] || argument_package_urls+=("$package_url")
+}
+
+function install_packages {
+  declare -r app_id=$1
+  shift
+
+  declare package_paths=()
+  declare package_urls=()
+  declare package_url_path
+  for package_url_path; do
+    install_package_prepare "$app_id" "$package_url_path" package_paths package_urls
+  done
+  readonly package_paths
+  readonly package_urls
+
+  if [[ ${package_urls-} ]]; then
+    declare download_package_names=("${package_urls[@]##*/}")
+    download_package_names=("${download_package_names[@]%%_*}")
+    readonly download_package_names
+
+    echo "Downloading packages: ${download_package_names[*]}" >&2
+  fi
+
+  download_files "$cache_path" "${package_urls[@]}"
+
+  if [[ ${package_paths-} ]]; then
+    declare extract_package_names=("${package_paths[@]##*/}")
+    extract_package_names=("${extract_package_names[@]%%_*}")
+    readonly extract_package_names
+
+    echo "Unpacking packages: ${extract_package_names[*]}" >&2
+
+    declare -r app_path=$base_path/$app_id
+    declare package_path
+    for package_path in "${package_paths[@]}"; do
+      extract_debian_package "$package_path" "$app_path"/root
+
+      declare package_name=${package_path##*/}
+      package_name=${package_name%%_*}
+
+      declare package_version=${package_path%_*}
+      package_version=${package_version##*_}
+
+      write_file "$app_path"/packages/"$package_name" "$package_version"
+    done
+  fi
+}
+
+function move_directory {
+  declare -r source_path=$1
+  declare -r destination_path=$2
+
+  make_directory "$destination_path"
+  cp -r "$source_path"/* "$destination_path"
+  ! ls "$source_path"/.[!.]* &> /dev/null || cp -r "$source_path"/.[!.]* "$destination_path"
+
+  rm -r "$source_path"
+}
+
+function resolve_package_url_paths {
+  declare -n argument_package_names=$1
+  declare -n argument_excluded_package_names=$2
+  declare -n result_package_url_paths=$3
+
+  declare -Ag global_excluded_package_names=()
+  declare -Ag global_resolved_package_names=()
+  declare -g global_package_url_paths=()
+
+  for argument_excluded_package_name in "${argument_excluded_package_names[@]}"; do
+    global_excluded_package_names[$argument_excluded_package_name]=1
+  done
+
+  resolve_package_url_paths_recursive "${argument_package_names[@]}"
+
+  result_package_url_paths=("${global_package_url_paths[@]}")
+  readonly result_package_url_paths
+
+  unset global_excluded_package_names
+  unset global_package_url_paths
+  unset global_resolved_package_names
+}
+
+function resolve_package_url_paths_recursive {
+  declare package_name
+  for package_name; do
+    [[ ! ${global_excluded_package_names[$package_name]-} ]] || continue
+
+    [[ ! ${global_resolved_package_names[$package_name]-} ]] || continue
+    global_resolved_package_names[$package_name]=1
+
+    output=$(grep -Fh -C 1 -m 1 "/${package_name}_" "$cache_path"/packages{-security,}) || raise_error "Unknown package: $package_name"
+    declare package_info=$output
+
+    declare key
+    declare value
+    while read -r key value; do
+      [[ $key != -- ]] || break
+
+      if [[ $key == Depends: ]]; then
+        declare depends_package_names=($value)
+        resolve_package_url_paths_recursive "${depends_package_names[@]}"
+      elif [[ $key == Filename: ]]; then
+        global_package_url_paths+=("$value")
+      fi
+    done <<< "$package_info"
+  done
+}
+
+function update_common_package_list {
+  declare -r package_list_path=$cache_path/common-packages
+
+  declare is_package_list_stale=
+  if [[ -f $package_list_path ]]; then
+    output=$(< "$package_list_path")
+    declare package_url_paths=($output)
+
+    declare common_package_name
+    for common_package_name in "${common_package_names[@]}"; do
+      [[ ${package_url_paths[@]} != */${common_package_name}_* ]] || continue
+
+      is_package_list_stale=1
+      break
+    done
+  fi
+  readonly is_package_list_stale
+
+  if [[ $is_package_list_stale || $cache_path/packages-security -nt $package_list_path || $cache_path/packages -nt $package_list_path ]]; then
+    declare -r excluded_package_names=("${ignored_package_names[@]}" "${ignored_common_package_names[@]}")
+    declare package_url_paths
+    resolve_package_url_paths common_package_names excluded_package_names package_url_paths
+
+    write_file "$package_list_path" "${package_url_paths[@]}"
+  fi
+}
+
+function update_package_list {
+  declare -r url_path=$1
+
+  if [[ $url_path == debian-security/* ]]; then
+    declare -r package_list_path=$cache_path/packages-security
+  else
+    declare -r package_list_path=$cache_path/packages
+  fi
+
+  check_mtime_age 60 "$package_list_path" || return 0
+
+  output=$(fetch_url_headers "$debian_mirror_url""$url_path")
+  declare -r package_list_headers=$output
+
+  [[ $package_list_headers =~ Last-Modified:\ ([^$'\n']+) ]] || raise_error "No 'Last-Modified' header"
+
+  output=$(date -d "${BASH_REMATCH[1]}")
+  declare -r last_modified_date=$output
+
+  declare -r archive_path=$package_list_path.xz
+
+  if [[ -f $archive_path ]]; then
+    output=$(date -r "$archive_path")
+    declare -r download_date=$output
+  else
+    declare -r download_date=
+  fi
+
+  [[ $last_modified_date == "$download_date" ]] || download_file "$debian_mirror_url""$url_path" "$archive_path"
+
+  if [[ $archive_path -nt $package_list_path ]]; then
+    xzgrep "^\(\(Depends\|Filename\): \|$\)" "$archive_path" \
+      | sed "s/ ([^)]\+)//g; s/ | [^,]\+//g; s/:any//g; s/, / /g; s/^Filename: /\0${url_path%%/*}\//" \
+      | write_file "$package_list_path"
+  fi
+
+  touch "$package_list_path"
+}
+
+function update_package_lists {
+  declare -A architecture
+  detect_architecture architecture
+
+  declare package_list_url_path
+  for package_list_url_path in {debian-security/dists/"$debian_release_name"/updates,debian/dists/"$debian_release_name"}/main/binary-"${architecture[debian]}"/Packages.xz; do
+    update_package_list "$package_list_url_path"
+  done
+}
