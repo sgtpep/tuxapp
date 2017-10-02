@@ -93,7 +93,8 @@ def detect_architecture_name():
     'i686': 'x86',
     'ia64': 'x86-64',
     'x86_64': 'x86-64',
-  }.get(machine_name, raise_exception("Unknown architecture: {}".format(machine_name)))
+  }.get(machine_name) \
+    or raise_exception("Unknown architecture: {}".format(machine_name))
 
 def detect_debian_architecture_name():
   return {
