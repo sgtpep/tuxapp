@@ -7,110 +7,113 @@ import os
 import stat
 import sys
 
+tuxapp = imp.load_source('tuxapp', "{}/tuxapp".format(os.path.dirname(__file__)))
+
 ARCH_MIRROR_URL = "https://mirrors.kernel.org/archlinux/"
 DEBIAN_ARCHIVE_URL = "https://download.openvz.org/template/precreated/contrib/debian-9.0-{}-minimal.tar.gz"
 
-tuxapp = imp.load_source('tuxapp', "{}/tuxapp".format(os.path.dirname(__file__))) # TODO
+def configure_arch_container():
+  container_path = "{}/arch".format(tuxapp.BASE_PATH)
+  return all(install_arch_package(package_name) for package_name in ('fakechroot', 'fakeroot', 'sed')) \
+    and tuxapp.change_file_mode("{}/etc/ca-certificates/extracted/cadir".format(container_path), lambda mode: mode | stat.S_IWUSR) \
+    and tuxapp.write_file_contents("{}/etc/pacman.d/mirrorlist".format(container_path), "Server = {}$repo/os/$arch".format(ARCH_MIRROR_URL)) \
+    and run_bwrap_root('arch', "pacman-key --init && pacman-key --populate archlinux && pacman -Sy --force --needed --noconfirm base strace") \
 
+def configure_debian_container():
+  container_path = "{}/debian".format(tuxapp.BASE_PATH)
+  return all(install_debian_package(package_name) for package_name in ('fakeroot', 'libfakeroot')) \
+    and tuxapp.write_file_contents("{}/etc/apt/sources.list".format(container_path), """\
+deb http://deb.debian.org/debian {0} main
+deb http://security.debian.org/ {0}/updates main
+""".format(tuxapp.DEBIAN_RELEASE_NAME)) \
+    and run_bwrap_root('debian', "apt update && DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y && apt install -y strace") \
+
+def install_arch_container():
+  tarball_base_url = "{}iso/latest/".format(ARCH_MIRROR_URL)
+  tarball_filename = tuxapp.fetch_grep_url(tarball_base_url, ('-Po', '-m', '1', "(?<=\")archlinux-bootstrap-[^\"]+"))
+  tarball_path = tuxapp.download_file_needed("{}{}".format(tarball_base_url, tarball_filename))
+  return tuxapp.unpack_tarball(tarball_path, "{}/arch".format(tuxapp.BASE_PATH), ("--strip-components=1",)) \
+    and configure_arch_container()
+
+def install_arch_package(package_name):
+  repository_name = 'extra' if package_name == 'fakechroot' \
+    else 'core'
+  tarball_base_url = "{}{}/os/x86_64/".format(ARCH_MIRROR_URL, repository_name)
+  tarball_filename = tuxapp.fetch_grep_url(tarball_base_url, ('-Po', '-m', '1', "(?<=\"){}-[^\"]+".format(package_name)))
+  tarball_path = tuxapp.download_file_needed("{}{}".format(tarball_base_url, tarball_filename))
+  return tuxapp.unpack_tarball_silently(tarball_path, "{}/arch".format(tuxapp.BASE_PATH), ("--exclude=.*", "--warning=no-unknown-keyword")) \
+    and True
+
+@tuxapp.log_message("Installing bubblewrap")
 def install_bubblewrap():
-  shell_command = "sudo apt update && sudo apt install -y bubblewrap" if tuxapp.is_command_executable('apt') \
-    else tuxapp.raise_exception("bubblewrap is not installed")
-  return tuxapp.run_command(shell_command, "Installing bubblewrap: {}".format(shell_command))
+  return tuxapp.run_command("sudo apt update && sudo apt install -y bubblewrap") if tuxapp.is_command_executable('apt') \
+    else False
 
+@tuxapp.assert_result("bubblewrap is not installed")
 def install_bubblewrap_needed():
   return tuxapp.is_command_executable('bwrap') \
     or install_bubblewrap()
 
-def install_container(distribution_name, container_path):
-  return install_container_arch(container_path) if distribution_name == 'arch' \
-    else install_container_debian(container_path) if distribution_name == 'debian' \
-    else tuxapp.raise_exception("Unknown distribution: {}".format(distribution_name))
-
-def install_container_arch(container_path):
-  tarball_base_url = "{}iso/latest/".format(ARCH_MIRROR_URL)
-  tarball_filename = tuxapp.fetch_url_grep(tarball_base_url, ['-Po', '-m', '1', "(?<=\")archlinux-bootstrap-[^\"]+"], "Failed to detect the download URL of Arch Linux")
-  tarball_path = tuxapp.download_file_needed("{}{}".format(tarball_base_url, tarball_filename))
-  container_extracted_path = tuxapp.extract_tarball(tarball_path, container_path, ["--strip-components=1"])
-  return install_container_arch_configure(container_extracted_path)
-
-def install_container_arch_configure(container_path):
-  return tuxapp.change_file_mode("{}/etc/ca-certificates/extracted/cadir".format(container_path), lambda mode: mode | stat.S_IWUSR) \
-    and all(install_container_arch_package(arch_package_name, container_path) for arch_package_name in ['fakechroot', 'fakeroot', 'sed']) \
-    and tuxapp.write_file("{}/etc/pacman.d/mirrorlist".format(container_path), "Server = {}$repo/os/$arch".format(ARCH_MIRROR_URL)) \
-    and run_bwrap_root(container_path, "pacman-key --init && pacman-key --populate archlinux && pacman -Sy --force --needed --noconfirm base strace") \
-    and container_path
-
-def install_container_arch_package(arch_package_name, container_path):
-  repository_name = 'extra' if arch_package_name == 'fakechroot' \
-    else 'core'
-  tarball_base_url = "{}{}/os/x86_64/".format(ARCH_MIRROR_URL, repository_name)
-  tarball_filename = tuxapp.fetch_url_grep(tarball_base_url, ['-Po', '-m', '1', "(?<=\"){}-[^\"]+".format(arch_package_name)], "Failed to detect the download URL of the {} package".format(arch_package_name))
-  tarball_path = tuxapp.download_file_needed("{}{}".format(tarball_base_url, tarball_filename))
-  return bool(tuxapp.extract_tarball(tarball_path, container_path, ["--exclude=.*", "--warning=no-unknown-keyword"], is_silent=True))
-
-def install_container_debian(container_path):
-  tarball_url = DEBIAN_ARCHIVE_URL.format(tuxapp.detect_architecture_name().replace('-', '_'))
-  tarball_path = tuxapp.download_file_needed(tarball_url)
-  container_extracted_path = tuxapp.extract_tarball(tarball_path, container_path, ["--exclude=./dev"])
-  return install_container_debian_configure(container_extracted_path)
-
-def install_container_debian_configure(container_path):
-  return all(install_container_debian_package(debian_package_name, container_path) for debian_package_name in ['fakeroot', 'libfakeroot']) \
-    and tuxapp.write_file("{}/etc/apt/sources.list".format(container_path), """\
-deb http://deb.debian.org/debian {0} main
-deb http://security.debian.org/ {0}/updates main
-""".format(tuxapp.DEBIAN_RELEASE_NAME)) \
-    and run_bwrap_root(container_path, "apt update && DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y && apt install -y strace") \
-    and container_path
-
-def install_container_debian_package(debian_package_name, container_path):
-  debian_package_url = "https://packages.debian.org/{}/{}/{}/download".format(tuxapp.DEBIAN_RELEASE_NAME, tuxapp.detect_debian_architecture_name(), debian_package_name)
-  debian_package_url_path = tuxapp.fetch_url_grep(debian_package_url, ['-o', '-m', '1', "[^/]*/pool/[^\"]*"], "Failed to detect the download URL of the {} package".format(debian_package_name))
-  debian_package_path = tuxapp.download_file_needed("{}{}".format(tuxapp.DEBIAN_MIRROR_URL, debian_package_url_path))
-  return bool(tuxapp.extract_debian_package(debian_package_path, container_path, is_silent=True))
+def install_container(distribution_name):
+  return install_arch_container() if distribution_name == 'arch' \
+    else install_debian_container() if distribution_name == 'debian' \
+    else False
 
 def install_container_needed(distribution_name):
-  container_path = "{}/{}".format(tuxapp.BASE_PATH, distribution_name)
-  container_check_path = "{}/var/lib/tuxapp".format(container_path)
-  return container_path if os.path.isfile(container_check_path) \
-    else install_container(distribution_name, container_path) \
-    and tuxapp.write_file(container_check_path) \
-    and container_path
+  check_path = "{}/{}/var/lib/tuxapp".format(tuxapp.BASE_PATH, distribution_name)
+  return distribution_name if os.path.isfile(check_path) \
+    else install_container(distribution_name) \
+      and tuxapp.write_file_contents(check_path) \
+      and distribution_name
+
+def install_debian_container():
+  architecture_name = tuxapp.detect_architecture_name()
+  tarball_url = DEBIAN_ARCHIVE_URL.format(architecture_name.replace('-', '_'))
+  tarball_path = tuxapp.download_file_needed(tarball_url)
+  return tuxapp.unpack_tarball(tarball_path, "{}/debian".format(tuxapp.BASE_PATH), ("--exclude=./dev",)) \
+    and configure_debian_container()
+
+def install_debian_package(package_name):
+  debian_architecture_name = tuxapp.detect_debian_architecture_name()
+  package_url = "https://packages.debian.org/{}/{}/{}/download".format(tuxapp.DEBIAN_RELEASE_NAME, debian_architecture_name, package_name)
+  package_url_path = tuxapp.fetch_grep_url(package_url, ('-o', '-m', '1', "[^/]*/pool/[^\"]*"))
+  package_path = tuxapp.download_file_needed("{}{}".format(tuxapp.DEBIAN_MIRROR_URL, package_url_path))
+  return tuxapp.unpack_package_silently(package_path, "{}/debian".format(tuxapp.BASE_PATH)) \
+    and True
 
 @tuxapp.handle_exceptions
 def main():
   parsed_arguments = parse_arguments(sys.argv[1:])
-  container_path = install_container_needed(parsed_arguments.distribution_name)
-  return run_bwrap_root(container_path) if parsed_arguments.is_root \
-    else run_bwrap_app(container_path, parsed_arguments.app, parsed_arguments.app_arguments) if parsed_arguments.app \
-    else run_bwrap_app(container_path)
+  distribution_name = install_container_needed(parsed_arguments.distribution)
+  return run_bwrap_root(distribution_name) if parsed_arguments.root \
+    else run_bwrap_app(distribution_name, parsed_arguments.app, parsed_arguments.arguments) if parsed_arguments.app \
+    else run_bwrap_app(distribution_name)
 
-def parse_arguments(arguments): # pylint: disable=imperative-function-body
+def parse_arguments(arguments): # pylint: disable=imperative-function
   argument_parser = argparse.ArgumentParser()
-  argument_parser.add_argument('-d', '--distribution', choices=['arch', 'debian'], default='debian', dest='distribution_name')
-  argument_parser.add_argument('-r', '--root', action='store_true', dest='is_root')
+  argument_parser.add_argument('-d', '--distribution', choices=('arch', 'debian'), default='debian')
+  argument_parser.add_argument('-r', '--root', action='store_true')
   argument_parser.add_argument('app', nargs='?')
-  argument_parser.add_argument('app_arguments', metavar='arguments', nargs=argparse.REMAINDER)
+  argument_parser.add_argument('arguments', nargs=argparse.REMAINDER)
   return argument_parser.parse_args(arguments)
 
-def run_bwrap_app(container_path, app=None, app_arguments=[]):
-  bwrap_ro_bind_paths = [
+def run_bwrap_app(distribution_name, app=None, app_arguments=()):
+  ro_bind_paths = (
     "/usr/lib/locale",
     "/usr/share/alsa",
-  ] + glob.glob("/usr/lib/*-linux-gnu/alsa-lib") + \
-    glob.glob("/usr/lib/*-linux-gnu/pulseaudio")
-  bwrap_ro_bind_options = [ro_bind_bwrap_option for bwrap_ro_bind_path in bwrap_ro_bind_paths if os.path.isdir(bwrap_ro_bind_path) for ro_bind_bwrap_option in ['--ro-bind', bwrap_ro_bind_path, bwrap_ro_bind_path]]
-  app_id = tuxapp.filter_app_id(app) if app \
+  ) + tuple(glob.glob("/usr/lib/*-linux-gnu/alsa-lib")) + \
+    tuple(glob.glob("/usr/lib/*-linux-gnu/pulseaudio"))
+  ro_bind_bwrap_options = tuple(ro_bind_bwrap_option for ro_bind_path in ro_bind_paths if os.path.isdir(ro_bind_path) for ro_bind_bwrap_option in ('--ro-bind', ro_bind_path, ro_bind_path))
+  app_id = tuxapp.extract_app_id(app) if app \
     else None
   app_path = "{}/{}".format(tuxapp.BASE_PATH, app_id) if app_id \
     else None
-  bwrap_app_bind_options = ['--bind', app_path, app_path] if app_path \
-    else []
-  bash_arguments = ["{}/run".format(app_path)] + app_arguments if app_path \
-    else []
+  app_bwrap_options = ('--bind', app_path, app_path) if app_path \
+    else ()
+  bash_arguments = ("{}/run".format(app_path),) + app_arguments if app_path \
+    else ()
   common_path = "{}/common".format(tuxapp.BASE_PATH)
-  bwrap_arguments = [
-    'bwrap', '--bind', container_path, "/",
+  bwrap_arguments = ('bwrap', '--bind', "{}/{}".format(tuxapp.BASE_PATH, distribution_name), '/',
     '--bind', common_path, common_path,
     '--bind', "/run", "/run",
     '--dev-bind', "/dev", "/dev",
@@ -119,25 +122,25 @@ def run_bwrap_app(container_path, app=None, app_arguments=[]):
     '--ro-bind', "/sys", "/sys",
     '--setenv', 'TUXAPP_TEST', '1',
     '--tmpfs', "/tmp",
-  ] + bwrap_ro_bind_options + bwrap_app_bind_options + ['bash', '-l'] + bash_arguments
+  ) + ro_bind_bwrap_options + app_bwrap_options + ('bash', '-l') + bash_arguments
   return install_bubblewrap_needed() \
-    and tuxapp.exec_command(bwrap_arguments)
+    and tuxapp.execute_command(bwrap_arguments)
 
-def run_bwrap_root(container_path, bash_script=None):
-  fakeroot_arguments = ['fakechroot', 'fakeroot'] if os.path.isfile("{}/etc/arch-release".format(container_path)) \
-    else ['fakeroot-sysv']
-  bash_arguments = ['-c', "set -eu -o pipefail\n{}".format(bash_script)] if bash_script \
-    else []
-  bwrap_arguments = [
-    'bwrap', '--bind', container_path, "/",
+def run_bwrap_root(distribution_name, bash_script=None):
+  container_path = "{}/{}".format(tuxapp.BASE_PATH, distribution_name)
+  fakeroot_arguments = ('fakechroot', 'fakeroot') if os.path.isfile("{}/etc/arch-release".format(container_path)) \
+    else ('fakeroot-sysv',)
+  bash_arguments = ('-c', "set -eu -o pipefail\n{}".format(bash_script)) if bash_script \
+    else ()
+  bwrap_arguments = ('bwrap', '--bind', container_path, "/",
     '--dev', "/dev",
     '--proc', "/proc",
     '--ro-bind', "/etc/resolv.conf", "/etc/resolv.conf",
     '--tmpfs', "/tmp",
-    'env', '-u', 'LANG',
-  ] + fakeroot_arguments + ['bash', '-l'] + bash_arguments
+  'env', '-u', 'LANG') + fakeroot_arguments + ('bash', '-l') + bash_arguments
   return install_bubblewrap_needed() \
     and (tuxapp.run_command(bwrap_arguments) if bash_script \
-    else tuxapp.exec_command(bwrap_arguments))
+      else tuxapp.execute_command(bwrap_arguments))
 
-__name__ == '__main__' and main()
+if __name__ == '__main__':
+  main()

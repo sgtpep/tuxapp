@@ -458,44 +458,6 @@ function detect_app_executable {
   [[ ${result_executable_arguments-} ]] || raise_error "Unable to determine the executable file"
 }
 
-function download_files {
-  declare -r download_directory_path=$1
-  shift
-
-  [[ $@ ]] || return 0
-
-  declare -r downloads_path=$cache_path/downloads
-
-  declare output_paths=("${@##*/}")
-  output_paths=("${output_paths[@]/#/$downloads_path/}")
-  readonly output_paths
-
-  declare status=0
-  make_directory "$downloads_path"
-  if type wget &> /dev/null && [[ ! ${TUXAPP_CURL-} ]]; then
-    rm -f "${output_paths[@]}"
-    wget "${wget_options[@]}" -P "$downloads_path" --show-progress "$@" || status=$?
-  else
-    declare -r urls=("$@")
-    declare extra_curl_options=()
-    declare index
-    for index in "${!output_paths[@]}"; do
-      extra_curl_options+=(-o "${output_paths[$index]}" "${urls[$index]}")
-    done
-    readonly extra_curl_options
-
-    curl "${curl_options[@]}" "${extra_curl_options[@]}" || status=$?
-  fi
-  readonly status
-
-  if [[ $status == 0 ]]; then
-    mv "${output_paths[@]}" "$download_directory_path"
-  else
-    rm -f "${output_paths[@]}"
-    raise_error "Failed to download files"
-  fi
-}
-
 function extract_app_download {
   declare -r download_path=$1
   declare -r extract_path=$2
