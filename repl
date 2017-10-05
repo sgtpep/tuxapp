@@ -1,2 +1,58 @@
-#!/bin/sh
-PYTHONSTARTUP=${0%/*}/lib/repl.py REPL_PATH=$1 exec python
+#!/bin/bash
+set -eu -o pipefail
+
+read -r -d '' startup_script << EOF || :
+from __future__ import print_function
+
+def main():
+  import atexit
+  import os
+  import readline
+  import rlcompleter
+
+  history_path = os.path.expanduser("~/.python_history")
+  readline.set_history_length(10000)
+  if os.path.exists(history_path):
+    readline.read_history_file(history_path)
+  atexit.register(lambda: readline.write_history_file(history_path))
+  reload()
+
+def reload(*args, **kwargs):
+  if args or kwargs:
+    return __builtins__.reload(*args, **kwargs)
+  else:
+    import functools
+    import imp
+    import inspect
+    import os
+
+    def reload_on_call(module_variables):
+      def decorator(function):
+        @functools.wraps(function)
+        def wrapper(*args, **kwargs):
+          reload()
+          return module_variables[function.__name__](*args, **kwargs)
+        return wrapper
+      return decorator
+
+    if len(inspect.stack()) <= 3:
+      for module_path in "$@".split():
+        module_mtime = os.path.getmtime(module_path)
+        module_name = os.path.basename(module_path)
+        if module_mtime != reload.module_mtimes.get(module_name):
+          reload.module_mtimes[module_name] = module_mtime
+          module_variables = vars(imp.load_source(module_name, module_path))
+          for module_variable_name, module_variable_value in module_variables.items():
+            if not module_variable_name.startswith('__'):
+              globals()[module_variable_name] = reload_on_call(module_variables)(module_variable_value) if hasattr(module_variable_value, '__call__') \
+                else module_variable_value
+reload.module_mtimes = {}
+
+def trace(*args, **kwargs):
+  import trace
+
+  return trace.Trace().runfunc(*args, **kwargs)
+
+main()
+EOF
+PYTHONSTARTUP=<(echo "$startup_script") exec python
