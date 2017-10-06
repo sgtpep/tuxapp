@@ -72,10 +72,10 @@ def assert_result(error_text):
   def decorator(function):
     @functools.wraps(function)
     def wrapper(*args, **kwargs): # pylint: disable=imperative-function
-      result = function(*args, **kwargs)
+      function_result = function(*args, **kwargs)
       format_arguments = tuple(filter_format_argument(arg) for arg in args)
-      assert result, error_text.format(*format_arguments)
-      return result
+      assert function_result, error_text.format(*format_arguments)
+      return function_result
     return wrapper
   return decorator
 
@@ -121,9 +121,8 @@ def check_app_installed(app_id):
 
 def check_app_updated(app_id):
   installed_app_id = check_app_installed(app_id)
-  app_info = fetch_app_info(installed_app_id)
   app_version = read_app_version(installed_app_id)
-  fetched_app_version = fetch_app_version_needed(installed_app_id, app_info['version-url'], app_info['version-regex'])
+  fetched_app_version = fetch_app_version_needed(installed_app_id)
   return app_version != fetched_app_version \
     and output_message("{} can be updated from {} to {}".format(installed_app_id, app_version, fetched_app_version))
 
@@ -161,6 +160,11 @@ def detect_debian_architecture_name():
     'x86': 'i386',
     'x86-64': 'amd64',
   }[detect_architecture_name()]
+
+def download_app_info_needed(app_id):
+  app_info_path = "{}/{}".format(CACHE_PATH, app_id)
+  return download_file("https://raw.githubusercontent.com/{}/master/apps/{}".format(GITHUB_REPOSITORY, app_id), app_info_path) if is_file_old(app_info_path) \
+    else app_info_path
 
 @assert_result("Failed to download {}")
 @log_message("Downloading {}")
@@ -225,34 +229,28 @@ def extract_package_name(package_path):
 def extract_package_version(package_path):
   return package_path.split('_', 2)[1]
 
-@assert_result("{} was not found")
-def fetch_app_info(app_id):
-  app_info_path = "{}/apps/{}".format(os.path.dirname(__file__), app_id)
-  app_info_contents = read_file_contents(app_info_path) if os.path.isfile(app_info_path) \
-    else fetch_url("https://raw.githubusercontent.com/{}/master/apps/{}".format(GITHUB_REPOSITORY, app_id))
-  return dict(app_info_line.split('=', 1) for app_info_line in app_info_contents.splitlines())
-
 @assert_result("Failed to fetch a version of {}")
-@log_message("Fetching {1}")
-def fetch_app_version(app_id, url, version_pattern): # pylint: disable=unused-argument
+@log_message("Fetching a version of {}")
+def fetch_app_version(app_id):
+  app_info = read_app_info(app_id)
   request_arguments = build_request_arguments(
-    ('-Ss', '-D', '-', url),
-    ('-Sq', '-O', '-', url),
+    ('-Ss', '-D', '-', app_info['version-url']),
+    ('-Sq', '-O', '-', app_info['version-url']),
   )
   request_command = join_command_arguments(request_arguments)
   redirected_request_command = "{} 2>&1".format(request_command) if request_arguments[0] == 'wget' \
     else request_command
-  grep_pattern = re.sub(r"^(.*?)(?<!\\)\(", r"(?<=\1)", re.sub(r"(?<!\\)\)(.*?)$", r"(?=\1)", version_pattern, 1), 1)
+  grep_pattern = re.sub(r"^(.*?)(?<!\\)\(", r"(?<=\1)", re.sub(r"(?<!\\)\)(.*?)$", r"(?=\1)", app_info['version-regex'], 1), 1)
   grep_command = "{} | head -c 1000000 2> /dev/null | grep -Pao -m 1 {}".format(redirected_request_command, quote(grep_pattern))
   grep_lines = get_command_output(grep_command).splitlines()
   return grep_lines[0] if grep_lines \
     else ''
 
-def fetch_app_version_needed(app_id, url, version_pattern):
+def fetch_app_version_needed(app_id):
   version_path = "{}/{}/version".format(BASE_PATH, app_id)
-  is_version_old = is_file_old(version_path, 10)
+  is_version_old = is_file_old(version_path)
   app_version = read_app_version(app_id)
-  fetched_app_version = fetch_app_version(app_id, url, version_pattern) if is_version_old \
+  fetched_app_version = fetch_app_version(app_id) if is_version_old \
     else app_version
   return touch_file(version_path) \
       and fetched_app_version if is_version_old and app_version == fetched_app_version \
@@ -314,7 +312,7 @@ def install_app(app_id):
 #     and install_packages(...) \
 #     and download_app(app_id) \
 #     and install_packages(app_id, ...) \
-#     and download_file(icon-url, ...) \
+#     and suppress_assert(download_file)(icon-url, ...) \
 #     and write_executable_file_contents(..., """\
 # """) \
 #     and write_file_contents(..., """\
@@ -324,7 +322,7 @@ def install_app(app_id):
 def install_apps(app_ids=()):
   target_app_ids = app_ids \
     or get_installed_app_ids()
-  return all(install_app(app_id) for app_id in target_app_ids)
+  return all(install_app(target_app_id) for target_app_id in target_app_ids)
 
 def install_common():
   return install_packages('common', COMMON_PACKAGE_NAMES, IGNORED_PACKAGE_NAMES + IGNORED_COMMON_PACKAGE_NAMES)
@@ -359,7 +357,7 @@ def install_packages(app_id, package_names, ignored_package_names):
 def is_command_executable(executable_name):
   return bool(distutils.spawn.find_executable(executable_name))
 
-def is_file_old(file_path, age_seconds):
+def is_file_old(file_path, age_seconds=60):
   return time.time() - get_file_mtime(file_path) > age_seconds
 
 def is_string(value):
@@ -444,13 +442,22 @@ def purge_cache():
   return remove_directory(CACHE_PATH) \
     and output_message("Purged cache")
 
+@assert_result("{} was not found")
+def read_app_info(app_id):
+  local_app_info_path = "{}/apps/{}".format(os.path.dirname(__file__), app_id)
+  app_info_path = local_app_info_path if os.path.isfile(local_app_info_path) \
+    else suppress_assert(download_app_info_needed, False)(app_id)
+  app_info_contents = read_file_contents(app_info_path) if app_info_path \
+    else ''
+  return dict(app_info_line.split('=', 1) for app_info_line in app_info_contents.splitlines())
+
 def read_app_version(app_id):
   return read_file_contents("{}/{}/version".format(BASE_PATH, app_id)).rstrip()
 
 def read_file_contents(file_path): # pylint: disable=imperative-function
   if os.path.isfile(file_path):
     with open(file_path) as file_file:
-      return file_file.read()
+      return file_file.read().decode('utf8')
   else:
     return ''
 
@@ -484,17 +491,16 @@ def resolve_package_urls_needed(package_names, ignored_package_names=()):
   package_urls = resolve_package_urls(package_names, ignored_package_names) if is_package_list_updated \
     else tuple(read_file_contents(package_urls_path).splitlines())
   return write_file_contents(package_urls_path, '\n'.join(package_urls)) \
-      and touch_file(package_urls_path) \
       and package_urls if is_package_list_updated \
     else package_urls
 
 def resolve_package_urls_recursive(package_name, ignored_package_names=(), resolved_package_names=None):
   package_info = parse_package_info(package_name)
   depend_package_names = package_info.get('Depends', '').split()
-  updated_resolved_package_names = {} if resolved_package_names is None \
-    else resolved_package_names
   package_urls = () if package_name in resolved_package_names \
     else ("{}{}".format(DEBIAN_MIRROR_URL, package_info['Filename']),)
+  updated_resolved_package_names = {} if resolved_package_names is None \
+    else resolved_package_names
   updated_resolved_package_names[package_name] = True
   depend_package_urls = tuple(resolved_package_url for depend_package_name in depend_package_names if not depend_package_name in ignored_package_names and not depend_package_name in updated_resolved_package_names for resolved_package_url in resolve_package_urls_recursive(depend_package_name, ignored_package_names, updated_resolved_package_names))
   return package_urls + depend_package_urls
@@ -510,6 +516,14 @@ def run_command(command_arguments): # pylint: disable=imperative-function
     return subprocess.check_call(command_arguments, shell=is_shell_command) == 0
   except subprocess.CalledProcessError:
     return False
+
+def suppress_assert(function, overridden_result=True):
+  def wrapper(*args, **kwargs): # pylint: disable=imperative-function
+    try:
+      return function(*args, **kwargs)
+    except AssertionError:
+      return overridden_result
+  return wrapper
 
 def touch_file(file_path, file_timestamp=None): # pylint: disable=imperative-function
   target_file_path = file_path if os.path.isfile(file_path) \
@@ -592,7 +606,7 @@ def update_package_list_needed(package_list_url):
   package_list_hash = hashlib.md5(package_list_url).hexdigest()
   package_list_path = "{}/package-list-{}".format(CACHE_PATH, package_list_hash)
   return update_package_list(package_list_url, package_list_path) \
-      and touch_file(package_list_path) if is_file_old(package_list_path, 60) \
+      and touch_file(package_list_path) if is_file_old(package_list_path) \
     else package_list_path
 
 def update_package_lists_needed():
@@ -603,11 +617,13 @@ def update_package_lists_needed():
   )
 
 def write_file_contents(file_path, file_contents=''): # pylint: disable=imperative-function
-  if not os.path.isfile(file_path) or read_file_contents(file_path) != file_contents:
+  if os.path.isfile(file_path) and read_file_contents(file_path) == file_contents:
+    return touch_file(file_path)
+  else:
     target_file_path = make_file_directories(file_path)
     with open(target_file_path, 'w') as file_file:
-      file_file.write(file_contents)
-  return file_path
+      file_file.write(file_contents.encode('utf8'))
+    return target_file_path
 
 if __name__ == '__main__':
   main()

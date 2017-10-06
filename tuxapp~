@@ -78,22 +78,6 @@ function check_firejail {
   fi
 }
 
-function check_mtime_age {
-  declare -r mtime_age=$1
-  declare -r file_path=$2
-
-  [[ -f $file_path ]] || return 0
-
-  output=$(date +%s)
-  declare -r current_timestamp=$output
-
-  output=$(date -r "$file_path" +%s)
-  declare -r check_timestamp=output
-
-  declare -r timestamp_difference=$((current_timestamp - check_timestamp))
-  ((timestamp_difference > mtime_age))
-}
-
 function configure_fontconfig {
   declare -r root_path=$base_path/common/root
 
@@ -502,7 +486,7 @@ function extract_appimage_download {
     "${command_arguments[@]}"
     cd - > /dev/null
 
-    move_directory "$parent_path"/squashfs-root "$extract_path"
+    rename_directory "$parent_path"/squashfs-root "$extract_path"
   fi
 }
 
@@ -528,7 +512,7 @@ function extract_zip_download {
   declare is_file_list_nested
   check_nested_file_list file_list_arguments is_file_list_nested
 
-  [[ ! $is_file_list_nested ]] || move_directory "$extract_path"/* "$extract_path"
+  [[ ! $is_file_list_nested ]] || rename_directory "$extract_path"/* "$extract_path"
 }
 
 function get_app_download_urls {
@@ -570,9 +554,6 @@ function get_excluded_package_names {
 }
 
 function install_app {
-  declare -A appfile
-  read_appfile "$app_id" appfile
-
   declare installed_app_version
   declare released_app_version
   read_app_versions "$app_id" appfile installed_app_version released_app_version
@@ -635,98 +616,17 @@ function install_app {
 }
 
 function install_common {
-  output=$(< "$cache_path"/common-packages)
-  declare -r package_url_paths=($output)
-
-  install_packages common "${package_url_paths[@]}"
-
   configure_fontconfig
   create_browser_script
   create_common_run_script
 }
 
-function install_package_prepare {
-  declare -r app_id=$1
-  declare -r package_url_path=$2
-  declare -n argument_package_paths=$3
-  declare -n argument_package_urls=$4
-
-  declare package_name=${package_url_path##*/}
-  package_name=${package_name%%_*}
-  readonly package_name
-
-  declare -r package_version_path=$base_path/$app_id/packages/$package_name
-  if [[ -f $package_version_path ]]; then
-    output=$(< "$package_version_path")
-    declare -r package_version=$output
-  else
-    declare -r package_version=
-  fi
-
-  declare package_release_version=${package_url_path%_*}
-  package_release_version=${package_release_version##*_}
-  readonly package_release_version
-
-  [[ $package_version != "$package_release_version" ]] || return 0
-
-  declare -r package_path=$cache_path/${package_url_path##*/}
-  argument_package_paths+=("$package_path")
-
-  declare -r package_url=$debian_mirror_url$package_url_path
-  [[ -f $package_path ]] || argument_package_urls+=("$package_url")
-}
-
-function install_packages {
-  declare -r app_id=$1
-  shift
-
-  declare package_paths=()
-  declare package_urls=()
-  declare package_url_path
-  for package_url_path; do
-    install_package_prepare "$app_id" "$package_url_path" package_paths package_urls
-  done
-  readonly package_paths
-  readonly package_urls
-
-  if [[ ${package_urls-} ]]; then
-    declare download_package_names=("${package_urls[@]##*/}")
-    download_package_names=("${download_package_names[@]%%_*}")
-    readonly download_package_names
-
-    echo "Downloading packages: ${download_package_names[*]}" >&2
-  fi
-
-  download_files "$cache_path" "${package_urls[@]}"
-
-  if [[ ${package_paths-} ]]; then
-    declare extract_package_names=("${package_paths[@]##*/}")
-    extract_package_names=("${extract_package_names[@]%%_*}")
-    readonly extract_package_names
-
-    echo "Unpacking packages: ${extract_package_names[*]}" >&2
-
-    declare -r app_path=$base_path/$app_id
-    declare package_path
-    for package_path in "${package_paths[@]}"; do
-      extract_debian_package "$package_path" "$app_path"/root
-
-      declare package_name=${package_path##*/}
-      package_name=${package_name%%_*}
-
-      declare package_version=${package_path%_*}
-      package_version=${package_version##*_}
-
-      write_file "$app_path"/packages/"$package_name" "$package_version"
-    done
-  fi
-}
-
-function move_directory {
+function rename_directory {
   declare -r source_path=$1
   declare -r destination_path=$2
 
   make_directory "$destination_path"
+# TODO: mv?
   cp -r "$source_path"/* "$destination_path"
   ! ls "$source_path"/.[!.]* &> /dev/null || cp -r "$source_path"/.[!.]* "$destination_path"
 
