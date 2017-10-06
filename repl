@@ -4,17 +4,39 @@ set -eu -o pipefail
 read -r -d '' startup_script << EOF || :
 from __future__ import print_function
 
+def debug():
+  import inspect
+  import pdb
+  import readline
+  import rlcompleter
+
+  def set_quit(self, *args, **kwargs):
+    previous_set_quit(self, *args, **kwargs)
+    self.quitting = 0
+    readline.read_history_file(debug.history_path)
+  previous_set_quit = pdb.Pdb.set_quit
+  pdb.Pdb.set_quit = set_quit
+  readline.write_history_file(debug.history_path)
+
+  frame = inspect.currentframe().f_back
+  pdb.Pdb.complete = rlcompleter.Completer(frame.f_locals).complete
+  pdb.Pdb(completekey="\e[25~").set_trace(frame)
+
 def main():
   import atexit
   import os
   import readline
   import rlcompleter
 
-  history_path = os.path.expanduser("~/.python_history")
   readline.set_history_length(10000)
+  history_path = os.path.expanduser("~/.python_history")
+  setattr(debug, 'history_path', history_path)
   if os.path.exists(history_path):
     readline.read_history_file(history_path)
   atexit.register(lambda: readline.write_history_file(history_path))
+
+  __builtins__.debug = debug
+
   reload()
 
 def reload(*args, **kwargs):
@@ -39,6 +61,7 @@ def reload(*args, **kwargs):
       for module_path in "$@".split():
         module_mtime = os.path.getmtime(module_path)
         module_name = os.path.basename(module_path)
+        setattr(reload, 'module_mtimes', getattr(reload, 'module_mtimes', {}))
         if module_mtime != reload.module_mtimes.get(module_name):
           reload.module_mtimes[module_name] = module_mtime
           module_variables = vars(imp.load_source(module_name, module_path))
@@ -46,7 +69,6 @@ def reload(*args, **kwargs):
             if not module_variable_name.startswith('__'):
               globals()[module_variable_name] = reload_on_call(module_variables)(module_variable_value) if hasattr(module_variable_value, '__call__') \
                 else module_variable_value
-reload.module_mtimes = {}
 
 def trace(*args, **kwargs):
   import trace
