@@ -15,7 +15,7 @@ DEBIAN_ARCHIVE_URL = "https://download.openvz.org/template/precreated/contrib/de
 def configure_arch_container():
   container_path = "{}/arch".format(tuxapp.BASE_PATH)
   return all(install_arch_package(package_name) for package_name in ('fakechroot', 'fakeroot', 'sed')) \
-    and tuxapp.change_file_mode("{}/etc/ca-certificates/extracted/cadir".format(container_path), lambda mode: mode | stat.S_IWUSR) \
+    and tuxapp.change_file_mode("{}/etc/ca-certificates/extracted/cadir".format(container_path), lambda file_mode: file_mode | stat.S_IWUSR) \
     and tuxapp.write_file_contents("{}/etc/pacman.d/mirrorlist".format(container_path), "Server = {}$repo/os/$arch".format(ARCH_MIRROR_URL)) \
     and run_bwrap_root('arch', "pacman-key --init && pacman-key --populate archlinux && pacman -Sy --force --needed --noconfirm base strace") \
 
@@ -86,7 +86,7 @@ def main():
   parsed_arguments = parse_arguments(sys.argv[1:])
   distribution_name = install_container_needed(parsed_arguments.distribution)
   return run_bwrap_root(distribution_name) if parsed_arguments.root \
-    else run_bwrap_app(distribution_name, parsed_arguments.app, parsed_arguments.arguments) if parsed_arguments.app \
+    else run_bwrap_app(distribution_name, parsed_arguments.app, tuple(parsed_arguments.arguments)) if parsed_arguments.app \
     else run_bwrap_app(distribution_name)
 
 def parse_arguments(arguments): # pylint: disable=imperative-function

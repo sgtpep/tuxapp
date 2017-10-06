@@ -12,6 +12,7 @@ import os
 import platform
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -32,6 +33,7 @@ os.environ.setdefault('XDG_DATA_HOME', os.path.expanduser("~/.local/share"))
 
 BASE_PATH = os.path.expanduser("~/.tuxapp")
 CACHE_PATH = os.path.expandvars("$XDG_CACHE_HOME/tuxapp")
+COMMON_PATH = os.path.expanduser("~/.tuxapp/common")
 CURL_OPTIONS = ('-#Lf', '-H', "Accept-Language: en", '-m', '10', '--retry', '2')
 DATA_PATH = os.path.expandvars("$XDG_DATA_HOME")
 DEBIAN_MIRROR_URL = "https://cdn-aws.deb.debian.org/"
@@ -78,6 +80,17 @@ def assert_result(error_text):
       return function_result
     return wrapper
   return decorator
+
+def configure_common_fontconfig():
+  root_path = "{}/root".format(COMMON_PATH)
+  config_directory_path = "{}/etc/fonts/conf.d".format(root_path)
+  return all(symlink_file(config_path, "../../..{}".format(os.readlink(config_path))) for config_path in glob.glob("{}/*".format(config_directory_path)) if os.path.islink(config_path) and os.readlink(config_path).startswith('/')) \
+    and write_file("{}/50-tuxapp.conf".format(config_directory_path), r"""\
+<fontconfig>
+  <dir>{}/usr/share/fonts</dir>
+</fontconfig>
+""".format(root_path.replace(os.path.expanduser('~'), '~'))) \
+    and True
 
 def handle_exceptions(function):
   @functools.wraps(function)
@@ -308,14 +321,13 @@ def get_installed_app_ids():
 
 def install_app(app_id):
   return install_common()
-  # TODO
 #     and install_packages(...) \
 #     and download_app(app_id) \
 #     and install_packages(app_id, ...) \
 #     and suppress_assert(download_file, True)(icon-url, ...) \
-#     and write_executable_file_contents(..., """\
+#     and write_executable_file_contents(..., r"""\
 # """) \
-#     and write_file_contents(..., """\
+#     and write_file(..., r"""\
 # """) \
 #     and True
 
@@ -325,16 +337,14 @@ def install_apps(app_ids=()):
   return all(install_app(target_app_id) for target_app_id in target_app_ids)
 
 def install_common():
-  return install_packages('common', COMMON_PACKAGE_NAMES, IGNORED_PACKAGE_NAMES + IGNORED_COMMON_PACKAGE_NAMES)
-  # TODO
-#     and all(make_symlink_relative(symlink_path) for symlink_path for glob("fontconfig")) \
-#     and write_file_contents("50-tuxapp.conf", """\
-# """
-#     and write_executable_file("{}/common/root/usr/local/bin/browser".format(BASE_PATH), """\
-# """) \
-#     and write_file_contents("{}/common/run.sh".format(BASE_PATH), """\
-# """) \
-#     and True
+  return install_packages('common', COMMON_PACKAGE_NAMES, IGNORED_PACKAGE_NAMES + IGNORED_COMMON_PACKAGE_NAMES) \
+    and configure_common_fontconfig() \
+    and write_executable_file("{}/root/usr/local/bin/browser".format(COMMON_PATH), r"""\
+#!/bin/sh
+echo "$1" > "$TUXAPP_URLS"
+""") \
+    and write_common_run_script() \
+    and True
 
 def install_package_file(app_id, package_path):
   return unpack_package_silently(package_path, "{}/{}/root".format(BASE_PATH, app_id)) \
@@ -342,11 +352,11 @@ def install_package_file(app_id, package_path):
 
 def install_package_file_needed(app_id, package_path):
   package_name = extract_package_name(package_path)
-  installed_package_version = read_file_contents("{}/{}/packages/{}".format(BASE_PATH, app_id, package_name))
+  installed_package_version = read_file("{}/{}/packages/{}".format(BASE_PATH, app_id, package_name))
   package_version = extract_package_version(package_path)
   return True if package_version == installed_package_version \
     else install_package_file(app_id, package_path) \
-      and write_file_contents("{}/{}/packages/{}".format(BASE_PATH, app_id, package_name), package_version) \
+      and write_file("{}/{}/packages/{}".format(BASE_PATH, app_id, package_name), package_version) \
       and True
 
 def install_packages(app_id, package_names, ignored_package_names):
@@ -447,14 +457,14 @@ def read_app_info(app_id):
   local_app_info_path = "{}/apps/{}".format(os.path.dirname(__file__), app_id)
   app_info_path = local_app_info_path if os.path.isfile(local_app_info_path) \
     else suppress_assert(download_app_info_needed)(app_id)
-  app_info_contents = read_file_contents(app_info_path) if app_info_path \
+  app_info_contents = read_file(app_info_path) if app_info_path \
     else ''
   return dict(app_info_line.split('=', 1) for app_info_line in app_info_contents.splitlines())
 
 def read_app_version(app_id):
-  return read_file_contents("{}/{}/version".format(BASE_PATH, app_id)).rstrip()
+  return read_file("{}/{}/version".format(BASE_PATH, app_id)).rstrip()
 
-def read_file_contents(file_path): # pylint: disable=imperative-function
+def read_file(file_path): # pylint: disable=imperative-function
   if os.path.isfile(file_path):
     with open(file_path) as file_file:
       return file_file.read().decode('utf8')
@@ -489,8 +499,8 @@ def resolve_package_urls_needed(package_names, ignored_package_names=()):
   package_list_paths = update_package_lists_needed()
   is_package_list_updated = any(get_file_mtime(package_list_path) > package_urls_mtime for package_list_path in package_list_paths)
   package_urls = resolve_package_urls(package_names, ignored_package_names) if is_package_list_updated \
-    else tuple(read_file_contents(package_urls_path).splitlines())
-  return write_file_contents(package_urls_path, '\n'.join(package_urls)) \
+    else tuple(read_file(package_urls_path).splitlines())
+  return write_file(package_urls_path, '\n'.join(package_urls)) \
       and package_urls if is_package_list_updated \
     else package_urls
 
@@ -517,6 +527,12 @@ def run_command(command_arguments): # pylint: disable=imperative-function
   except subprocess.CalledProcessError:
     return False
 
+def symlink_file(file_path, target_path):
+  if os.path.islink(file_path):
+    os.remove(file_path)
+  os.symlink(target_path, file_path)
+  return True
+
 def suppress_assert(function, overridden_result=False):
   def wrapper(*args, **kwargs): # pylint: disable=imperative-function
     try:
@@ -527,7 +543,7 @@ def suppress_assert(function, overridden_result=False):
 
 def touch_file(file_path, file_timestamp=None): # pylint: disable=imperative-function
   target_file_path = file_path if os.path.isfile(file_path) \
-    else write_file_contents(file_path)
+    else write_file(file_path)
   file_timestamps = None if file_timestamp is None \
     else (file_timestamp, file_timestamp)
   os.utime(target_file_path, file_timestamps)
@@ -616,8 +632,229 @@ def update_package_lists_needed():
     update_package_list_needed("{}debian/dists/{}/main/binary-{}/Packages.xz".format(DEBIAN_MIRROR_URL, DEBIAN_RELEASE_NAME, debian_architecture_name)),
   )
 
-def write_file_contents(file_path, file_contents=''): # pylint: disable=imperative-function
-  if os.path.isfile(file_path) and read_file_contents(file_path) == file_contents:
+def write_common_run_script():
+  return write_file("{}/run.sh".format(COMMON_PATH), r"""\
+#!/bin/bash
+set -eu -o pipefail
+
+declare -r APP_PATH=${0%/*}
+declare -r BASE_PATH=${0%/*/*}
+declare -r CACHE_PATH=${XDG_CACHE_HOME-~/.cache}/tuxapp
+declare -r COMMON_PATH=${0%/*/*}/common
+readonly APP_EXECUTABLE
+readonly APP_FIREJAIL
+readonly CUSTOM_FIREJAIL
+
+declare -r BLACKLISTED_PATHS=(
+  ~/.electron-cash
+)
+
+function build_command_arguments {
+  declare -n result_command_arguments=$1
+  shift
+
+  result_command_arguments=()
+
+  [[ ! ${TUXAPP_STRACE-} ]] || result_command_arguments+=(strace -e open)
+
+  declare -r dist_path=$APP_PATH/dist
+  eval "declare -r app_executable=($APP_EXECUTABLE)"
+  if [[ $APP_EXECUTABLE == ./* ]]; then
+    cd "$dist_path"
+    result_command_arguments+=("${app_executable[@]}")
+  else
+    result_command_arguments+=("$dist_path"/"${app_executable[0]}")
+    result_command_arguments+=("${app_executable[@]:1}")
+  fi
+
+  readonly result_command_arguments
+}
+
+function build_directory_list {
+  declare -n result_directory_list=$1
+  shift
+
+  declare directory_paths=()
+  declare root_path
+  for root_path in '' {"$COMMON_PATH","$APP_PATH"}/root; do
+    declare relative_directory_path
+    for relative_directory_path; do
+      declare directory_path=$root_path$relative_directory_path
+      [[ ! -d $directory_path ]] || directory_paths+=("$directory_path")
+    done
+  done
+  readonly directory_paths
+
+  declare -r ifs=$IFS
+  IFS=:
+  result_directory_list=${directory_paths[*]}
+  IFS=$ifs
+
+  readonly result_directory_list 2> /dev/null
+}
+
+function build_environment_variables {
+  declare -n result_environment_variables=$1
+  shift
+
+  result_environment_variables=()
+
+  declare -r root_path=$COMMON_PATH/root
+
+  [[ $APP_EXECUTABLE\  != AppRun\ * ]] || result_environment_variables[APPDIR]=$APP_PATH/dist
+  [[ -d /usr/share/X11/xkb ]] || result_environment_variables[QT_XKB_CONFIG_ROOT]=$root_path/usr/share/X11/xkb
+  [[ -f /etc/fonts/fonts.conf ]] || result_environment_variables[FONTCONFIG_PATH]=$root_path/etc/fonts
+
+  if type firejail &> /dev/null; then
+    result_environment_variables[BROWSER]=$root_path/usr/local/bin/browser
+    result_environment_variables[TUXAPP_URLS]=$APP_PATH/urls
+  fi
+
+  build_directory_list result_environment_variables\[LD_LIBRARY_PATH\] {,/usr}/lib{,32,64} {,/usr}/lib/{i386,x86_64}-linux-gnu /usr/lib/x86_64-linux-gnu/alsa-lib
+  build_language_list result_environment_variables\[LANGUAGE\]
+
+  LD_LIBRARY_PATH=${result_environment_variables[LD_LIBRARY_PATH]} build_gdk_pixbuf_path result_environment_variables\[GDK_PIXBUF_MODULE_FILE\]
+
+  readonly result_environment_variables
+}
+
+function build_firejail_arguments {
+  declare -n result_firejail_arguments=$1
+  declare -n argument_environment_variables=$2
+  shift 2
+
+  result_firejail_arguments=(firejail --protocol="unix,inet,inet6,netlink")
+
+  [[ ! ${TUXAPP_STRACE-} ]] || result_firejail_arguments+=(--allow-debuggers)
+
+  declare argument_environment_variable_name
+  for argument_environment_variable_name in "${!argument_environment_variables[@]}"; do
+    result_firejail_arguments+=(--env="$argument_environment_variable_name"="${argument_environment_variables[$argument_environment_variable_name]}")
+  done
+
+  result_firejail_arguments+=(--blacklist="$CACHE_PATH")
+
+  declare app_path
+  for app_path in "$BASE_PATH"/*; do
+    [[ ! -d $app_path || $app_path == "$APP_PATH" || $app_path == "$COMMON_PATH" ]] || result_firejail_arguments+=(--blacklist="$app_path")
+  done
+
+  declare blacklisted_path
+  for blacklisted_path in "${BLACKLISTED_PATHS[@]}"; do
+    result_firejail_arguments+=(--blacklist="$blacklisted_path")
+  done
+
+  eval "declare -r app_executable=($APP_EXECUTABLE)"
+  declare -r profile_path=/etc/firejail/${app_executable[0]##*/}.profile
+  if [[ -f $profile_path ]]; then
+    declare profile_contents
+    profile_contents=$(< "$profile_path")
+    if [[ $profile_contents =~ include\ ([^$'\n']) ]]; then
+      declare -r included_profile_path=/etc/firejail/${BASH_REMATCH[1]}.profile
+      [[ ! -f $included_profile_path ]] || profile_contents=$(< "$included_profile_path")
+    fi
+    readonly profile_contents
+
+    [[ $profile_contents != *whitelist\ * ]] || result_firejail_arguments+=(--whitelist="$APP_PATH"/dist)
+  fi
+
+  eval "result_firejail_arguments+=($APP_FIREJAIL $CUSTOM_FIREJAIL)"
+
+  readonly result_firejail_arguments
+}
+
+function build_gdk_pixbuf_path {
+  declare -n result_gdk_pixbuf_path=$1
+  shift
+
+  declare -r local_gdk_pixbuf_paths=(/usr/lib/*-linux-gnu/gdk-pixbuf-2.0)
+  if [[ ! -d ${local_gdk_pixbuf_paths[0]} ]]; then
+    declare common_gdk_pixbuf_path
+    for common_gdk_pixbuf_path in "$COMMON_PATH"/root/usr/lib/*-linux-gnu/gdk-pixbuf-2.0/*; do
+      if [[ -d $common_gdk_pixbuf_path ]]; then
+        result_gdk_pixbuf_path=$common_gdk_pixbuf_path/loaders.cache
+        [[ -f $result_gdk_pixbuf_path ]] || "${common_gdk_pixbuf_path%/*}"/gdk-pixbuf-query-loaders "$common_gdk_pixbuf_path"/loaders/* > "$result_gdk_pixbuf_path"
+      fi
+    done
+  fi
+
+  readonly result_gdk_pixbuf_path 2> /dev/null
+}
+
+function build_language_list {
+  declare -n result_language_list=$1
+  shift
+
+  declare language_list
+  if [[ ${LANGUAGE-} ]]; then
+    language_list=$LANGUAGE
+  elif [[ ${LANG-} ]]; then
+    language_list=${LANG%%.*}
+    [[ $language_list != *_* ]] || language_list=$language_list:${language_list%%_*}
+  fi
+  readonly language_list
+
+  if [[ ${language_list-} ]]; then
+    declare -r language_list_items=(${language_list//:/ })
+    declare -r locale_paths=("${language_list_items[@]/#//usr/share/locale/}")
+
+    declare language_directory_list
+    build_directory_list language_directory_list "${locale_paths[@]}"
+
+    # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=114461
+    [[ ! $language_directory_list ]] || result_language_list=../../..${language_directory_list//:/:../../..}
+  fi
+
+  readonly result_language_list 2> /dev/null
+}
+
+function check_firejail {
+  if type firejail &> /dev/null ]]; then
+    [[ ${WAYLAND_DISPLAY-} || " $APP_FIREJAIL $CUSTOM_FIREJAIL " == *\ --x11[\ =]* ]] || echo "X11 sandboxing is not enabled for this app" >&2
+    [[ ! $CUSTOM_FIREJAIL ]] || echo "Firejail will run this app with custom options: $CUSTOM_FIREJAIL" >&2
+  else
+    [[ ${TUXAPP_TEST-} ]] || echo "Firejail is not installed on your system and will not be used to sandbox this app" >&2
+  fi
+}
+
+function main {
+  check_firejail
+
+  declare -A environment_variables
+  build_environment_variables environment_variables
+
+  if type firejail &> /dev/null; then
+    [[ -f ${environment_variables[TUXAPP_URLS]} ]] || touch "${environment_variables[TUXAPP_URLS]}"
+    while read -r; do
+      setsid xdg-open "$REPLY" &
+    done < <(tail -f -n 0 --pid=$$ "${environment_variables[TUXAPP_URLS]}" 2> /dev/null) &
+
+    declare firejail_arguments
+    build_firejail_arguments firejail_arguments environment_variables
+  else
+    declare environment_variable_name
+    for environment_variable_name in "${!environment_variables[@]}"; do
+      export "$environment_variable_name"="${environment_variables[$environment_variable_name]}"
+    done
+
+    declare -r firejail_arguments
+  fi
+
+  declare command_arguments
+  build_command_arguments command_arguments environment_variables
+
+  exec "${firejail_arguments[@]}" "${command_arguments[@]}" "$@"
+}
+
+main "$@"
+""")
+
+def write_executable_file(file_path, file_contents):
+  target_file_path = write_file(file_path, file_contents)
+  return change_file_mode(target_file_path, lambda mode: mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+def write_file(file_path, file_contents=''): # pylint: disable=imperative-function
+  if os.path.isfile(file_path) and read_file(file_path) == file_contents:
     return touch_file(file_path)
   else:
     target_file_path = make_file_directories(file_path)
