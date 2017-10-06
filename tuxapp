@@ -312,7 +312,7 @@ def install_app(app_id):
 #     and install_packages(...) \
 #     and download_app(app_id) \
 #     and install_packages(app_id, ...) \
-#     and suppress_assert(download_file)(icon-url, ...) \
+#     and suppress_assert(download_file, True)(icon-url, ...) \
 #     and write_executable_file_contents(..., """\
 # """) \
 #     and write_file_contents(..., """\
@@ -446,7 +446,7 @@ def purge_cache():
 def read_app_info(app_id):
   local_app_info_path = "{}/apps/{}".format(os.path.dirname(__file__), app_id)
   app_info_path = local_app_info_path if os.path.isfile(local_app_info_path) \
-    else suppress_assert(download_app_info_needed, False)(app_id)
+    else suppress_assert(download_app_info_needed)(app_id)
   app_info_contents = read_file_contents(app_info_path) if app_info_path \
     else ''
   return dict(app_info_line.split('=', 1) for app_info_line in app_info_contents.splitlines())
@@ -517,7 +517,7 @@ def run_command(command_arguments): # pylint: disable=imperative-function
   except subprocess.CalledProcessError:
     return False
 
-def suppress_assert(function, overridden_result=True):
+def suppress_assert(function, overridden_result=False):
   def wrapper(*args, **kwargs): # pylint: disable=imperative-function
     try:
       return function(*args, **kwargs)
