@@ -7,7 +7,7 @@ init-hook="import sys; sys.path.append('.')"
 load-plugins=lib.functional_checker
 
 [MESSAGES CONTROL]
-disable=bad-continuation, deprecated-lambda, expression-not-assigned, invalid-name, line-too-long, locally-disabled, missing-docstring, too-many-locals
+disable=bad-continuation, deprecated-lambda, expression-not-assigned, invalid-name, line-too-long, locally-disabled, missing-docstring, too-many-lines, too-many-locals
 
 [REPORTS]
 reports=no
