@@ -2,6 +2,7 @@
 from __future__ import print_function
 import argparse
 import contextlib
+import distutils.dir_util
 import distutils.spawn
 import email.utils
 import functools
@@ -11,6 +12,7 @@ import mmap
 import os
 import platform
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -18,7 +20,7 @@ import sys
 import time
 
 try:
-  from shlex import quote
+  from shlex import quote # pylint: disable=ungrouped-imports
 except ImportError:
   from pipes import quote
 try:
@@ -31,11 +33,11 @@ __version__ = "1.0.0"
 os.environ.setdefault('XDG_CACHE_HOME', os.path.expanduser("~/.cache"))
 os.environ.setdefault('XDG_DATA_HOME', os.path.expanduser("~/.local/share"))
 
+APPLICATIONS_PATH = os.path.expandvars("$XDG_DATA_HOME/applications")
 BASE_PATH = os.path.expanduser("~/.tuxapp")
 CACHE_PATH = os.path.expandvars("$XDG_CACHE_HOME/tuxapp")
 COMMON_PATH = os.path.expanduser("~/.tuxapp/common")
 CURL_OPTIONS = ('-#Lf', '-H', "Accept-Language: en", '-m', '10', '--retry', '2')
-DATA_PATH = os.path.expandvars("$XDG_DATA_HOME")
 DEBIAN_MIRROR_URL = "https://cdn-aws.deb.debian.org/"
 DEBIAN_RELEASE_NAME = 'stretch'
 GITHUB_REPOSITORY = "sgtpep/tuxapp"
@@ -81,12 +83,19 @@ def assert_result(error_text):
     return wrapper
   return decorator
 
+def check_firejail_options(app_firejail_options, custom_firejail_options):
+  firejail_options = "{} {}".format(app_firejail_options, custom_firejail_options)
+  return ('WAYLAND_DISPLAY' in os.environ or re.search(r"--x11\b", firejail_options) \
+        or output_message("X11 sandboxing is not enabled for this app")) \
+      and (not custom_firejail_options \
+        or output_message("Firejail will run this app with custom options: {}".format(custom_firejail_options))) if is_command_executable('firejail') \
+    else output_message("Firejail is not installed on your system and will not be used to sandbox this app")
+
 def configure_common_fontconfig():
   root_path = "{}/root".format(COMMON_PATH)
   config_directory_path = "{}/etc/fonts/conf.d".format(root_path)
   return all(symlink_file(config_path, "../../..{}".format(os.readlink(config_path))) for config_path in glob.glob("{}/*".format(config_directory_path)) if os.path.islink(config_path) and os.readlink(config_path).startswith('/')) \
-    and write_file("{}/50-tuxapp.conf".format(config_directory_path), r"""\
-<fontconfig>
+    and write_file("{}/50-tuxapp.conf".format(config_directory_path), r"""<fontconfig>
   <dir>{}/usr/share/fonts</dir>
 </fontconfig>
 """.format(root_path.replace(os.path.expanduser('~'), '~'))) \
@@ -133,19 +142,23 @@ def check_app_installed(app_id):
     and app_id
 
 def check_app_updated(app_id):
-  installed_app_id = check_app_installed(app_id)
-  app_version = read_app_version(installed_app_id)
-  fetched_app_version = fetch_app_version_needed(installed_app_id)
+  app_version = read_app_version(app_id)
+  fetched_app_version = fetch_app_version_needed(app_id)
   return app_version != fetched_app_version \
-    and output_message("{} can be updated from {} to {}".format(installed_app_id, app_version, fetched_app_version))
+    and output_text("{} can be updated from {} to {}".format(app_id, app_version, fetched_app_version))
 
 def check_apps_updated(app_ids=()):
-  target_app_ids = tuple(check_app_installed(app_id) for app_id in app_ids) \
+  target_app_ids = app_ids \
     or get_installed_app_ids()
   updated_app_ids = tuple(target_app_id for target_app_id in target_app_ids if check_app_updated(target_app_id))
   message_text = "Updates available: {}".format(", ".join(updated_app_ids)) if updated_app_ids \
     else "No updates"
   return output_message(message_text)
+
+def copy_directory_contents(source_path, destination_path): # pylint: disable=imperative-function
+  distutils.dir_util._path_created = {} # pylint: disable=protected-access
+  distutils.dir_util.copy_tree(source_path, destination_path, update=True)
+  return destination_path
 
 def copy_file_contents(source_file, destination_file, source_offset=0, source_size=None, chunk_size=65536): # pylint: disable=imperative-function
   with source_file, destination_file:
@@ -157,6 +170,26 @@ def copy_file_contents(source_file, destination_file, source_offset=0, source_si
     else:
       shutil.copyfileobj(source_file, destination_file, chunk_size)
   return True
+
+def detect_app_bin_executable_command(app_id):
+  dist_path = "{}/{}/dist".format(BASE_PATH, app_id)
+  bin_paths = glob.glob("{}/usr/bin/*".format(dist_path))
+  return bin_paths \
+    and os.access(bin_paths[0], os.X_OK) \
+    and bin_paths[0].replace("{}/".format(dist_path), '')
+
+@assert_result("Unable to determine the executable file of {}")
+def detect_app_executable_command(app_id):
+  dist_path = "{}/{}/dist".format(BASE_PATH, app_id)
+  return 'AppRun' if os.access("{}/AppRun".format(dist_path), os.X_OK) \
+    else detect_app_bin_executable_command(app_id) if os.path.isdir("{}/usr/bin".format(dist_path)) \
+    else detect_app_top_executable_command(app_id)
+
+def detect_app_top_executable_command(app_id):
+  dist_path = "{}/{}/dist".format(BASE_PATH, app_id)
+  executable_paths = tuple(top_path for top_path in glob.glob("{}/*".format(dist_path)) if os.access(top_path, os.X_OK) and os.path.basename(top_path).lower() == app_id.lower())
+  return executable_paths \
+    and executable_paths[0].replace("{}/".format(dist_path), '')
 
 @assert_result("Unknown architecture")
 def detect_architecture_name():
@@ -226,12 +259,11 @@ def download_files_needed(urls, output_directory_path=CACHE_PATH):
   return existing_paths + downloaded_paths
 
 def execute_command(command_arguments, environment_variables=None): # pylint: disable=imperative-function
-  if environment_variables:
-    command_environment_variables = os.environ.copy()
-    command_environment_variables.update(environment_variables)
-    os.execvpe(command_arguments[0], command_arguments, command_environment_variables)
-  else:
+  if environment_variables is None:
     os.execvp(command_arguments[0], command_arguments)
+  else:
+    command_environment_variables = dict(os.environ, **environment_variables)
+    os.execvpe(command_arguments[0], command_arguments, command_environment_variables)
 
 def extract_app_id(app):
   return app.split('/')[-1]
@@ -242,8 +274,8 @@ def extract_package_name(package_path):
 def extract_package_version(package_path):
   return package_path.split('_', 2)[1]
 
-@assert_result("Failed to fetch a version of {}")
-@log_message("Fetching a version of {}")
+@assert_result("Failed to fetch the version number of {}")
+@log_message("Fetching the version number of {}")
 def fetch_app_version(app_id):
   app_info = read_app_info(app_id)
   request_arguments = build_request_arguments(
@@ -260,10 +292,10 @@ def fetch_app_version(app_id):
     else ''
 
 def fetch_app_version_needed(app_id):
+  app_version = read_app_version(app_id)
   version_path = "{}/{}/version".format(BASE_PATH, app_id)
   is_version_old = is_file_old(version_path)
-  app_version = read_app_version(app_id)
-  fetched_app_version = fetch_app_version(app_id) if is_version_old \
+  fetched_app_version = fetch_app_version(app_id) if not app_version or is_version_old \
     else app_version
   return touch_file(version_path) \
       and fetched_app_version if is_version_old and app_version == fetched_app_version \
@@ -304,10 +336,12 @@ def filter_format_argument(format_argument):
     else ", ".join(format_argument) if hasattr(format_argument, '__iter__') \
     else format_argument
 
-def get_command_output(command_arguments): # pylint: disable=imperative-function
+def get_command_output(command_arguments, environment_variables=None): # pylint: disable=imperative-function
   try:
+    command_environment_variables = None if environment_variables is None \
+      else dict(os.environ, **environment_variables)
     is_shell_command = is_string(command_arguments)
-    return subprocess.check_output(command_arguments, shell=is_shell_command).decode('utf8')
+    return subprocess.check_output(command_arguments, env=command_environment_variables, shell=is_shell_command).decode('utf8')
   except subprocess.CalledProcessError:
     return ''
 
@@ -315,21 +349,106 @@ def get_file_mtime(file_path):
   return os.path.getmtime(file_path) if os.path.isfile(file_path) \
     else 0
 
+def get_file_paths_prefix(file_paths):
+  get_file_path_prefix = lambda file_path: file_path.lstrip("./").split('/', 1)[0]
+  file_path_prefix = get_file_path_prefix(file_paths[0]) if file_paths \
+    else ''
+  is_file_path_prefix_common = all(get_file_path_prefix(file_path) == file_path_prefix for file_path in file_paths)
+  return file_path_prefix if is_file_path_prefix_common \
+    else ''
+
 @assert_result("No apps are installed")
 def get_installed_app_ids():
   return tuple(sorted(os.path.basename(os.path.dirname(version_path)) for version_path in glob.glob("{}/*/version".format(BASE_PATH))))
 
 def install_app(app_id):
-  return install_common()
-#     and install_packages(...) \
-#     and download_app(app_id) \
-#     and install_packages(app_id, ...) \
-#     and suppress_assert(download_file, True)(icon-url, ...) \
-#     and write_executable_file_contents(..., r"""\
-# """) \
-#     and write_file(..., r"""\
-# """) \
-#     and True
+  app_version = read_app_version(app_id)
+  fetched_app_version = fetch_app_version_needed(app_id)
+  message_text = "{} {} is up to date".format(app_id, app_version) if app_version == fetched_app_version \
+    else "Updated {} to {}".format(app_id, fetched_app_version) if app_version \
+    else "Installed {} {}".format(app_id, fetched_app_version)
+  app_path = "{}/{}".format(BASE_PATH, app_id)
+  return install_common() \
+    and install_app_distribution_needed(app_id, fetched_app_version) \
+    and install_app_packages(app_id) \
+    and install_app_run_script(app_id) \
+    and (app_version == fetched_app_version \
+      or install_app_icon(app_id)) \
+    and install_app_desktop_entry(app_id) \
+    and output_message(message_text) \
+    and app_path
+
+def install_app_desktop_entry(app_id):
+  desktop_entry_path = "{}/tuxapp-{}.desktop".format(APPLICATIONS_PATH, app_id)
+  app_info = read_app_info(app_id)
+  app_path = "{}/{}".format(BASE_PATH, app_id)
+  parent_desktop_entry_category = "AudioVideo;" if app_info.get('category') in ('Audion', 'Video') \
+    else ''
+  desktop_entry_category = "{}{};".format(parent_desktop_entry_category, app_info.get('category', '').title())
+  app_name = app_info.get('name', app_id)
+  is_desktop_entry_existing = os.path.isfile(desktop_entry_path)
+  return write_file(desktop_entry_path, r"""[Desktop Entry]
+Categories={1}
+Comment={2}
+Exec={0}/run %U
+Icon={0}/icon
+Name={3}
+TryExec={0}/run
+Type=Application
+""".format(app_path, desktop_entry_category, app_info.get('title', ''), app_name)) \
+    and (is_desktop_entry_existing \
+      or output_message("Added the menu item '{}'".format(app_name))) \
+    and desktop_entry_path
+
+def install_app_distribution(app_id, app_version=None):
+  dist_path = "{}/{}/dist".format(BASE_PATH, app_id)
+  target_app_version = app_version \
+    or fetch_app_version_needed(app_id)
+  download_urls = read_app_download_urls(app_id, target_app_version)
+  download_paths = tuple(download_file_needed(download_url, "{}/{}-{}".format(CACHE_PATH, app_id, target_app_version)) for download_url in download_urls)
+  return all(unpack_distribution(download_path, dist_path) for download_path in download_paths) \
+    and write_file("{}/{}/version".format(BASE_PATH, app_id), "{}\n".format(target_app_version)) \
+    and dist_path
+
+def install_app_distribution_needed(app_id, app_version=None):
+  installed_app_version = read_app_version(app_id)
+  target_app_version = app_version \
+    or fetch_app_version_needed(app_id)
+  return "{}/{}/dist".format(BASE_PATH, app_id) if installed_app_version == target_app_version \
+    else install_app_distribution(app_id, target_app_version)
+
+def install_app_icon(app_id):
+  app_info = read_app_info(app_id)
+  icon_path = "{}/{}/icon".format(BASE_PATH, app_id)
+  return suppress_assert(download_file, icon_path)(app_info['icon-url'], icon_path) if app_info.get('icon-url') \
+    else icon_path
+
+def install_app_packages(app_id):
+  app_info = read_app_info(app_id)
+  return install_packages(app_id, app_info['tuxapp-packages'].split()) if app_info.get('tuxapp-packages') \
+    else True
+
+def install_app_run_script(app_id):
+  run_script_path = "{}/{}/run".format(BASE_PATH, app_id)
+  run_script_contents = read_file(run_script_path)
+  custom_firejail_match = re.search(r"\nCUSTOM_FIREJAIL=([^\n]*)", run_script_contents)
+  custom_firejail_value = custom_firejail_match.group(1) if custom_firejail_match \
+    else quote('')
+  app_info = read_app_info(app_id)
+  executable_command = sanitize_command(app_info.get('tuxapp-executable', '')) \
+    or detect_app_executable_command(app_id)
+  firejail_options = sanitize_command(app_info.get('tuxapp-firejail', ''))
+  splitted_custom_firejail_value = split_command(custom_firejail_value)
+  custom_firejail_options = splitted_custom_firejail_value[0] if splitted_custom_firejail_value \
+    else ''
+  return check_firejail_options(firejail_options, custom_firejail_options) \
+    and write_executable_file(run_script_path, r"""#!/bin/bash
+CUSTOM_FIREJAIL={}
+
+APP_EXECUTABLE={}
+APP_FIREJAIL={}
+. "${{0%/*/*}}"/common/run.sh
+""".format(custom_firejail_value, quote(executable_command), quote(firejail_options)))
 
 def install_apps(app_ids=()):
   target_app_ids = app_ids \
@@ -337,304 +456,16 @@ def install_apps(app_ids=()):
   return all(install_app(target_app_id) for target_app_id in target_app_ids)
 
 def install_common():
-  return install_packages('common', COMMON_PACKAGE_NAMES, IGNORED_PACKAGE_NAMES + IGNORED_COMMON_PACKAGE_NAMES) \
+  return install_packages('common', COMMON_PACKAGE_NAMES) \
     and configure_common_fontconfig() \
-    and write_executable_file("{}/root/usr/local/bin/browser".format(COMMON_PATH), r"""\
-#!/bin/sh
+    and write_executable_file("{}/root/usr/local/bin/browser".format(COMMON_PATH), r"""#!/bin/sh
 echo "$1" > "$TUXAPP_URLS"
 """) \
-    and write_common_run_script() \
-    and True
+    and install_common_run_script() \
+    and COMMON_PATH
 
-def install_package_file(app_id, package_path):
-  return unpack_package_silently(package_path, "{}/{}/root".format(BASE_PATH, app_id)) \
-    and True
-
-def install_package_file_needed(app_id, package_path):
-  package_name = extract_package_name(package_path)
-  installed_package_version = read_file("{}/{}/packages/{}".format(BASE_PATH, app_id, package_name))
-  package_version = extract_package_version(package_path)
-  return True if package_version == installed_package_version \
-    else install_package_file(app_id, package_path) \
-      and write_file("{}/{}/packages/{}".format(BASE_PATH, app_id, package_name), package_version) \
-      and True
-
-def install_packages(app_id, package_names, ignored_package_names):
-  package_urls = resolve_package_urls_needed(package_names, ignored_package_names)
-  package_paths = download_files_needed(package_urls)
-  return all(install_package_file_needed(app_id, package_path) for package_path in package_paths)
-
-def is_command_executable(executable_name):
-  return bool(distutils.spawn.find_executable(executable_name))
-
-def is_file_old(file_path, age_seconds=60):
-  return time.time() - get_file_mtime(file_path) > age_seconds
-
-def is_string(value):
-  return isinstance(value, (''.__class__, u''.__class__))
-
-def join_command_arguments(command_arguments):
-  return ' '.join(quote(command_argument) for command_argument in command_arguments)
-
-def list_all_apps():
-  message_text = fetch_grep_url("https://api.github.com/repos/{}/contents/apps".format(GITHUB_REPOSITORY), ('-Po', "(?<=\"name\": \")[^\"]+"))
-  return output_message(message_text)
-
-def list_installed_app(app_id):
-  app_version = read_app_version(app_id)
-  return output_message("{} {}".format(app_id, app_version))
-
-def list_installed_apps():
-  app_ids = get_installed_app_ids()
-  return all(list_installed_app(app_id) for app_id in app_ids)
-
-@handle_exceptions
-def main():
-  parsed_arguments = parse_arguments(sys.argv[1:])
-  app_ids = tuple(extract_app_id(app) for app in parsed_arguments.apps)
-  return list_all_apps() if parsed_arguments.all \
-    else check_apps_updated(app_ids) if parsed_arguments.check \
-    else install_apps(app_ids) if parsed_arguments.install \
-    else list_installed_apps() if parsed_arguments.list \
-    else purge_cache() if parsed_arguments.purge \
-    else run_app(app_ids[0], tuple(parsed_arguments.apps[1:])) if parsed_arguments.run and app_ids \
-    else uninstall_apps(app_ids) if parsed_arguments.uninstall \
-    else False
-
-def make_directories(directory_path): # pylint: disable=imperative-function
-  if not os.path.isdir(directory_path):
-    os.makedirs(directory_path)
-  return directory_path
-
-def make_file_directories(file_path):
-  return make_directories(os.path.dirname(file_path)) \
-    and file_path
-
-def output_message(message_text=''): # pylint: disable=imperative-function
-  print(message_text)
-  return True
-
-def parse_arguments(arguments): # pylint: disable=imperative-function
-  argument_parser = argparse.ArgumentParser(description=u"%(prog)s downloads and installs the latest official releases of Linux\N{COPYRIGHT SIGN} applications including dependencies without root permissions and allows to run them sandboxed.", epilog="ISC License, (c) 2017 Danil Semelenov, https://github.com/{}".format(GITHUB_REPOSITORY))
-  argument_parser.add_argument('-a', '--all', action='store_true', help="list apps available for installation")
-  argument_parser.add_argument('-c', '--check', action='store_true', help="check installed apps for updates")
-  argument_parser.add_argument('-i', '--install', action='store_true', help="install or update apps; update all installed apps if no arguments are provided")
-  argument_parser.add_argument('-l', '--list', action='store_true', help="list installed apps")
-  argument_parser.add_argument('-p', '--purge', action='store_true', help="purge cache")
-  argument_parser.add_argument('-r', '--run', action='store_true', help="run an installed app")
-  argument_parser.add_argument('-u', '--uninstall', action='store_true', help="uninstall installed apps")
-  argument_parser.add_argument('-v', '--version', action='version', version="%(prog)s {}".format(__version__))
-  argument_parser.add_argument('apps', help="an app identifier", metavar='app', nargs='*')
-  return argument_parser.parse_args(arguments or ('-h',))
-
-@assert_result("Failed to parse {}")
-def parse_package_file_info(package_path): # pylint: disable=imperative-function
-  with open(package_path, 'rb') as package_file, contextlib.closing(mmap.mmap(package_file.fileno(), 0, access=mmap.ACCESS_READ)) as package_memory_map:
-    data_header_start_offset = package_memory_map.find(b"data.tar.")
-    data_header_end_offset = package_memory_map.find(b"`\n", data_header_start_offset)
-    data_filename, _, _, _, _, data_size = package_memory_map[data_header_start_offset:data_header_end_offset].decode('utf8').split()
-  return {
-    'data_extension': os.path.splitext(data_filename)[1][1:],
-    'data_offset': data_header_end_offset + 2,
-    'data_size': int(data_size),
-  } if data_filename and data_header_end_offset != -1 \
-    else {}
-
-@assert_result("Unknown package: {}")
-def parse_package_info(package_name):
-  package_list_paths = update_package_lists_needed()
-  grep_arguments = ('grep', '-Fh', '-C', '1', '-m', '1', "/{}_".format(package_name)) + package_list_paths
-  grep_output = get_command_output(grep_arguments)
-  grep_lines = re.sub(r"\n--\n.+$", '', grep_output, flags=re.S).strip('\n').splitlines()
-  return dict(grep_line.split(": ", 1) for grep_line in grep_lines)
-
-def purge_cache():
-  return remove_directory(CACHE_PATH) \
-    and output_message("Purged cache")
-
-@assert_result("{} was not found")
-def read_app_info(app_id):
-  local_app_info_path = "{}/apps/{}".format(os.path.dirname(__file__), app_id)
-  app_info_path = local_app_info_path if os.path.isfile(local_app_info_path) \
-    else suppress_assert(download_app_info_needed)(app_id)
-  app_info_contents = read_file(app_info_path) if app_info_path \
-    else ''
-  return dict(app_info_line.split('=', 1) for app_info_line in app_info_contents.splitlines())
-
-def read_app_version(app_id):
-  return read_file("{}/{}/version".format(BASE_PATH, app_id)).rstrip()
-
-def read_file(file_path): # pylint: disable=imperative-function
-  if os.path.isfile(file_path):
-    with open(file_path) as file_file:
-      return file_file.read().decode('utf8')
-  else:
-    return ''
-
-def remove_directory(directory_path): # pylint: disable=imperative-function
-  if os.path.isdir(directory_path):
-    shutil.rmtree(directory_path)
-  return True
-
-def remove_file(file_path): # pylint: disable=imperative-function
-  if os.path.isfile(file_path):
-    os.remove(file_path)
-  return True
-
-def rename_file(source_path, destination_path): # pylint: disable=imperative-function
-  target_destination_path = make_file_directories(destination_path)
-  os.rename(source_path, target_destination_path)
-  return target_destination_path
-
-@log_message("Resolving packages: {}")
-def resolve_package_urls(package_names, ignored_package_names=()):
-  resolved_package_names = {}
-  return tuple(package_url for package_name in package_names for package_url in resolve_package_urls_recursive(package_name, ignored_package_names, resolved_package_names))
-
-def resolve_package_urls_needed(package_names, ignored_package_names=()):
-  package_urls_key = "{}\n{}".format(','.join(sorted(package_names)), ','.join(sorted(ignored_package_names)))
-  package_urls_hash = hashlib.md5(package_urls_key).hexdigest()
-  package_urls_path = "{}/resolved-packages-{}".format(CACHE_PATH, package_urls_hash)
-  package_urls_mtime = get_file_mtime(package_urls_path)
-  package_list_paths = update_package_lists_needed()
-  is_package_list_updated = any(get_file_mtime(package_list_path) > package_urls_mtime for package_list_path in package_list_paths)
-  package_urls = resolve_package_urls(package_names, ignored_package_names) if is_package_list_updated \
-    else tuple(read_file(package_urls_path).splitlines())
-  return write_file(package_urls_path, '\n'.join(package_urls)) \
-      and package_urls if is_package_list_updated \
-    else package_urls
-
-def resolve_package_urls_recursive(package_name, ignored_package_names=(), resolved_package_names=None):
-  package_info = parse_package_info(package_name)
-  depend_package_names = package_info.get('Depends', '').split()
-  package_urls = () if package_name in resolved_package_names \
-    else ("{}{}".format(DEBIAN_MIRROR_URL, package_info['Filename']),)
-  updated_resolved_package_names = {} if resolved_package_names is None \
-    else resolved_package_names
-  updated_resolved_package_names[package_name] = True
-  depend_package_urls = tuple(resolved_package_url for depend_package_name in depend_package_names if not depend_package_name in ignored_package_names and not depend_package_name in updated_resolved_package_names for resolved_package_url in resolve_package_urls_recursive(depend_package_name, ignored_package_names, updated_resolved_package_names))
-  return package_urls + depend_package_urls
-
-def run_app(app_id, app_arguments=()):
-  installed_app_id = check_app_installed(app_id)
-  run_arguments = ("{}/{}/run".format(BASE_PATH, installed_app_id),) + app_arguments
-  return execute_command(run_arguments)
-
-def run_command(command_arguments): # pylint: disable=imperative-function
-  try:
-    is_shell_command = is_string(command_arguments)
-    return subprocess.check_call(command_arguments, shell=is_shell_command) == 0
-  except subprocess.CalledProcessError:
-    return False
-
-def symlink_file(file_path, target_path):
-  if os.path.islink(file_path):
-    os.remove(file_path)
-  os.symlink(target_path, file_path)
-  return True
-
-def suppress_assert(function, overridden_result=False):
-  def wrapper(*args, **kwargs): # pylint: disable=imperative-function
-    try:
-      return function(*args, **kwargs)
-    except AssertionError:
-      return overridden_result
-  return wrapper
-
-def touch_file(file_path, file_timestamp=None): # pylint: disable=imperative-function
-  target_file_path = file_path if os.path.isfile(file_path) \
-    else write_file(file_path)
-  file_timestamps = None if file_timestamp is None \
-    else (file_timestamp, file_timestamp)
-  os.utime(target_file_path, file_timestamps)
-  return target_file_path
-
-def uninstall_app(app_id):
-  installed_app_id = check_app_installed(app_id)
-  return remove_file("{}/icons/tuxapp-{}".format(DATA_PATH, installed_app_id)) \
-    and remove_file("{}/applications/tuxapp-{}.desktop".format(DATA_PATH, installed_app_id)) \
-    and remove_directory("{}/{}".format(BASE_PATH, installed_app_id)) \
-    and output_message("Uninstalled {}".format(installed_app_id))
-
-def uninstall_apps(app_ids):
-  installed_app_ids = tuple(check_app_installed(app_id) for app_id in app_ids)
-  return all(uninstall_app(installed_app_id) for installed_app_id in installed_app_ids)
-
-@log_message("Unpacking {}")
-def unpack_package(package_path, output_path):
-  return unpack_package_silently(package_path, output_path, True)
-
-@assert_result("Failed to unpack {}")
-def unpack_package_silently(package_path, output_path, is_verbose=False):
-  package_info = parse_package_file_info(package_path)
-  tar_filter_option = {
-    'bz2': '-j',
-    'gz': '-z',
-    'lzma': '--lzma',
-    'xz': '-J',
-  }[package_info['data_extension']]
-  target_output_path = make_directories(output_path)
-  tar_progress_options = ("--checkpoint=.250",) if is_verbose \
-    else ()
-  tar_arguments = ('tar', '-x', tar_filter_option, '-C', target_output_path,
-    "--exclude=./usr/share/doc",
-    "--exclude=./usr/share/doc-base",
-    "--exclude=./usr/share/lintian,man",
-    "--exclude=./usr/share/man",
-  ) + tar_progress_options
-  tar_process = subprocess.Popen(tar_arguments, stdin=subprocess.PIPE)
-  return copy_file_contents(open(package_path, 'rb'), tar_process.stdin, package_info['data_offset'], package_info['data_size']) \
-    and tar_process.wait() == 0 \
-    and (not is_verbose \
-      or output_message()) \
-    and target_output_path
-
-@log_message("Unpacking {}")
-def unpack_tarball(package_path, output_path, tar_options=()):
-  return unpack_tarball_silently(package_path, output_path, tar_options, True)
-
-@assert_result("Failed to unpack {}")
-def unpack_tarball_silently(tarball_path, output_path, tar_options=(), is_verbose=False):
-  target_output_path = make_directories(output_path)
-  tar_progress_options = ("--checkpoint=.250",) if is_verbose \
-    else ()
-  tar_arguments = ('tar', '-x', '-C', target_output_path, '-f', tarball_path) + tar_progress_options + tar_options
-  return run_command(tar_arguments) \
-    and (not is_verbose \
-      or output_message()) \
-    and target_output_path
-
-def update_package_list(package_list_url, package_list_path):
-  package_list_headers = fetch_url_headers(package_list_url)
-  last_modified_match = re.search(r"\sLast-Modified: ([^\n]+)", package_list_headers)
-  last_modified_timestamp = time.mktime(email.utils.parsedate(last_modified_match.group(1))) if last_modified_match \
-    else time.time()
-  archive_path = "{}.xz".format(package_list_path)
-  downloaded_archive_path = download_file(package_list_url, archive_path) if last_modified_timestamp > get_file_mtime(archive_path) \
-    else archive_path
-  package_list_url_prefix = urlparse(package_list_url).path.split('/')[1]
-  extract_command = r"""xzgrep "^\(\(Depends\|Filename\): \|$\)" {} | sed "s/ ([^)]\+)//g; s/ | [^,]\+//g; s/:any//g; s/, / /g; s/^Filename: /\0{}\//" > {}""".format(quote(downloaded_archive_path), quote(package_list_url_prefix), quote(package_list_path))
-  return run_command(extract_command) \
-      and package_list_path if get_file_mtime(downloaded_archive_path) > get_file_mtime(package_list_path) \
-    else package_list_path
-
-def update_package_list_needed(package_list_url):
-  package_list_hash = hashlib.md5(package_list_url).hexdigest()
-  package_list_path = "{}/package-list-{}".format(CACHE_PATH, package_list_hash)
-  return update_package_list(package_list_url, package_list_path) \
-      and touch_file(package_list_path) if is_file_old(package_list_path) \
-    else package_list_path
-
-def update_package_lists_needed():
-  debian_architecture_name = detect_debian_architecture_name()
-  return (
-    update_package_list_needed("{}debian-security/dists/{}/updates/main/binary-{}/Packages.xz".format(DEBIAN_MIRROR_URL, DEBIAN_RELEASE_NAME, debian_architecture_name)),
-    update_package_list_needed("{}debian/dists/{}/main/binary-{}/Packages.xz".format(DEBIAN_MIRROR_URL, DEBIAN_RELEASE_NAME, debian_architecture_name)),
-  )
-
-def write_common_run_script():
-  return write_file("{}/run.sh".format(COMMON_PATH), r"""\
-#!/bin/bash
+def install_common_run_script():
+  return write_file("{}/run.sh".format(COMMON_PATH), r"""#!/bin/bash
 set -eu -o pipefail
 
 declare -r APP_PATH=${0%/*}
@@ -808,7 +639,7 @@ function build_language_list {
   readonly result_language_list 2> /dev/null
 }
 
-function check_firejail {
+function check_firejail_options {
   if type firejail &> /dev/null ]]; then
     [[ ${WAYLAND_DISPLAY-} || " $APP_FIREJAIL $CUSTOM_FIREJAIL " == *\ --x11[\ =]* ]] || echo "X11 sandboxing is not enabled for this app" >&2
     [[ ! $CUSTOM_FIREJAIL ]] || echo "Firejail will run this app with custom options: $CUSTOM_FIREJAIL" >&2
@@ -818,7 +649,7 @@ function check_firejail {
 }
 
 function main {
-  check_firejail
+  check_firejail_options
 
   declare -A environment_variables
   build_environment_variables environment_variables
@@ -848,6 +679,383 @@ function main {
 
 main "$@"
 """)
+
+def install_package_file(app_id, package_path):
+  package_name = extract_package_name(package_path)
+  package_version = extract_package_version(package_path)
+  return unpack_package_silently(package_path, "{}/{}/root".format(BASE_PATH, app_id)) \
+    and write_file("{}/{}/packages/{}".format(BASE_PATH, app_id, package_name), "{}\n".format(package_version)) \
+    and True
+
+def install_package_file_needed(app_id, package_path):
+  package_version = extract_package_version(package_path)
+  package_name = extract_package_name(package_path)
+  installed_package_version = read_file("{}/{}/packages/{}".format(BASE_PATH, app_id, package_name)).rstrip()
+  return package_version == installed_package_version \
+    or install_package_file(app_id, package_path)
+
+def install_packages(app_id, package_names):
+  ignored_package_names = IGNORED_COMMON_PACKAGE_NAMES if app_id == 'common' \
+    else resolve_common_package_names()
+  package_urls = resolve_package_urls_needed(package_names, IGNORED_PACKAGE_NAMES + ignored_package_names)
+  package_paths = download_files_needed(package_urls)
+  return all(install_package_file_needed(app_id, package_path) for package_path in package_paths)
+
+def is_command_executable(executable_name):
+  return bool(distutils.spawn.find_executable(executable_name))
+
+def is_file_old(file_path, age_seconds=60):
+  return time.time() - get_file_mtime(file_path) > age_seconds
+
+def is_file_older(file_path, another_file_path):
+  return get_file_mtime(file_path) > get_file_mtime(another_file_path)
+
+def is_string(value):
+  return isinstance(value, (''.__class__, u''.__class__))
+
+def join_command_arguments(command_arguments):
+  return ' '.join(quote(command_argument) for command_argument in command_arguments)
+
+def list_all_apps():
+  message_text = fetch_grep_url("https://api.github.com/repos/{}/contents/apps".format(GITHUB_REPOSITORY), ('-Po', "(?<=\"name\": \")[^\"]+"))
+  return output_text(message_text)
+
+def list_installed_app(app_id):
+  app_version = read_app_version(app_id)
+  return output_text("{} {}".format(app_id, app_version))
+
+def list_installed_apps():
+  app_ids = get_installed_app_ids()
+  return all(list_installed_app(app_id) for app_id in app_ids)
+
+@handle_exceptions
+def main():
+  parsed_arguments = parse_arguments(sys.argv[1:])
+  app_ids = tuple(extract_app_id(app) for app in parsed_arguments.apps)
+  installed_app_ids = tuple(check_app_installed(app_id) for app_id in app_ids) if parsed_arguments.check or parsed_arguments.uninstall \
+    else (check_app_installed(app_ids[0]),) if parsed_arguments.run and app_ids \
+    else ()
+  return list_all_apps() if parsed_arguments.all \
+    else check_apps_updated(installed_app_ids) if parsed_arguments.check \
+    else install_apps(app_ids) if parsed_arguments.install \
+    else list_installed_apps() if parsed_arguments.list \
+    else purge_cache() if parsed_arguments.purge \
+    else run_app(installed_app_ids[0], tuple(parsed_arguments.apps[1:])) if parsed_arguments.run and installed_app_ids \
+    else uninstall_apps(installed_app_ids) if parsed_arguments.uninstall \
+    else False
+
+def make_directories(directory_path): # pylint: disable=imperative-function
+  if not os.path.isdir(directory_path):
+    os.makedirs(directory_path)
+  return directory_path
+
+def make_file_directories(file_path):
+  return make_directories(os.path.dirname(file_path)) \
+    and file_path
+
+def move_directory_contents(source_path, destination_path):
+  removable_path = os.path.dirname(source_path) if len(glob.glob("{}/*".format(os.path.dirname(source_path)))) == 1 \
+    else source_path
+  target_destination_path = copy_directory_contents(source_path, destination_path)
+  return remove_directory(removable_path) \
+    and target_destination_path
+
+def output_message(message_text=''): # pylint: disable=imperative-function
+  print(message_text, file=sys.stderr)
+  return True
+
+def output_text(text=''): # pylint: disable=imperative-function
+  print(text)
+  return True
+
+def parse_arguments(arguments): # pylint: disable=imperative-function
+  argument_parser = argparse.ArgumentParser(description=u"%(prog)s downloads and installs the latest official releases of Linux\N{COPYRIGHT SIGN} applications including dependencies without root permissions and allows to run them sandboxed.", epilog="ISC License, (c) 2017 Danil Semelenov, https://github.com/{}".format(GITHUB_REPOSITORY))
+  argument_parser.add_argument('-a', '--all', action='store_true', help="list apps available for installation")
+  argument_parser.add_argument('-c', '--check', action='store_true', help="check installed apps for updates")
+  argument_parser.add_argument('-i', '--install', action='store_true', help="install or update apps; update all installed apps if no arguments are provided")
+  argument_parser.add_argument('-l', '--list', action='store_true', help="list installed apps")
+  argument_parser.add_argument('-p', '--purge', action='store_true', help="purge cache")
+  argument_parser.add_argument('-r', '--run', action='store_true', help="run an installed app")
+  argument_parser.add_argument('-u', '--uninstall', action='store_true', help="uninstall installed apps")
+  argument_parser.add_argument('-v', '--version', action='version', version="%(prog)s {}".format(__version__))
+  argument_parser.add_argument('apps', help="an app identifier", metavar='app', nargs='*')
+  return argument_parser.parse_args(arguments or ('-h',))
+
+@assert_result("Failed to parse {}")
+def parse_package_file_info(package_path): # pylint: disable=imperative-function
+  with open(package_path, 'rb') as package_file, contextlib.closing(mmap.mmap(package_file.fileno(), 0, access=mmap.ACCESS_READ)) as package_memory_map:
+    data_header_start_offset = package_memory_map.find(b"data.tar.")
+    data_header_end_offset = package_memory_map.find(b"`\n", data_header_start_offset)
+    data_filename, _, _, _, _, data_size = package_memory_map[data_header_start_offset:data_header_end_offset].decode('utf8').split()
+  return {
+    'data_extension': os.path.splitext(data_filename)[1][1:],
+    'data_offset': data_header_end_offset + 2,
+    'data_size': int(data_size),
+  } if data_filename and data_header_end_offset != -1 \
+    else {}
+
+@assert_result("Unknown package: {}")
+def parse_package_info(package_name):
+  package_list_paths = update_package_lists_needed()
+  grep_arguments = ('grep', '-Fh', '-C', '1', '-m', '1', "/{}_".format(package_name)) + package_list_paths
+  grep_output = get_command_output(grep_arguments)
+  grep_lines = re.sub(r"\n--\n.+$", '', grep_output, flags=re.S).strip('\n').splitlines()
+  return dict(grep_line.split(": ", 1) for grep_line in grep_lines)
+
+def purge_cache():
+  return remove_directory(CACHE_PATH) \
+    and output_message("Purged cache")
+
+@assert_result("No download URL of {} for your architecture")
+def read_app_download_urls(app_id, app_version=None):
+  app_info = read_app_info(app_id)
+  architecture_name = detect_architecture_name()
+  download_url = app_info.get('download-{}-url'.format(architecture_name))
+  target_app_version = app_version \
+    or fetch_app_version_needed(app_id)
+  return tuple(download_url.replace("{version}", target_app_version).split(' ')) if download_url \
+    else ()
+
+@assert_result("{} was not found")
+def read_app_info(app_id):
+  local_app_info_path = "{}/apps/{}".format(os.path.dirname(__file__), app_id)
+  app_info_path = local_app_info_path if os.path.isfile(local_app_info_path) \
+    else suppress_assert(download_app_info_needed)(app_id)
+  app_info_contents = read_file(app_info_path) if app_info_path \
+    else ''
+  return dict(app_info_line.split('=', 1) for app_info_line in app_info_contents.splitlines())
+
+def read_app_version(app_id):
+  return read_file("{}/{}/version".format(BASE_PATH, app_id)).rstrip()
+
+def read_file(file_path, read_size=-1): # pylint: disable=imperative-function
+  if os.path.isfile(file_path):
+    with open(file_path) as file_file:
+      return file_file.read(read_size).decode('utf8', 'replace')
+  else:
+    return ''
+
+def remove_directory(directory_path): # pylint: disable=imperative-function
+  if os.path.isdir(directory_path):
+    shutil.rmtree(directory_path)
+  return True
+
+def remove_file(file_path): # pylint: disable=imperative-function
+  if os.path.isfile(file_path):
+    os.remove(file_path)
+  return True
+
+def rename_file(source_path, destination_path): # pylint: disable=imperative-function
+  target_destination_path = make_file_directories(destination_path)
+  os.rename(source_path, target_destination_path)
+  return target_destination_path
+
+def resolve_common_package_names():
+  package_urls = resolve_package_urls_needed(COMMON_PACKAGE_NAMES, IGNORED_PACKAGE_NAMES + IGNORED_COMMON_PACKAGE_NAMES)
+  return tuple(extract_package_name(package_url) for package_url in package_urls)
+
+@log_message("Resolving packages: {}")
+def resolve_package_urls(package_names, ignored_package_names=()):
+  resolved_package_names = {}
+  return tuple(package_url for package_name in package_names for package_url in resolve_package_urls_recursive(package_name, ignored_package_names, resolved_package_names))
+
+def resolve_package_urls_needed(package_names, ignored_package_names=()):
+  package_urls_key = "{}\n{}".format(','.join(sorted(package_names)), ','.join(sorted(ignored_package_names)))
+  package_urls_hash = hashlib.md5(package_urls_key).hexdigest()
+  package_urls_path = "{}/resolved-packages-{}".format(CACHE_PATH, package_urls_hash)
+  package_list_paths = update_package_lists_needed()
+  is_package_list_updated = any(is_file_older(package_list_path, package_urls_path) for package_list_path in package_list_paths)
+  package_urls = resolve_package_urls(package_names, ignored_package_names) if is_package_list_updated \
+    else tuple(read_file(package_urls_path).splitlines())
+  return write_file(package_urls_path, '\n'.join(package_urls)) \
+      and package_urls if is_package_list_updated \
+    else package_urls
+
+def resolve_package_urls_recursive(package_name, ignored_package_names=(), resolved_package_names=None):
+  package_info = parse_package_info(package_name)
+  depend_package_names = package_info.get('Depends', '').split()
+  package_urls = () if package_name in resolved_package_names \
+    else ("{}{}".format(DEBIAN_MIRROR_URL, package_info['Filename']),)
+  updated_resolved_package_names = {} if resolved_package_names is None \
+    else resolved_package_names
+  updated_resolved_package_names[package_name] = True
+  depend_package_urls = tuple(resolved_package_url for depend_package_name in depend_package_names if not depend_package_name in ignored_package_names and not depend_package_name in updated_resolved_package_names for resolved_package_url in resolve_package_urls_recursive(depend_package_name, ignored_package_names, updated_resolved_package_names))
+  return package_urls + depend_package_urls
+
+def run_app(app_id, app_arguments=()):
+  run_arguments = ("{}/{}/run".format(BASE_PATH, app_id),) + app_arguments
+  return execute_command(run_arguments)
+
+def run_command(command_arguments, environment_variables=None): # pylint: disable=imperative-function
+  try:
+    command_environment_variables = None if environment_variables is None \
+      else dict(os.environ, **environment_variables)
+    is_shell_command = is_string(command_arguments)
+    return subprocess.check_call(command_arguments, env=command_environment_variables, shell=is_shell_command) == 0
+  except subprocess.CalledProcessError:
+    return False
+
+def sanitize_command(shell_command):
+  command_arguments = split_command(shell_command)
+  return join_command_arguments(command_arguments)
+
+def split_command(shell_command): # pylint: disable=imperative-function
+  try:
+    return shlex.split(shell_command)
+  except ValueError:
+    return ''
+
+def suppress_assert(function, overridden_result=False):
+  def wrapper(*args, **kwargs): # pylint: disable=imperative-function
+    try:
+      return function(*args, **kwargs)
+    except AssertionError:
+      return overridden_result
+  return wrapper
+
+def symlink_file(file_path, target_path): # pylint: disable=imperative-function
+  if os.path.islink(file_path):
+    os.remove(file_path)
+  os.symlink(target_path, file_path)
+  return True
+
+def touch_file(file_path, file_timestamp=None): # pylint: disable=imperative-function
+  target_file_path = file_path if os.path.isfile(file_path) \
+    else write_file(file_path)
+  file_timestamps = None if file_timestamp is None \
+    else (file_timestamp, file_timestamp)
+  os.utime(target_file_path, file_timestamps)
+  return target_file_path
+
+def uninstall_app(app_id):
+  return remove_file("{}/tuxapp-{}.desktop".format(APPLICATIONS_PATH, app_id)) \
+    and remove_directory("{}/{}".format(BASE_PATH, app_id)) \
+    and output_message("Uninstalled {}".format(app_id))
+
+def uninstall_apps(app_ids):
+  installed_app_ids = tuple(check_app_installed(app_id) for app_id in app_ids)
+  return all(uninstall_app(installed_app_id) for installed_app_id in installed_app_ids)
+
+def unpack_appimage2_distribution(appimage_path, output_path):
+  output_directory_path = make_directories(os.path.dirname(output_path))
+  firejail_arguments = ('firejail',) if is_command_executable('firejail') \
+    else ()
+  executable_appimage_path = change_file_mode(appimage_path, lambda mode: mode | stat.S_IXUSR)
+  appimage_arguments = firejail_arguments + (executable_appimage_path, '--appimage-extract')
+  appimage_command = join_command_arguments(appimage_arguments)
+  return run_command("cd {} && {}".format(output_directory_path, appimage_command)) \
+    and move_directory_contents("{}/squashfs-root".format(output_directory_path), output_path)
+
+@log_message("Unpacking {}")
+def unpack_appimage_distribution(appimage_path, output_path):
+  root_path = "{}/common/root".format(BASE_PATH)
+  bsdtar_path = "{}/usr/bin/bsdtar".format(root_path)
+  bsdtar_command = join_command_arguments((bsdtar_path, '-t', '-f', appimage_path))
+  ld_library_path = "{}/usr/lib/x86_64-linux-gnu".format(root_path)
+  is_appimage1 = install_packages('common', ('libarchive-tools',)) \
+    and run_command("{} > /dev/null 2>&1".format(bsdtar_command), {'LD_LIBRARY_PATH': ld_library_path})
+  target_output_path = make_directories(output_path)
+  return run_command((bsdtar_path, '-x', '-C', target_output_path, '-f', appimage_path), {'LD_LIBRARY_PATH': ld_library_path}) if is_appimage1 \
+    else unpack_appimage2_distribution(appimage_path, output_path)
+
+def unpack_distribution(distribution_path, output_path):
+  distribution_header = read_file(distribution_path, 8)
+  return unpack_appimage_distribution(distribution_path, output_path) if distribution_header.startswith("\x7fELF") \
+    else unpack_package(distribution_path, output_path) if distribution_header.startswith("!<arch>\n") \
+    else unpack_zipfile_distribution(distribution_path, output_path) if distribution_header.startswith("PK") \
+    else unpack_tarball_distribution(distribution_path, output_path)
+
+@log_message("Unpacking {}")
+def unpack_package(package_path, output_path):
+  return unpack_package_silently(package_path, output_path, True)
+
+@assert_result("Failed to unpack {}")
+def unpack_package_silently(package_path, output_path, is_verbose=False):
+  package_info = parse_package_file_info(package_path)
+  tar_filter_option = {
+    'bz2': '-j',
+    'gz': '-z',
+    'lzma': '--lzma',
+    'xz': '-J',
+  }[package_info['data_extension']]
+  target_output_path = make_directories(output_path)
+  tar_progress_options = ("--checkpoint=.250",) if is_verbose \
+    else ()
+  tar_arguments = ('tar', '-x', tar_filter_option, '-C', target_output_path,
+    "--exclude=./usr/share/doc",
+    "--exclude=./usr/share/doc-base",
+    "--exclude=./usr/share/lintian,man",
+    "--exclude=./usr/share/man",
+  ) + tar_progress_options
+  tar_process = subprocess.Popen(tar_arguments, stdin=subprocess.PIPE)
+  return copy_file_contents(open(package_path, 'rb'), tar_process.stdin, package_info['data_offset'], package_info['data_size']) \
+    and tar_process.wait() == 0 \
+    and (not is_verbose \
+      or output_text()) \
+    and target_output_path
+
+@log_message("Unpacking {}")
+def unpack_tarball(package_path, output_path, tar_options=()):
+  return unpack_tarball_silently(package_path, output_path, tar_options, True)
+
+@log_message("Preparing to unpack {}")
+def unpack_tarball_distribution(tarball_path, output_path):
+  tarball_file_paths = get_command_output(('tar', '-t', '-f', tarball_path)).splitlines()
+  tarball_file_paths_prefix = get_file_paths_prefix(tarball_file_paths)
+  tar_options = ("--strip-components=1",) if tarball_file_paths_prefix \
+    else ()
+  return unpack_tarball(tarball_path, output_path, tar_options)
+
+@assert_result("Failed to unpack {}")
+def unpack_tarball_silently(tarball_path, output_path, tar_options=(), is_verbose=False):
+  target_output_path = make_directories(output_path)
+  tar_progress_options = ("--checkpoint=.250",) if is_verbose \
+    else ()
+  tar_arguments = ('tar', '-x', '-C', target_output_path, '-f', tarball_path) + tar_progress_options + tar_options
+  return run_command(tar_arguments) \
+    and (not is_verbose \
+      or output_text()) \
+    and target_output_path
+
+@log_message("Unpacking {}")
+def unpack_zipfile_distribution(zip_path, output_path):
+  unzipped_path = make_directories("{}/unzipped".format(os.path.dirname(output_path)))
+  zipfile_file_paths = get_command_output(('zipinfo', '-1', zip_path)).splitlines()
+  zipfile_file_paths_prefix = get_file_paths_prefix(zipfile_file_paths)
+  return run_command(('unzip', '-o', '-d', unzipped_path, zip_path)) \
+    and move_directory_contents("{}/{}".format(unzipped_path, zipfile_file_paths_prefix), output_path)
+
+def update_package_list(package_list_url, package_list_path):
+  archive_path = "{}{}".format(package_list_path, os.path.splitext(package_list_url)[1])
+  package_list_headers = fetch_url_headers(package_list_url)
+  last_modified_match = re.search(r"\sLast-Modified: ([^\n]+)", package_list_headers)
+  last_modified_timestamp = time.mktime(email.utils.parsedate(last_modified_match.group(1))) if last_modified_match \
+    else time.time()
+  archive_mtime = get_file_mtime(archive_path)
+  downloaded_archive_path = download_file(package_list_url, archive_path) if last_modified_timestamp > archive_mtime \
+    else archive_path
+  package_list_url_prefix = urlparse(package_list_url).path.split('/')[1]
+  extract_command = r"""xzgrep "^\(\(Depends\|Filename\): \|$\)" {} | sed "s/ ([^)]\+)//g; s/ | [^,]\+//g; s/:any//g; s/, / /g; s/^Filename: /\0{}\//" > {}""".format(quote(downloaded_archive_path), quote(package_list_url_prefix), quote(package_list_path))
+  package_list_mtime = get_file_mtime(package_list_path)
+  return run_command(extract_command) \
+      and package_list_path if last_modified_timestamp > package_list_mtime \
+    else package_list_path
+
+def update_package_list_needed(package_list_url):
+  package_list_hash = hashlib.md5(package_list_url).hexdigest()
+  package_list_path = "{}/package-list-{}".format(CACHE_PATH, package_list_hash)
+  archive_path = "{}{}".format(package_list_path, os.path.splitext(package_list_url)[1])
+  return update_package_list(package_list_url, package_list_path) \
+      and touch_file(archive_path) \
+      and package_list_path if is_file_old(archive_path) \
+    else package_list_path
+
+def update_package_lists_needed():
+  debian_architecture_name = detect_debian_architecture_name()
+  return (
+    update_package_list_needed("{}debian-security/dists/{}/updates/main/binary-{}/Packages.xz".format(DEBIAN_MIRROR_URL, DEBIAN_RELEASE_NAME, debian_architecture_name)),
+    update_package_list_needed("{}debian/dists/{}/main/binary-{}/Packages.xz".format(DEBIAN_MIRROR_URL, DEBIAN_RELEASE_NAME, debian_architecture_name)),
+  )
 
 def write_executable_file(file_path, file_contents):
   target_file_path = write_file(file_path, file_contents)
