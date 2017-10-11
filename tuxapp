@@ -993,16 +993,19 @@ unpack_appimage1_distribution = \
   asserts(lambda app, path, *args, **kwargs: "Failed to unpack {}".format(os.path.basename(path)))(
   logs(lambda app, path, *args, **kwargs: "Unpacking {}".format(os.path.basename(path)))(
     lambda app, path: \
-      install_packages('common', ('libarchive-tools',)) and \
-      call_process(
-        ((
-          'firejail',
-          "--env=LD_LIBRARY_PATH={}/usr/lib/x86_64-linux-gnu".format(get_root_path('common')),
-        ) if is_executable('firejail') else ()) +
-        ("{}/usr/bin/bsdtar".format(get_root_path('common')), '-x', '-C', make_directories(get_distribution_path(app)), '-f', path),
-      env=dict(os.environ, LD_LIBRARY_PATH="{}/usr/lib/x86_64-linux-gnu".format(get_root_path('common')))) and \
+      call_process(build_bsdtar_arguments() + ('-x', '-C', make_directories(get_distribution_path(app)), '-f', path)) and \
       get_distribution_path(app)
   ))
+
+build_bsdtar_arguments = lambda: \
+  ('bsdtar',) \
+    if is_executable('bsdtar') else \
+  install_packages('common', ('libarchive-tools',)) and \
+  (
+    ('firejail', '--quiet', "--env=LD_LIBRARY_PATH={}/usr/lib/x86_64-linux-gnu".format(get_root_path('common'))) \
+      if is_executable('firejail') else \
+    ('env', "LD_LIBRARY_PATH={}/usr/lib/x86_64-linux-gnu".format(get_root_path('common')))
+  ) + ("{}/usr/bin/bsdtar".format(get_root_path('common')),)
 
 unpack_appimage2_distribution = \
   asserts(lambda app, path, *args, **kwargs: "Failed to unpack {}".format(os.path.basename(path)))(
