@@ -267,7 +267,8 @@ check_updated = logs_after(
 
 configure_fontconfig = lambda value=True: \
   all(symlink(path, "../../..{}".format(os.readlink(path))) for path in glob.iglob("{}/*".format(get_fontconfig_path())) if os.path.islink(path) and os.readlink(path).startswith('/')) and \
-  write("{}/50-tuxapp.conf".format(get_fontconfig_path()), r"""<fontconfig>
+  write("{}/50-tuxapp.conf".format(get_fontconfig_path()), """\
+<fontconfig>
   <dir>{}/usr/share/fonts</dir>
 </fontconfig>
 """.format(tildify(get_root_path('common')))) and \
@@ -767,11 +768,10 @@ function read_firejail {
 
 main "$@"
 """)
-# result_environment_variables[BROWSER]={}
-# """.format(quote_tilded(install_browser())))
 
 install_desktop_entry = logs_after(lambda app, is_new=False, *args, **kwargs: is_new and "Added the menu item: {}".format(get_app_name(app)))(
-  lambda app, is_new=False: write(get_desktop_entry_path(app), r"""[Desktop Entry]
+  lambda app, is_new=False: write(get_desktop_entry_path(app), """\
+[Desktop Entry]
 Categories={category}
 Comment={title}
 Exec={runner_path} %U
