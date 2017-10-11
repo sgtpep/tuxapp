@@ -818,7 +818,7 @@ Type=Application
 )))
 
 install_distribution = lambda app: \
-  all(unpack_distribution(app, download_missing(url, "{}/{}-{}".format(get_cache_path(), app, fetch_version(app)))) for url in query_download_urls(app)) and \
+  all(unpack_distribution(app, download_missing(url, "{}/distribution-{}-{}".format(get_cache_path(), app, fetch_version(app)))) for url in query_download_urls(app)) and \
   write(get_version_path(app), "{}\n".format(fetch_version(app))) and \
   get_distribution_path(app)
 
