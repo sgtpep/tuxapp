@@ -429,8 +429,6 @@ get_app_path = lambda app: "{}/{}".format(get_base_path(), app)
 
 get_base_path = lambda: os.path.expanduser("~/.tuxapp")
 
-get_browser_path = lambda: "{}/usr/local/bin/browser".format(get_root_path('common'))
-
 get_cache_path = lambda: "{}/tuxapp".format(get_xdg_cache_path())
 
 get_common_packages = lambda: (
@@ -537,7 +535,7 @@ install = logs_after(lambda app, *args, **kwargs: "Installed {} {}".format(app, 
     get_app_path(app)
 )
 
-install_browser = lambda: write(get_browser_path(), r"""#!/bin/sh
+install_browser = lambda: write("{}/usr/local/bin/browser".format(get_root_path('common')), r"""#!/bin/sh
 echo "$1" > "$TUXAPP_URLS"
 """)
 
@@ -547,7 +545,7 @@ install_common_runner = lambda: write(get_runner_path('common'), r"""#!/bin/bash
 set -eu -o pipefail
 
 declare -r app_path=${0%/*}
-declare -r browser_path=""" + quote_tilded(get_browser_path()) + r"""
+declare -r browser_path=""" + quote_tilded(install_browser()) + r"""
 declare -r cache_path=${XDG_CACHE_HOME-~/.cache}/""" + quote(os.path.relpath(get_cache_path(), get_xdg_cache_path())) + r"""
 declare -r common_path=""" + quote_tilded(get_app_path('common')) + r"""
 declare -r common_root_path=""" + quote_tilded(get_root_path('common')) + r"""
