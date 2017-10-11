@@ -323,11 +323,15 @@ download = \
       False
   ))
 
-download_cache = lambda url: download(url, get_download_path(url))
+download_cache = lambda url: download(url, get_download_cache_path(url))
 
 download_missing = lambda url, path: path if os.path.isfile(path) else download(url, path)
 
-download_missing_cache = lambda url: download_missing(url, get_download_path(url))
+download_missing_cache = lambda url: download_missing(url, get_download_cache_path(url))
+
+download_missing_packages = lambda app, urls: \
+  tuple(get_download_cache_path(url) for url in urls if is_package_updated(app, url)) + \
+  download_multiple_missing(tuple(url for url in urls if not is_package_updated(app, url)), get_cache_path())
 
 download_multiple = \
   asserts(lambda urls, *args, **kwargs: kwargs['result'] is not () and "Failed to download files")(
@@ -466,7 +470,9 @@ get_desktop_entry_path = lambda app: "{}/applications/tuxapp-{}.desktop".format(
 
 get_distribution_path = lambda app: "{}/dist".format(get_app_path(app))
 
-get_download_path = lambda url, path=None: "{}/{}".format(path or get_cache_path(), os.path.basename(urlparse(url).path))
+get_download_cache_path = lambda url: get_download_path(url, get_cache_path())
+
+get_download_path = lambda url, path: "{}/{}".format(path, os.path.basename(urlparse(url).path))
 
 get_excluded_common_packages = lambda: (
   'libicu57',
@@ -809,14 +815,17 @@ install_distribution = lambda app: \
   write(get_version_path(app), "{}\n".format(fetch_version(app))) and \
   get_distribution_path(app)
 
-install_icon = lambda app: unasserts('')(download)(query_appfile(app, 'icon-url'), get_icon_path(app))
+install_icon = lambda app: \
+  unasserts(get_icon_path(app))(download)(query_appfile(app, 'icon-url'), get_icon_path(app)) and \
+  touch(get_icon_path(app)) and \
+  get_icon_path(app)
 
 install_package_file = lambda app, path: \
   unpack_package(path, get_root_path(app), True) and \
   write(get_package_version_path(app, extract_package_name(path)), "{}\n".format(extract_package_version(path))) and \
   extract_package_name(path)
 
-install_packages = lambda app, packages: tuple(install_updated_package_file(app, path) for path in download_multiple_missing(resolve_package_urls(packages, build_excluded_packages(app)), get_cache_path()))
+install_packages = lambda app, packages: tuple(install_updated_package_file(app, path) for path in download_missing_packages(app, resolve_package_urls(packages, build_excluded_packages(app))))
 
 install_runner = lambda app: \
   write_executable(get_runner_path(app), r"""#!/bin/bash
@@ -831,7 +840,17 @@ FIREJAIL={}
   check_firejail(app) and \
   get_runner_path(app)
 
-install_updated = logs(
+install_updated_distribution = lambda app: get_distribution_path(app) if is_updated(app) else install_distribution(app)
+
+install_updated_icon = lambda app: \
+  install_icon(app) \
+    if not get_icon_path(app) or is_newer(get_version_path(app), get_icon_path(app)) else \
+  get_icon_path(app)
+
+install_updated_package_file = lambda app, path: \
+  extract_package_name(path) if is_package_updated(app, path) else install_package_file(app, path)
+
+install_verbose = logs(
   lambda app, *args, **kwargs: \
     "{} {} is up to date".format(app, read_version(app)) \
       if is_updated(app) else \
@@ -839,17 +858,8 @@ install_updated = logs(
       if read_version(app) else \
     "Installing {} {}".format(app, fetch_version(app))
 )(
-  lambda app: get_app_path(app) if is_updated(app) else install(app)
+  lambda app: install(app)
 )
-
-install_updated_distribution = lambda app: get_distribution_path(app) if is_updated(app) else install_distribution(app)
-
-install_updated_icon = lambda app: install_icon(app) if not get_icon_path(app) or is_newer(get_version_path(app), get_icon_path(app)) else get_icon_path(app)
-
-install_updated_package_file = lambda app, path: \
-  extract_package_name(path) \
-    if extract_package_version(path) == read(get_package_version_path(app, extract_package_name(path))).rstrip() else \
-  install_package_file(app, path)
 
 is_executable = lambda name: bool(distutils.spawn.find_executable(name))
 
@@ -858,6 +868,8 @@ is_file_list_nested = lambda paths: all(path.lstrip("./").split('/', 1)[0] == pa
 is_magic_number = lambda path, magic_number: read(path, len(magic_number)) == magic_number
 
 is_newer = lambda path, reference_path: get_mtime(path) > get_mtime(reference_path)
+
+is_package_updated = lambda app, path: extract_package_version(path) == read_package_version(app, extract_package_name(path))
 
 is_string = lambda value: isinstance(value, (''.__class__, u''.__class__))
 
@@ -891,7 +903,7 @@ main = handles_exceptions(
       if parse_arguments().run and parse_arguments().apps else \
     all(uninstall(app) for app in (check_installed(extract_app(app)) for app in parse_arguments().apps)) \
       if parse_arguments().uninstall else \
-    all(install_updated(app) for app in (extract_app(app) for app in parse_arguments().apps or get_installed())) \
+    all(install_verbose(app) for app in (extract_app(app) for app in parse_arguments().apps or get_installed())) \
 )
 
 move_directory = lambda path, destination_path: \
@@ -933,6 +945,8 @@ quote_tilded = lambda path: \
 read_appfile = lambda app: read("{}/apps/{}".format(os.path.dirname(__file__), app)) or fetch_appfile(app)
 
 read_firejail = lambda app: read(get_firejail_path(app)).rstrip()
+
+read_package_version = lambda app, package: read(get_package_version_path(app, package)).rstrip()
 
 read_process = lambda arguments, *args, **kwargs: subprocess.Popen(arguments, *args, shell=is_string(arguments), stdout=subprocess.PIPE, **kwargs).communicate()[0].decode('utf8', 'replace')
 
