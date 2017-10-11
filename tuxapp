@@ -226,7 +226,7 @@ def symlink(path, target_path):
   os.symlink(target_path, path)
   return path
 
-def write(path, contents):
+def write(path, contents=''):
   with open(make_directories(path, True), 'w') as file:
     file.write(contents.encode('utf8'))
     return file.name
