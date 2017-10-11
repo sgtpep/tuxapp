@@ -785,7 +785,7 @@ TryExec={runner_path}
 Type=Application
 """.format(
   category=generate_desktop_entry_category(query_appfile(app, 'category')),
-  icon_path=install_updated_icon(id),
+  icon_path=install_updated_icon(app),
   name=get_app_name(app),
   runner_path=install_runner(app),
   title=query_appfile(app, 'title'),
