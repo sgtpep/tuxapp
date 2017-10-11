@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu -o pipefail
 
-read -r -d '' startup_script << EOF || :
+read -r -d '' script << EOF || :
 from __future__ import print_function
 
 def debug():
@@ -11,10 +11,10 @@ def debug():
   import rlcompleter
 
   def set_quit(self, *args, **kwargs):
-    previous_set_quit(self, *args, **kwargs)
+    method(self, *args, **kwargs)
     self.quitting = 0
     readline.read_history_file(debug.history_path)
-  previous_set_quit = pdb.Pdb.set_quit
+  method = pdb.Pdb.set_quit
   pdb.Pdb.set_quit = set_quit
   readline.write_history_file(debug.history_path)
 
@@ -22,21 +22,26 @@ def debug():
   pdb.Pdb.complete = rlcompleter.Completer(frame.f_locals).complete
   pdb.Pdb(completekey="\e[25~").set_trace(frame)
 
+import readline
 def main():
   import atexit
   import os
-  import readline
   import rlcompleter
 
   readline.set_history_length(10000)
-  history_path = os.path.expanduser("~/.python_history")
-  setattr(debug, 'history_path', history_path)
-  if os.path.exists(history_path):
-    readline.read_history_file(history_path)
-  atexit.register(lambda: readline.write_history_file(history_path))
+  path = os.path.expanduser("~/.python_history")
+  if os.path.exists(path):
+    readline.read_history_file(path)
+  setattr(debug, 'history_path', path)
+  def write_history(path):
+    try:
+      readline.write_history_file(path)
+    except IOError:
+      pass
+  atexit.register(write_history, path)
 
   __builtins__.debug = debug
-
+  del globals()['main']
   reload()
 
 def reload(*args, **kwargs):
@@ -48,27 +53,32 @@ def reload(*args, **kwargs):
     import inspect
     import os
 
-    def reload_on_call(module_variables):
+    def reloads(variables, variable):
       def decorator(function):
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
           reload()
-          return module_variables[function.__name__](*args, **kwargs)
+          return variables[variable](*args, **kwargs)
         return wrapper
       return decorator
 
     if len(inspect.stack()) <= 3:
-      for module_path in "$@".split():
-        module_mtime = os.path.getmtime(module_path)
-        module_name = os.path.basename(module_path)
-        setattr(reload, 'module_mtimes', getattr(reload, 'module_mtimes', {}))
-        if module_mtime != reload.module_mtimes.get(module_name):
-          reload.module_mtimes[module_name] = module_mtime
-          module_variables = vars(imp.load_source(module_name, module_path))
-          for module_variable_name, module_variable_value in module_variables.items():
-            if not module_variable_name.startswith('__'):
-              globals()[module_variable_name] = reload_on_call(module_variables)(module_variable_value) if hasattr(module_variable_value, '__call__') \
-                else module_variable_value
+      for path in "$@".split():
+        mtime = os.path.getmtime(path)
+        module = os.path.basename(path)
+        setattr(reload, 'mtimes', getattr(reload, 'mtimes', {}))
+        if mtime != reload.mtimes.get(module):
+          reload.mtimes[module] = mtime
+          variables = vars(imp.load_source(module, path))
+          for variable, value in variables.items():
+            if not variable.startswith('__'):
+              globals()[variable] = reloads(variables, variable)(value) if hasattr(value, '__call__') else value
+
+def timeit(*args, **kwargs):
+  import timeit
+
+  kwargs['number'] = 1
+  return timeit.timeit(*args, **kwargs)
 
 def trace(*args, **kwargs):
   import trace
@@ -77,4 +87,4 @@ def trace(*args, **kwargs):
 
 main()
 EOF
-PYTHONSTARTUP=<(echo "$startup_script") exec python
+PYTHONSTARTUP=<(echo "$script") exec python

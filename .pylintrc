@@ -4,10 +4,10 @@ indent-string="  "
 
 [MASTER]
 init-hook="import sys; sys.path.append('.')"
-load-plugins=lib.functional_checker
+load-plugins=lib.order_checker
 
 [MESSAGES CONTROL]
-disable=bad-continuation, deprecated-lambda, expression-not-assigned, invalid-name, line-too-long, locally-disabled, missing-docstring, too-many-lines, too-many-locals
+disable=bad-continuation, invalid-name, line-too-long, locally-disabled, missing-docstring, redefined-builtin, too-many-lines, ungrouped-imports, unnecessary-lambda, used-before-assignment
 
 [REPORTS]
 reports=no
