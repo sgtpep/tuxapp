@@ -818,10 +818,7 @@ install_distribution = lambda app: \
   write(get_version_path(app), "{}\n".format(fetch_version(app))) and \
   get_distribution_path(app)
 
-install_icon = lambda app: \
-  unasserts(get_icon_path(app))(download)(query_appfile(app, 'icon-url'), get_icon_path(app)) and \
-  touch(get_icon_path(app)) and \
-  get_icon_path(app)
+install_icon = lambda app: unasserts(download)(query_appfile(app, 'icon-url'), get_icon_path(app))
 
 install_package_file = lambda app, path: \
   unpack_package(path, get_root_path(app), True) and \
@@ -846,9 +843,10 @@ FIREJAIL={}
 install_updated_distribution = lambda app: get_distribution_path(app) if is_updated(app) else install_distribution(app)
 
 install_updated_icon = lambda app: \
-  install_icon(app) \
-    if not get_icon_path(app) or is_newer(get_version_path(app), get_icon_path(app)) else \
-  get_icon_path(app)
+  get_icon_path(app) \
+    if os.path.isfile(get_icon_path(app)) and is_newer(get_icon_path(app), get_version_path(app)) else \
+  install_icon(app) and \
+  touch(get_icon_path(app), time.time() + 24 * 60 * 60)
 
 install_updated_package_file = lambda app, path: \
   extract_package_name(path) if is_package_updated(app, path) else install_package_file(app, path)
