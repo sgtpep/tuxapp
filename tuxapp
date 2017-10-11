@@ -94,7 +94,7 @@ def memoizes(seconds=60):
     return wrapper
   return decorator
 
-def outputs(message):
+def outputs(message="{result}"):
   def decorator(function):
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
