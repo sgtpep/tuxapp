@@ -81,18 +81,16 @@ def logs_after(message):
     return wrapper
   return decorator
 
-def memoizes(seconds=60):
-  def decorator(function):
-    cache = {}
-    function.unmemoized = function
-    @functools.wraps(function)
-    def wrapper(*args, **kwargs):
-      key = "{}{}".format(args, kwargs)
-      if key not in cache or cache[key][1] < time.time() - seconds:
-        cache[key] = function(*args, **kwargs), time.time()
-      return cache[key][0]
-    return wrapper
-  return decorator
+def memoizes(function):
+  cache = {}
+  function.unmemoized = function
+  @functools.wraps(function)
+  def wrapper(*args, **kwargs):
+    key = "{}{}".format(args, kwargs)
+    if key not in cache or cache[key][1] < time.time() - 60:
+      cache[key] = function(*args, **kwargs), time.time()
+    return cache[key][0]
+  return wrapper
 
 def outputs(message="{result}"):
   def decorator(function):
@@ -107,16 +105,14 @@ def outputs(message="{result}"):
     return wrapper
   return decorator
 
-def unasserts(result=False):
-  def decorator(function):
-    @functools.wraps(function)
-    def wrapper(*args, **kwargs):
-      try:
-        return function(*args, **kwargs)
-      except AssertionError:
-        return result
-    return wrapper
-  return decorator
+def unasserts(function):
+  @functools.wraps(function)
+  def wrapper(*args, **kwargs):
+    try:
+      return function(*args, **kwargs)
+    except AssertionError:
+      return False
+  return wrapper
 
 def change_mode(path, get_mode):
   os.chmod(path, get_mode(os.stat(path).st_mode))
@@ -157,7 +153,7 @@ def make_directories(path, is_file=False):
     os.makedirs(directory_path)
   return path
 
-@memoizes()
+@memoizes
 def parse_arguments(arguments=sys.argv[1:]):
   parser = argparse.ArgumentParser(
     description=u"%(prog)s downloads and installs the latest official releases of Linux\N{COPYRIGHT SIGN} applications including dependencies without root permissions and allows to run them sandboxed.",
@@ -174,7 +170,7 @@ def parse_arguments(arguments=sys.argv[1:]):
   parser.add_argument('apps', help="an app identifier", metavar='app', nargs='*')
   return parser.parse_args(arguments or ('-h',))
 
-@memoizes()
+@memoizes
 @asserts(lambda path, *args, **kwargs: "Failed to parse {}".format(os.path.basename(path)))
 def parse_package_data(path):
   with open(path, 'rb') as file, contextlib.closing(mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ)) as map:
@@ -387,9 +383,9 @@ fetch = \
   ))
 
 fetch_appfile = \
-  memoizes()(
+  memoizes(
   asserts("{} was not found")(
-    lambda app: unasserts()(fetch)("https://raw.githubusercontent.com/{}/master/apps/{}".format(get_github_repository(), app))
+    lambda app: unasserts(fetch)("https://raw.githubusercontent.com/{}/master/apps/{}".format(get_github_repository(), app))
   ))
 
 fetch_grep = \
@@ -416,7 +412,7 @@ fetch_headers = \
 fetch_last_modified = lambda url: time.mktime(email.utils.parsedate(search(r"(?<=\bLast-Modified: ).+$", fetch_headers(url), re.I | re.M)) or time.localtime())
 
 fetch_version = \
-  memoizes()(
+  memoizes(
   asserts("Failed to fetch the version number of {}")(
   logs("Fetching the version number of {}")(
     lambda app: re.sub(r"\n.*$", '', read_process("{}{} | head -c 1000000 2> /dev/null | grep -Pao -m 1 {}".format(
@@ -505,11 +501,11 @@ get_mtime = lambda path: os.path.getmtime(path) if os.path.isfile(path) else 0
 
 get_package_list_archive_path = lambda url: "{}{}".format(get_package_list_path(url), os.path.splitext(url)[1])
 
-get_package_list_path = memoizes()(
+get_package_list_path = memoizes(
   lambda url: "{}/package-list-{}".format(get_cache_path(), hashlib.md5(url).hexdigest())
 )
 
-get_package_urls_cache_path = memoizes()(
+get_package_urls_cache_path = memoizes(
   lambda packages, excluded_packages=(): "{}/package-urls-{}".format(
     get_cache_path(),
     hashlib.md5(str((sorted(packages), sorted(excluded_packages)))).hexdigest(),
@@ -934,11 +930,11 @@ query_download_urls = asserts("No download URL of {} for your architecture")(
 
 query_package_data = lambda path, key: parse_package_data(path).get(key)
 
-query_package_depends = memoizes()(
+query_package_depends = memoizes(
   lambda package: tuple(search(r"(?<=^Depends: ).*$", grep_package_lists(package), re.M).split())
 )
 
-query_package_url = memoizes()(
+query_package_url = memoizes(
   lambda package: "{}{}".format(get_debian_url(), search(r"(?<=^Filename: ).*$", grep_package_lists(package), re.M))
 )
 
@@ -1102,7 +1098,7 @@ update_package_list_archive = lambda url: \
     if fetch_last_modified(url) > get_mtime(get_package_list_archive_path(url)) else \
   get_package_list_archive_path(url)
 
-update_package_lists = memoizes()(
+update_package_lists = memoizes(
   lambda: (
     update_package_list("{}debian-security/dists/{}/updates/main/binary-{}/Packages.xz".format(
       get_debian_url(),

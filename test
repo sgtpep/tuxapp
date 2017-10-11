@@ -9,7 +9,7 @@ import sys
 
 tuxapp = imp.load_source('tuxapp', "{}/tuxapp".format(os.path.dirname(__file__)))
 
-@tuxapp.memoizes()
+@tuxapp.memoizes
 def parse_arguments(arguments=sys.argv[1:]):
   parser = argparse.ArgumentParser()
   parser.add_argument('-d', '--distribution', choices=('arch', 'debian'), default='debian')
