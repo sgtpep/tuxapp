@@ -30,9 +30,9 @@ build_bwrap_arguments = lambda distribution, app=None, arguments=(): \
     '--tmpfs', "/tmp",
   ) + \
   tuple(option for path in get_bind_paths() if os.path.isdir(path) for option in ('--ro-bind', path, path)) + \
-  (('--bind', get_app_path(app), get_app_path(app)) if app else ()) + \
+  (('--bind', tuxapp.get_app_path(app), tuxapp.get_app_path(app)) if app else ()) + \
   ('bash', '-l') + \
-  ((get_runner_path(app),) + arguments if app else ())
+  ((tuxapp.get_runner_path(app),) + arguments if app else ())
 
 build_bwrap_root_arguments = lambda distribution, script=None: \
   ('bwrap', '--bind', get_container_path(distribution), "/",
