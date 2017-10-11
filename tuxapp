@@ -241,7 +241,7 @@ build_request_arguments = lambda curl_options=(), wget_options=(): \
     if get_request_executable() == 'curl' else \
   ('wget', '-T', '10', '-t', '3', '-nv', '--header', "Accept-Language: en") + wget_options
 
-call_process = lambda *args, **kwargs: subprocess.Popen(*args, **kwargs).wait() == 0
+call_process = lambda arguments, *args, **kwargs: subprocess.Popen(arguments, *args, shell=is_string(arguments), **kwargs).wait() == 0
 
 check_all_updated = outputs(
   lambda apps, *args, **kwargs: \
@@ -377,7 +377,7 @@ fetch_grep = \
         ('-q', '-O', '-', url),
       )),
       join_arguments(arguments),
-    ), shell=True).rstrip('\n')
+    )).rstrip('\n')
   ))
 
 fetch_headers = \
@@ -402,7 +402,7 @@ fetch_version = \
       )),
       " 2>&1" if get_request_executable() == 'wget' else '',
       quote(re.sub(r"^(.*?)(?<!\\)\((.*)(?<!\\)\)(.*?)$", r"(?<=\1)\2(?=\3)", query_appfile(app, 'version-regex'), 1))
-    ), shell=True), flags=re.S)
+    )), flags=re.S)
   )))
 
 filter_executable = lambda app, prefix='': \
@@ -917,7 +917,7 @@ read_appfile = lambda app: read("{}/apps/{}".format(os.path.dirname(__file__), a
 
 read_firejail = lambda app: read(get_firejail_path(app)).rstrip()
 
-read_process = lambda *args, **kwargs: subprocess.Popen(*args, stdout=subprocess.PIPE, **kwargs).communicate()[0].decode('utf8', 'replace')
+read_process = lambda arguments, *args, **kwargs: subprocess.Popen(arguments, *args, shell=is_string(arguments), stdout=subprocess.PIPE, **kwargs).communicate()[0].decode('utf8', 'replace')
 
 read_version = lambda app: read(get_version_path(app)).rstrip()
 
@@ -974,7 +974,7 @@ unpack_appimage2_distribution = \
           (('firejail',) if is_executable('firejail') else ()) +
           (change_mode(path, lambda mode: mode | stat.S_IXUSR), '--appimage-extract'),
         ),
-      ), shell=True) and \
+      )) and \
       move_directory("{}/squashfs-root".format(get_app_path(app)), get_distribution_path(app))
   ))
 
@@ -1046,7 +1046,7 @@ update_package_list = lambda url: \
     quote(get_package_list_archive_path(url)),
     quote(urlparse(url).path.split('/', 2)[1]),
     quote(get_package_list_path(url)),
-  ), shell=True) and \
+  )) and \
   get_package_list_path(url) \
     if is_newer(update_package_list_archive(url), get_package_list_path(url)) else \
   get_package_list_path(url)
