@@ -120,7 +120,7 @@ def change_mode(path, get_mode):
 
 def check_firejail(app):
   if is_executable('firejail'):
-    if 'WAYLAND_DISPLAY' not in os.environ and not re.search(r"--x11\b", "{} {}".format(query_appfile(app, 'tuxapp-firejail'), read_firejail(app))):
+    if 'WAYLAND_DISPLAY' not in os.environ and not re.search(r"--x11\b", "{} {}".format(query_appfile(app, 'firejail'), read_firejail(app))):
       print("X11 sandboxing is not enabled for this app", file=sys.stderr)
     if read_firejail(app):
       print("Firejail will run this app with custom options: {}".format(read_firejail(app)), file=sys.stderr)
@@ -295,8 +295,8 @@ detect_debian_architecture = asserts(lambda *args, **kwargs: "Unsupported archit
 
 detect_executable = asserts("Unable to determine the executable file of {}")(
   lambda app: \
-    query_appfile(app, 'tuxapp-executable') \
-      if install_updated_distribution(app) and query_appfile(app, 'tuxapp-executable') else \
+    query_appfile(app, 'executable') \
+      if install_updated_distribution(app) and query_appfile(app, 'executable') else \
     'AppRun' \
       if os.access("{}/AppRun".format(install_updated_distribution(app)), os.X_OK) else \
     filter_executable(app, "/usr/bin") \
@@ -552,7 +552,7 @@ grep_package_lists = asserts("Unknown package: {}")(
 
 install = logs_after(lambda app, *args, **kwargs: "Installed {} {}".format(app, read_version(app)))(
   lambda app: \
-    all(install_packages(app, query_appfile(app, 'tuxapp-packages').split())) and \
+    all(install_packages(app, query_appfile(app, 'packages').split())) and \
     install_desktop_entry(app, not os.path.isfile(get_desktop_entry_path(app))) and \
     app
 )
@@ -834,7 +834,7 @@ FIREJAIL={}
 . {}
 """.format(
   sanitize_command(detect_executable(app)),
-  sanitize_command(query_appfile(app, 'tuxapp-firejail')),
+  sanitize_command(query_appfile(app, 'firejail')),
   quote_tilded(install_common_runner())),
 ) and \
   check_firejail(app) and \
