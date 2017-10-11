@@ -23,7 +23,7 @@ class OrderChecker(pylint.checkers.BaseChecker):
 
   def visit_functiondef(self, node):
     if not node.col_offset:
-      if len(node.body) == 2 and isinstance(node.body[0], astroid.FunctionDef) and isinstance(node.body[1], astroid.Return):
+      if len(node.body) >= 2 and isinstance(node.body[-2], astroid.FunctionDef) and isinstance(node.body[-1], astroid.Return):
         if self.previous_decorator and self.previous_decorator > node.name:
           self.add_message('unordered-decorator', args=node.name, node=node)
         self.previous_decorator = node.name
