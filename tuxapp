@@ -316,7 +316,11 @@ download = \
       False
   ))
 
+download_cache = lambda url: download(url, get_download_path(url))
+
 download_missing = lambda url, path: path if os.path.isfile(path) else download(url, path)
+
+download_missing_cache = lambda url: download_missing(url, get_download_path(url))
 
 download_multiple = \
   asserts(lambda urls, *args, **kwargs: kwargs['result'] is not () and "Failed to download {} files".format(len(urls)))(
@@ -347,6 +351,8 @@ download_multiple_wget = lambda urls, path: \
     call_process(build_request_arguments((), ('-P', make_directories(path), '--show-progress')) + urls) else \
   all(remove(get_download_path(url, path)) for url in urls) and \
   False
+
+execute_process = lambda arguments, environment=None: os.execvpe(arguments[0], arguments, dict(os.environ, **environment)) if environment else os.execvp(arguments[0], arguments)
 
 extract_app = lambda path: os.path.basename(path)
 
