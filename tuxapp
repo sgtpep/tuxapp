@@ -468,7 +468,7 @@ get_debian_url = lambda: "https://cdn-aws.deb.debian.org/"
 
 get_desktop_entry_path = lambda app: "{}/applications/tuxapp-{}.desktop".format(os.environ.get('XDG_DATA_HOME', os.path.expanduser("~/.local/share")), app)
 
-get_distribution_path = lambda app: "{}/dist".format(get_app_path(app))
+get_distribution_path = lambda app: "{}/distribution".format(get_app_path(app))
 
 get_download_cache_path = lambda url: get_download_path(url, get_cache_path())
 
