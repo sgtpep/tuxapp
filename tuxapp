@@ -293,7 +293,7 @@ detect_debian_architecture = asserts(lambda *args, **kwargs: "Unsupported archit
 detect_executable = asserts("Unable to determine the executable file of {}")(
   lambda app: \
     query_appfile(app, 'tuxapp-executable') \
-      if query_appfile(app, 'tuxapp-executable') else \
+      if install_updated_distribution(app) and query_appfile(app, 'tuxapp-executable') else \
     'AppRun' \
       if os.access("{}/AppRun".format(install_updated_distribution(app)), os.X_OK) else \
     filter_executable(app, "/usr/bin") \
