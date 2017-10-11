@@ -509,6 +509,13 @@ get_package_list_path = memoizes()(
   lambda url: "{}/package-list-{}".format(get_cache_path(), hashlib.md5(url).hexdigest())
 )
 
+get_package_urls_cache_path = memoizes()(
+  lambda packages, excluded_packages=(): "{}/package-urls-{}".format(
+    get_cache_path(),
+    hashlib.md5(str((sorted(packages), sorted(excluded_packages)))).hexdigest(),
+  )
+)
+
 get_package_version_path = lambda app, name: "{}/packages/{}".format(get_app_path(app), name)
 
 get_request_executable = asserts("Neither wget nor curl is installed")(
@@ -825,7 +832,7 @@ install_package_file = lambda app, path: \
   write(get_package_version_path(app, extract_package_name(path)), "{}\n".format(extract_package_version(path))) and \
   extract_package_name(path)
 
-install_packages = lambda app, packages: tuple(install_updated_package_file(app, path) for path in download_missing_packages(app, resolve_package_urls(packages, build_excluded_packages(app))))
+install_packages = lambda app, packages: tuple(install_updated_package_file(app, path) for path in download_missing_packages(app, resolve_package_urls_cached(packages, build_excluded_packages(app))))
 
 install_runner = lambda app: \
   write_executable(get_runner_path(app), r"""#!/bin/bash
@@ -952,7 +959,15 @@ read_process = lambda arguments, *args, **kwargs: subprocess.Popen(arguments, *a
 
 read_version = lambda app: read(get_version_path(app)).rstrip()
 
-resolve_package_urls = lambda packages, excluded_packages=(): tuple(query_package_url(package) for package in resolve_packages(packages, excluded_packages))
+resolve_package_urls = logs(lambda packages, *args, **kwargs: "Resolving packages: {}".format(", ".join(packages)))(
+  lambda packages, excluded_packages=(): tuple(query_package_url(package) for package in resolve_packages(packages, excluded_packages))
+)
+
+resolve_package_urls_cached = lambda packages, excluded_packages=(): \
+  write(get_package_urls_cache_path(packages, excluded_packages), '\n'.join(resolve_package_urls(packages, excluded_packages))) and \
+  read(get_package_urls_cache_path(packages, excluded_packages)).splitlines() \
+    if any(is_newer(path, get_package_urls_cache_path(packages, excluded_packages)) for path in update_package_lists()) else \
+  read(get_package_urls_cache_path(packages, excluded_packages)).splitlines()
 
 resolve_packages = lambda packages, excluded_packages=(), resolved_packages=set(): functools.reduce(lambda packages, package: \
   packages | {package} | resolve_packages(
