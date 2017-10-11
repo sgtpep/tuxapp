@@ -5,6 +5,7 @@ download-x86-url=https://get.popcorntime.sh/build/Popcorn-Time-{version}-Linux-3
 executable=
 firejail=
 free-license=yes
+group=video-streaming
 homepage-url=https://popcorntime.sh/
 icon-url=https://popcorntime.sh/images/icon152.png
 name=Popcorn Time

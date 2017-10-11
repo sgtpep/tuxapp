@@ -5,6 +5,7 @@ download-x86-url=
 executable=
 firejail=
 free-license=yes
+group=code-editors
 homepage-url=https://atom.io/
 icon-url=https://atom.io/favicon.ico
 name=Atom

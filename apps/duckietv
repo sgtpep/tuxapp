@@ -5,6 +5,7 @@ download-x86-url=https://github.com/SchizoDuckie/DuckieTV/releases/download/{ver
 executable=DuckieTV/DuckieTV
 firejail=
 free-license=yes
+group=video-streaming
 homepage-url=https://schizoduckie.github.io/DuckieTV/
 icon-url=https://schizoduckie.github.io/DuckieTV/img/icon256.png
 name=DuckieTV

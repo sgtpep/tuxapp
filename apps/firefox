@@ -5,6 +5,7 @@ download-x86-url=https://download.mozilla.org/?product=firefox-{version}-SSL&os=
 executable=
 firejail=
 free-license=yes
+group=web-browsers
 homepage-url=https://www.mozilla.org/en-US/firefox/
 icon-url=https://www.mozilla.org/media/img/firefox/favicon-196.223e1bcaf067.png
 name=Firefox

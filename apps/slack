@@ -5,6 +5,7 @@ download-x86-url=
 executable=
 firejail=
 free-license=
+group=instant-messengers
 homepage-url=https://slack.com/
 icon-url=https://a.slack-edge.com/436da/marketing/img/meta/app-256.png
 name=Slack

@@ -5,6 +5,7 @@ download-x86-url=
 executable=WordPress.com
 firejail=
 free-license=yes
+group=content-management
 homepage-url=https://wordpress.com/
 icon-url=https://s1.wp.com/i/favicon.ico?v=1447321881
 name=WordPress.com

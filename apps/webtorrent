@@ -5,6 +5,7 @@ download-x86-url=https://github.com/webtorrent/webtorrent-desktop/releases/downl
 executable=
 firejail=
 free-license=yes
+group=video-streaming
 homepage-url=https://webtorrent.io/desktop/
 icon-url=https://webtorrent.io/android-chrome-192x192.png
 name=WebTorrent Desktop

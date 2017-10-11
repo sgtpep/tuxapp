@@ -5,6 +5,7 @@ download-x86-url=https://telegram.org/dl/desktop/linux32
 executable=
 firejail=
 free-license=yes
+group=instant-messengers
 homepage-url=https://telegram.org/
 icon-url=https://telegram.org/img/t_logo.png
 name=Telegram

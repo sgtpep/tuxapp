@@ -5,6 +5,7 @@ download-x86-url=
 executable=
 firejail=
 free-license=
+group=version-control
 homepage-url=https://www.gitkraken.com/
 icon-url=https://www.gitkraken.com/android-chrome-192x192.png
 name=GitKraken

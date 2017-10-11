@@ -5,6 +5,7 @@ download-x86-url=https://drl.chaosforge.org/file_download/33/doomrl-linux-i386-{
 executable=./doomrl
 firejail=
 free-license=yes
+group=role-playing
 homepage-url=https://drl.chaosforge.org/
 icon-url=https://drl.chaosforge.org/images/19.png
 name=DRL

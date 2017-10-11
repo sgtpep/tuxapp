@@ -5,6 +5,7 @@ download-x86-url=
 executable=
 firejail=
 free-license=yes
+group=web-development
 homepage-url=https://insomnia.rest/
 icon-url=https://insomnia.rest/favicon/favicon-32x32.png
 name=Insomnia
