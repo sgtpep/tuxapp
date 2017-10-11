@@ -331,7 +331,13 @@ download_missing_cache = lambda url: download_missing(url, get_download_path(url
 
 download_multiple = \
   asserts(lambda urls, *args, **kwargs: kwargs['result'] is not () and "Failed to download files")(
-  logs(lambda urls, *args, **kwargs: urls and "Downloading {} files: {}".format(len(urls), ", ".join(os.path.basename(url) for url in urls)))(
+  logs(
+    lambda urls, *args, **kwargs: urls and "Downloading {} file{}: {}".format(
+      len(urls),
+      '' if len(urls) == 1 else 's',
+      ", ".join(sorted(os.path.basename(url) for url in urls)),
+    )
+  )(
     lambda urls, path: \
       () \
         if not urls else \
