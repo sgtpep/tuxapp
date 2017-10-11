@@ -45,6 +45,10 @@ build_bwrap_root_arguments = lambda distribution, script=None: \
   ('bash', '-l') + \
   (('-c', "set -eu -o pipefail\n{}".format(script)) if script else ())
 
+call_process_verbose = tuxapp.logs("Running the command: {}")(
+  lambda arguments, *args, **kwargs: tuxapp.call_process(arguments, *args, **kwargs)
+)
+
 configure_arch = lambda: \
   all(install_arch_package(package) for package in ('fakechroot', 'fakeroot', 'sed')) and \
   tuxapp.write("{}/etc/pacman.d/mirrorlist".format(get_container_path('arch')), "Server = {}".format(get_arch_url("$repo/os/$arch"))) and \
@@ -103,7 +107,7 @@ install_arch_package = lambda package: \
 install_bubblewrap = \
   tuxapp.asserts("bubblewrap is not installed")(
   tuxapp.logs("Installing bubblewrap")(
-    lambda: tuxapp.is_executable('apt') and tuxapp.call_process("sudo apt update && sudo apt install -y bubblewrap")
+    lambda: tuxapp.is_executable('apt') and call_process_verbose("sudo apt update && sudo apt install -y bubblewrap")
   ))
 
 install_container = lambda distribution: install_arch() if distribution == 'arch' else install_debian()
