@@ -532,7 +532,7 @@ install = logs_after(lambda app, *args, **kwargs: "Installed {} {}".format(app, 
   lambda app: \
     all(install_packages(app, query_appfile(app, 'tuxapp-packages').split())) and \
     install_desktop_entry(app, not os.path.isfile(get_desktop_entry_path(app))) and \
-    get_app_path(app)
+    app
 )
 
 install_browser = lambda: write("{}/usr/local/bin/browser".format(get_root_path('common')), r"""#!/bin/sh
