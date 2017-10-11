@@ -226,6 +226,13 @@ def symlink(path, target_path):
   os.symlink(target_path, path)
   return path
 
+def touch(path, timestamp=None):
+  os.utime(
+    path if os.path.isfile(path) else write(path),
+    None if timestamp is None else (timestamp, timestamp),
+  )
+  return path
+
 def write(path, contents=''):
   with open(make_directories(path, True), 'w') as file:
     file.write(contents.encode('utf8'))
