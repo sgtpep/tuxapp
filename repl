@@ -4,28 +4,34 @@ set -eu -o pipefail
 read -r -d '' script << EOF || :
 from __future__ import print_function
 
-def debug():
+def debug(function, *args, **kwargs):
   import inspect
   import pdb
   import readline
   import rlcompleter
 
   def set_quit(self, *args, **kwargs):
-    method(self, *args, **kwargs)
-    self.quitting = 0
+    previous_set_quit(self, *args, **kwargs)
     readline.read_history_file(debug.history_path)
-  method = pdb.Pdb.set_quit
-  pdb.Pdb.set_quit = set_quit
+  previous_set_quit, pdb.Pdb.set_quit = pdb.Pdb.set_quit, set_quit
   readline.write_history_file(debug.history_path)
 
-  frame = inspect.currentframe().f_back
-  pdb.Pdb.complete = rlcompleter.Completer(frame.f_locals).complete
-  pdb.Pdb(completekey="\e[25~").set_trace(frame)
+  completer = rlcompleter.Completer()
+  def complete(self, *args, **kwargs):
+    completer.namespace = self.curframe.f_locals
+    completer.use_main_ns = 0
+    return completer.complete(*args, **kwargs)
+  pdb.Pdb.complete = complete
 
-import readline
+  locals = inspect.currentframe().f_back.f_locals
+  name = next(name for name, value in locals.items() if id(value) == id(function))
+  reload()
+  pdb.Pdb(completekey="\e[25~").runcall(getattr(locals[name], 'non_reloadable', locals[name]), *args, **kwargs)
+
 def main():
   import atexit
   import os
+  import readline
   import rlcompleter
 
   readline.set_history_length(10000)
@@ -55,6 +61,7 @@ def reload(*args, **kwargs):
 
     def reloads(variables, variable):
       def decorator(function):
+        function.non_reloadable = function
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
           reload()
