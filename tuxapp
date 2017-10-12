@@ -853,10 +853,7 @@ FIREJAIL={}
 install_updated_distribution = lambda app: get_distribution_path(app) if is_updated(app) else install_distribution(app)
 
 install_updated_icon = lambda app: \
-  get_icon_path(app) \
-    if os.path.isfile(get_icon_path(app)) and is_newer(get_icon_path(app), get_version_path(app)) else \
-  install_icon(app) and \
-  touch(get_icon_path(app), time.time() + 24 * 60 * 60)
+  get_icon_path(app) if is_updated(app) and os.path.isfile(get_icon_path(app)) else install_icon(app)
 
 install_updated_package_file = lambda app, path: \
   extract_package_name(path) if is_package_updated(app, path) else install_package_file(app, path)
