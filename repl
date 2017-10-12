@@ -81,17 +81,6 @@ def reload(*args, **kwargs):
             if not variable.startswith('__'):
               globals()[variable] = reloads(variables, variable)(value) if hasattr(value, '__call__') else value
 
-def timeit(*args, **kwargs):
-  import timeit
-
-  kwargs['number'] = 1
-  return timeit.timeit(*args, **kwargs)
-
-def trace(*args, **kwargs):
-  import trace
-
-  return trace.Trace().runfunc(*args, **kwargs)
-
 main()
 EOF
 PYTHONSTARTUP=<(echo "$script") exec python
