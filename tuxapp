@@ -465,7 +465,6 @@ get_common_packages = lambda: (
   'libxkbfile1',
   'libxss1',
   'libxtst6',
-  'xkb-data',
 )
 
 get_debian_release = lambda: 'stretch'
@@ -619,8 +618,8 @@ function build_environment {
   result_environment=()
 
   [[ $EXECUTABLE\  != AppRun\ * ]] || result_environment[APPDIR]=$distribution_path
-  [[ -d /usr/share/X11/xkb ]] || result_environment[QT_XKB_CONFIG_ROOT]=$common_root_path/usr/share/X11/xkb
   [[ -f /etc/fonts/fonts.conf ]] || result_environment[FONTCONFIG_PATH]=$common_root_path/etc/fonts
+  result_environment[QT_XKB_CONFIG_ROOT]=/usr/share/X11/xkb
 
   if type firejail &> /dev/null; then
     result_environment[BROWSER]=$browser_path
