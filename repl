@@ -10,23 +10,24 @@ def debug(function, *args, **kwargs):
   import readline
   import rlcompleter
 
-  def set_quit(self, *args, **kwargs):
-    previous_set_quit(self, *args, **kwargs)
+  def runcall(self, *args, **kwargs):
+    previous_runcall(self, *args, **kwargs)
+    readline.clear_history()
     readline.read_history_file(debug.history_path)
-  previous_set_quit, pdb.Pdb.set_quit = pdb.Pdb.set_quit, set_quit
+  previous_runcall, pdb.Pdb.runcall = pdb.Pdb.runcall, runcall
   readline.write_history_file(debug.history_path)
 
   completer = rlcompleter.Completer()
   def complete(self, *args, **kwargs):
-    completer.namespace = self.curframe.f_locals
+    completer.namespace = dict(locals, **self.curframe.f_locals)
     completer.use_main_ns = 0
     return completer.complete(*args, **kwargs)
   pdb.Pdb.complete = complete
 
   locals = inspect.currentframe().f_back.f_locals
-  name = next(name for name, value in locals.items() if id(value) == id(function))
+  debugging_function = next((getattr(locals[name], 'non_reloadable', locals[name]) for name, value in locals.items() if id(value) == id(function)), function)
   reload()
-  pdb.Pdb(completekey="\e[25~").runcall(getattr(locals[name], 'non_reloadable', locals[name]), *args, **kwargs)
+  pdb.Pdb(completekey="\e[25~").runcall(debugging_function, *args, **kwargs)
 
 def main():
   import atexit
@@ -38,13 +39,8 @@ def main():
   path = os.path.expanduser("~/.python_history")
   if os.path.exists(path):
     readline.read_history_file(path)
+  atexit.register(readline.write_history_file, path)
   setattr(debug, 'history_path', path)
-  def write_history(path):
-    try:
-      readline.write_history_file(path)
-    except IOError:
-      pass
-  atexit.register(write_history, path)
 
   __builtins__.debug = debug
   del globals()['main']
