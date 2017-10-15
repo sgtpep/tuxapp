@@ -92,7 +92,8 @@ deb http://security.debian.org/ {0}/updates main
     xserver-xorg-core
   )
   DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
-  """)
+  """) and \
+  all(tuxapp.remove_file(path) for path in glob.iglob("{}/usr/lib/x86_64-linux-gnu/libXt.so*".format(get_container_path('debian'))))
 
 execute_bwrap = lambda distribution, app=None, arguments=(), is_strace=False: tuxapp.execute_process(build_bwrap_arguments(distribution, app, arguments, is_strace))
 
