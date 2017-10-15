@@ -649,12 +649,11 @@ function build_arguments {
 
   if [[ ${executable_arguments[0]} == ./* ]]; then
     cd "$distribution_path"
-    result_arguments+=(./"${executable_arguments[0]##*/}")
+    result_arguments+=("${executable_arguments[@]}")
   else
-    result_arguments+=("$distribution_path"/"${executable_arguments[0]##*/}")
+    result_arguments+=("$distribution_path"/"${executable_arguments[0]}")
+    result_arguments+=("${executable_arguments[@]:1}")
   fi
-
-  result_arguments+=("${executable_arguments[@]:1}")
 
   readonly result_arguments
 }
