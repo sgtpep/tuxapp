@@ -10,7 +10,7 @@ homepage-url=https://wordpress.com/
 icon-url=https://s1.wp.com/i/favicon.ico?v=1447321881
 name=WordPress.com
 note=
-packages=
+packages=group-electron
 title=Create a website or blog
 version-regex=/tag/v([^"]+)
 version-url=https://github.com/Automattic/wp-desktop/releases

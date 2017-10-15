@@ -10,7 +10,7 @@ homepage-url=https://www.mozilla.org/en-US/firefox/
 icon-url=https://www.mozilla.org/media/img/firefox/favicon-196.223e1bcaf067.png
 name=Firefox
 note=
-packages=libgtk-3-0 libxt6
+packages=libdbus-glib-1-2 libgtk-3-0 libxt6
 title=The 100% fresh, free-range, ethical browser
 version-regex= data-latest-firefox="([^"]+)
 version-url=https://www.mozilla.org/en-US/firefox/
