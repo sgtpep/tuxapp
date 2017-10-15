@@ -10,17 +10,22 @@ import sys
 tuxapp = imp.load_source('tuxapp', "{}/tuxapp".format(os.path.dirname(__file__)))
 
 @tuxapp.memoizes
-def parse_arguments(arguments=sys.argv[1:]):
+def parse_arguments(arguments):
   parser = argparse.ArgumentParser()
-  parser.add_argument('-d', '--distribution', choices=('arch', 'debian'), default='debian')
+  parser.add_argument('-a', '--arch', action='store_true')
+  parser.add_argument('-d', '--debian', action='store_true')
   parser.add_argument('-r', '--root', action='store_true')
   parser.add_argument('app', nargs='?')
   parser.add_argument('arguments', nargs=argparse.REMAINDER)
   return parser.parse_args(arguments)
 
+call_process_verbose = tuxapp.logs("Running the command: {}")(
+  lambda arguments, *args, **kwargs: tuxapp.call_process(arguments, *args, **kwargs)
+)
+
 build_bwrap_arguments = lambda distribution, app=None, arguments=(): \
+  install_missing_bubblewrap() and \
   ('bwrap', '--bind', get_container_path(distribution), '/',
-    '--bind', tuxapp.get_app_path('common'), tuxapp.get_app_path('common'),
     '--bind', "/run", "/run",
     '--dev-bind', "/dev", "/dev",
     '--proc', "/proc",
@@ -29,62 +34,92 @@ build_bwrap_arguments = lambda distribution, app=None, arguments=(): \
     '--setenv', 'TUXAPP_TEST', '1',
     '--tmpfs', "/tmp",
   ) + \
-  tuple(option for path in get_bind_paths() if os.path.isdir(path) for option in ('--ro-bind', path, path)) + \
-  (('--bind', tuxapp.get_app_path(app), tuxapp.get_app_path(app)) if app else ()) + \
+  tuple(option for path in get_bwrap_bind_paths() if os.path.isdir(path) for option in ('--ro-bind', path, path)) + \
+  (
+    ('--bind', tuxapp.get_app_path(app), tuxapp.get_app_path(app)) \
+      if app else \
+    ('--bind', tuxapp.get_base_path(), tuxapp.get_base_path())
+  ) + \
   ('bash', '-l') + \
-  ((tuxapp.get_runner_path(app),) + arguments if app else ())
+  ((tuxapp.get_app_runner_path(app),) + arguments if app else ())
 
-build_bwrap_root_arguments = lambda distribution, script=None: \
+build_root_bwrap_arguments = lambda distribution: \
+  install_missing_bubblewrap() and \
   ('bwrap', '--bind', get_container_path(distribution), "/",
+    '--bind', tuxapp.make_directories(get_container_cache_path(distribution)), "/var/cache/pacman/pkg" if distribution == 'arch' else "/var/cache/apt/archives",
     '--dev', "/dev",
     '--proc', "/proc",
     '--ro-bind', "/etc/resolv.conf", "/etc/resolv.conf",
     '--tmpfs', "/tmp",
-  'env', '-u', 'LANG') + \
-  (('fakechroot', 'fakeroot') if os.path.isfile("{}/etc/arch-release".format(get_container_path(distribution))) else ('fakeroot-sysv',)) + \
-  ('bash', '-l') + \
-  (('-c', "set -eu -o pipefail\n{}".format(script)) if script else ())
+  ) + \
+  ('env', '-u', 'LANG') + \
+  (('fakechroot', 'fakeroot') if distribution == 'arch' else ('fakeroot-sysv',)) + \
+  ('bash', '-l')
 
-call_process_verbose = tuxapp.logs("Running the command: {}")(
-  lambda arguments, *args, **kwargs: tuxapp.call_process(arguments, *args, **kwargs)
-)
+call_root_bwrap = lambda distribution, script: tuxapp.call_process(build_root_bwrap_arguments(distribution) + ('-c', "set -eu -o pipefail\n{}".format(script)))
 
-configure_arch = lambda: \
-  all(install_arch_package(package) for package in ('fakechroot', 'fakeroot', 'sed')) and \
-  tuxapp.write("{}/etc/pacman.d/mirrorlist".format(get_container_path('arch')), "Server = {}".format(get_arch_url("$repo/os/$arch"))) and \
-  run_bwrap_root('arch', "pacman-key --init && pacman-key --populate archlinux && pacman -Sy --force --needed --noconfirm base strace") and \
-  True
+configure_arch_container = lambda: \
+  all(install_arch_container_package(package) for package in ('fakechroot', 'fakeroot', 'sed')) and \
+  tuxapp.write_file("{}/etc/pacman.d/mirrorlist".format(get_container_path('arch')), "Server = {}".format(get_arch_url("$repo/os/$arch"))) and \
+  call_root_bwrap('arch', r"""
+  pacman-key --init
+  pacman-key --populate archlinux
+  packages=(
+    base
+    strace
+    ttf-dejavu
+    xorg-server
+  )
+  pacman -Sy --force --needed --noconfirm "${packages[@]}"
+  """)
 
-configure_debian = lambda: \
-  all(install_debian_package(package) for package in ('fakeroot', 'libfakeroot')) and \
-  tuxapp.write("{}/etc/apt/sources.list".format(get_container_path('debian')), """\
+configure_debian_container = lambda: \
+  all(install_debian_container_package(package) for package in ('fakeroot', 'libfakeroot')) and \
+  tuxapp.write_file("{}/etc/apt/apt.conf.d/50keep-downloaded-packages".format(get_container_path('debian')), """Binary::apt::APT::Keep-Downloaded-Packages "true";""") and \
+  tuxapp.write_file("{}/etc/apt/sources.list".format(get_container_path('debian')), """\
 deb http://deb.debian.org/debian {0} main
 deb http://security.debian.org/ {0}/updates main
 """.format(tuxapp.get_debian_release())) and \
-  run_bwrap_root('debian', "apt update && DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y && apt install -y strace") and \
-  True
+  call_root_bwrap('debian', r"""
+  apt update
+  DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y
+  packages=(
+    fontconfig-config
+    fonts-dejavu-core
+    strace
+    xserver-xorg-core
+  )
+  DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
+  """)
 
-fetch_arch_package_url = lambda package: get_arch_package_url(package) + tuxapp.fetch_grep(get_arch_package_url(package), ('-Po', '-m', '1', "(?<=\"){}-[^\"]+".format(package)))
+execute_bwrap = lambda distribution, app=None, arguments=(): tuxapp.execute_process(build_bwrap_arguments(distribution, app, arguments))
 
-fetch_arch_url = lambda: get_arch_url("iso/latest/") + tuxapp.fetch_grep(get_arch_url("iso/latest/"), ('-Po', '-m', '1', "(?<=\")archlinux-bootstrap-[^\"]+"))
+execute_root_bwrap = lambda distribution: tuxapp.execute_process(build_root_bwrap_arguments(distribution))
 
-fetch_debian_package_url = lambda package: "{}{}".format(tuxapp.get_debian_url(), tuxapp.fetch_grep(get_debian_package_url(package), ('-o', '-m', '1', "[^/]*/pool/[^\"]*")))
+fetch_arch_container_url = lambda: get_arch_url("iso/latest/") + tuxapp.fetch_grep_url(get_arch_url("iso/latest/"), ('-Po', '-m', '1', "(?<=\")archlinux-bootstrap-[^\"]+"))
+
+fetch_arch_package_url = lambda package: get_arch_package_url(package) + tuxapp.fetch_grep_url(get_arch_package_url(package), ('-Po', '-m', '1', "(?<=\"){}-[^\"]+".format(package)))
+
+fetch_debian_package_url = lambda package: "{}{}".format(tuxapp.get_debian_url(), tuxapp.fetch_grep_url(get_debian_package_url(package), ('-o', '-m', '1', "[^/]*/pool/[^\"]*")))
 
 get_arch_package_url = lambda package: get_arch_url("{}/os/x86_64/".format('extra' if package == 'fakechroot' else 'core'))
 
 get_arch_url = lambda path='': "https://mirrors.kernel.org/archlinux/{}".format(path)
 
-get_bind_paths = lambda: \
-  (
+get_bwrap_bind_paths = lambda: (
     "/usr/lib/locale",
     "/usr/share/alsa",
   ) + \
   tuple(glob.glob("/usr/lib/*-linux-gnu/alsa-lib")) + \
   tuple(glob.glob("/usr/lib/*-linux-gnu/pulseaudio"))
 
-get_check_path = lambda distribution: "{}/var/lib/tuxapp".format(get_container_path(distribution))
+get_container_cache_path = lambda distribution: "{}/{}".format(tuxapp.get_cache_path(), distribution)
+
+get_container_check_path = lambda distribution: "{}/var/lib/tuxapp".format(get_container_path(distribution))
 
 get_container_path = lambda distribution: tuxapp.get_app_path(distribution)
+
+get_debian_container_url = lambda: "https://download.openvz.org/template/precreated/contrib/debian-9.0-{}-minimal.tar.gz".format(tuxapp.detect_architecture().replace('-', '_'))
 
 get_debian_package_url = lambda package: "https://packages.debian.org/{}/{}/{}/download".format(
   tuxapp.get_debian_release(),
@@ -92,63 +127,59 @@ get_debian_package_url = lambda package: "https://packages.debian.org/{}/{}/{}/d
   package,
 )
 
-get_debian_url = lambda: "https://download.openvz.org/template/precreated/contrib/debian-9.0-{}-minimal.tar.gz".format(tuxapp.detect_architecture().replace('-', '_'))
-
-install_arch = lambda: \
-  tuxapp.unpack_tarball(tuxapp.download_missing_cache(fetch_arch_url()), get_container_path('arch'), ("--strip-components=1",)) and \
-  tuxapp.change_mode("{}/etc/ca-certificates/extracted/cadir".format(get_container_path('arch')), lambda mode: mode | stat.S_IWUSR) and \
-  configure_arch() and \
+install_arch_container = lambda: \
+  tuxapp.unpack_tarball(tuxapp.download_missing_cache_file(fetch_arch_container_url()), get_container_path('arch'), ("--strip-components=1",)) and \
+  tuxapp.change_file_mode("{}/etc/ca-certificates/extracted/cadir".format(get_container_path('arch')), lambda mode: mode | stat.S_IWUSR) and \
+  configure_arch_container() and \
   'arch'
 
-install_arch_package = lambda package: \
-  tuxapp.unpack_tarball(tuxapp.download_missing_cache(fetch_arch_package_url(package)), get_container_path('arch'), ("--exclude=.*", "--warning=no-unknown-keyword"), True) and \
+install_arch_container_package = lambda package: \
+  tuxapp.unpack_tarball(tuxapp.download_missing_cache_file(fetch_arch_package_url(package)), get_container_path('arch'), ("--exclude=.*", "--warning=no-unknown-keyword"), True) and \
   package
 
 install_bubblewrap = \
   tuxapp.asserts("bubblewrap is not installed")(
   tuxapp.logs("Installing bubblewrap")(
-    lambda: tuxapp.is_executable('apt') and call_process_verbose("sudo apt update && sudo apt install -y bubblewrap")
+    lambda: tuxapp.is_command_executable('apt') and call_process_verbose("sudo apt update && sudo apt install -y bubblewrap")
   ))
 
-install_container = lambda distribution: install_arch() if distribution == 'arch' else install_debian()
+install_container = tuxapp.asserts("Failed to install {}")(
+  lambda distribution: install_arch_container() if distribution == 'arch' else install_debian_container()
+)
 
-install_debian = lambda: \
-  tuxapp.unpack_tarball(tuxapp.download_missing_cache(get_debian_url()), get_container_path('debian'), ("--exclude=./dev",)) and \
-  configure_debian() and \
+install_debian_container = lambda: \
+  tuxapp.unpack_tarball(tuxapp.download_missing_cache_file(get_debian_container_url()), get_container_path('debian'), ("--exclude=./dev",)) and \
+  configure_debian_container() and \
   'debian'
 
-install_debian_package = lambda package: \
-  tuxapp.unpack_package(tuxapp.download_missing_cache(fetch_debian_package_url(package)), get_container_path('debian'), True) and \
+install_debian_container_package = lambda package: \
+  tuxapp.unpack_package(tuxapp.download_missing_cache_file(fetch_debian_package_url(package)), get_container_path('debian'), (), True) and \
   package
 
-install_missing_bubblewrap = lambda: tuxapp.is_executable('bwrap') or install_bubblewrap()
+install_missing_bubblewrap = lambda: tuxapp.is_command_executable('bwrap') or install_bubblewrap()
 
 install_missing_container = lambda distribution: \
   distribution \
-    if os.path.isfile(get_check_path(distribution)) else \
+    if os.path.isfile(get_container_check_path(distribution)) else \
   install_container(distribution) and \
-  tuxapp.write(get_check_path(distribution)) and \
+  tuxapp.write_file(get_container_check_path(distribution)) and \
   distribution
 
 main = tuxapp.handles_exceptions(
-  lambda: \
-    run_bwrap_root(install_missing_container(parse_arguments().distribution)) \
-      if parse_arguments().root else \
-    run_bwrap(install_missing_container(parse_arguments().distribution), tuxapp.extract_app(parse_arguments().app), tuple(parse_arguments().arguments)) \
-      if parse_arguments().app else \
-    run_bwrap(install_missing_container(parse_arguments().distribution))
+  lambda arguments=tuple(sys.argv[1:]): \
+    execute_root_bwrap(install_missing_container(parse_distribution_arguments(arguments))) \
+      if parse_arguments(arguments).root else \
+    execute_bwrap(install_missing_container(parse_distribution_arguments(arguments)), tuxapp.check_app_installed(tuxapp.extract_app(parse_arguments(arguments).app)), tuple(parse_arguments(arguments).arguments)) \
+      if parse_arguments(arguments).app else \
+    execute_bwrap(install_missing_container(parse_distribution_arguments(arguments)))
 )
 
-run_bwrap = lambda distribution, app=None, arguments=(): \
-  install_missing_bubblewrap() and \
-  tuxapp.execute_process(build_bwrap_arguments(distribution, app, arguments))
-
-run_bwrap_root = lambda distribution, script=None: \
-  install_missing_bubblewrap() and \
-  tuxapp.call_process(build_bwrap_root_arguments(distribution, script)) \
-    if script else \
-  install_missing_bubblewrap() and \
-  tuxapp.execute_process(build_bwrap_root_arguments(distribution, script))
+parse_distribution_arguments = lambda arguments: \
+  'arch' \
+    if parse_arguments(arguments).arch else \
+  'debian' \
+    if parse_arguments(arguments).debian else \
+  'debian'
 
 if __name__ == '__main__':
   main()

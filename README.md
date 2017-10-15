@@ -4,18 +4,19 @@ tuxapp downloads and installs the latest official releases of Linux© applicatio
 
 ## Usage of `tuxapp`
 
-### Install, run, update and uninstall an app
+### Install, execute, update and remove an app
 
-- Install or update Firefox: `tuxapp firefox` or `tuxapp -i firefox`
-- Run Firefox: `tuxapp -r firefox`
+- Install or update Firefox: `tuxapp firefox`
+- Execute Firefox: `tuxapp -e firefox`
 - Check Firefox for updates: `tuxapp -c firefox`
-- Uninstall Firefox: `tuxapp -u firefox`
+- Update Firefox: tuxapp -u firefox
+- Remove Firefox: `tuxapp -r firefox`
 
 ### Other actions
 
 - List apps available for installation: `tuxapp -a`
 - Check installed apps for updates: `tuxapp -c`
 - Show help: `tuxapp -h`
-- Update all installed apps: `tuxapp -i`
 - List installed apps: `tuxapp -l`
 - Purge cache: `tuxapp -p`
+- Update installed apps: `tuxapp -u`
