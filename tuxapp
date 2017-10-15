@@ -666,13 +666,13 @@ function build_environment {
 
   [[ ${executable_arguments[0]} != AppRun ]] || result_environment[APPDIR]=$distribution_path
 
+  build_lib_path result_environment\[LD_LIBRARY_PATH\]
+  build_gdk_pixbuf result_environment\[GDK_PIXBUF_MODULE_FILE\] "${result_environment[LD_LIBRARY_PATH]}"
+
   if type firejail &> /dev/null; then
     result_environment[BROWSER]=$browser_path
     result_environment[TUXAPP_URLS]=$urls_path
   fi
-
-  build_lib_path result_environment\[LD_LIBRARY_PATH\]
-  build_gdk_pixbuf result_environment\[GDK_PIXBUF_MODULE_FILE\] "${result_environment[LD_LIBRARY_PATH]}"
 
   readonly result_environment
 }
