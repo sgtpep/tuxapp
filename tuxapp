@@ -664,7 +664,6 @@ function build_environment {
 
   result_environment=()
 
-  [[ ${QT_XKB_CONFIG_ROOT-} ]] || result_environment[QT_XKB_CONFIG_ROOT]=/usr/share/X11/xkb
   [[ ${executable_arguments[0]} != AppRun ]] || result_environment[APPDIR]=$distribution_path
 
   if type firejail &> /dev/null; then
