@@ -374,6 +374,11 @@ expand_package = lambda package, *args, **kwargs: {
     ('libgtk-3-0' if is_gtk3 else 'libgtk2.0-0'),
   ),
   'group-electron-gtk3': lambda: expand_package('group-electron', True),
+  'group-firefox': lambda: (
+    'libdbus-glib-1-2',
+    'libgtk-3-0',
+    'libxt6',
+  )
 }.get(package, lambda: (package,))(*args, **kwargs)
 
 extract_app = lambda string: os.path.basename(string)
