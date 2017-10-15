@@ -329,7 +329,7 @@ download_file = \
 
 download_files = \
   asserts(lambda *args, **kwargs: kwargs['result'] is False and "Failed to download files")(
-  logs(lambda urls, *args, **kwargs: urls and "Downloading files: {}".format(", ".join(sorted(os.path.basename(url) for url in urls))))(
+  logs(lambda urls, *args, **kwargs: urls and "Downloading {} file{}".format(len(urls), '' if len(urls) == 1 else 's'))(
     lambda urls, path: \
       () \
         if not urls else \
