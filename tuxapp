@@ -5,6 +5,7 @@ import contextlib
 import distutils.dir_util
 import distutils.spawn
 import email.utils
+import fnmatch
 import functools
 import glob
 import hashlib
@@ -1025,7 +1026,10 @@ unpack_app_distribution = lambda app, path: \
 unpack_app_package_distribution = lambda app, path: unpack_package(path, get_app_distribution_path(app))
 
 unpack_app_tarball_distribution = logs(lambda app, path, *args, **kwargs: "Preparing to unpack {}".format(os.path.basename(path)))(
-  lambda app, path: unpack_tarball(path, get_app_distribution_path(app), ("--strip-components=1",) if is_tarball_nested(path) else ())
+  lambda app, path: \
+    unpack_tarball(path, get_app_distribution_path(app), ("--strip-components=1",) if is_tarball_nested(path) else ()) and \
+    all(unpack_app_package_distribution(app, "{}/{}".format(path, filename)) and remove_file("{}/{}".format(path, filename), True) for path, _, filenames in os.walk(get_app_distribution_path(app)) for filename in fnmatch.filter(filenames, "*.deb")) and \
+    get_app_distribution_path(app)
 )
 
 unpack_app_zipfile_distribution = lambda app, path: \
