@@ -364,22 +364,29 @@ execute_process = lambda arguments, environment=None: \
     if environment else \
   os.execvp(arguments[0], arguments)
 
-expand_package = lambda package, *args, **kwargs: {
-  'group-electron': lambda is_gtk3=False: (
+expand_package = lambda package: {
+  'group-electron': (
     'libasound2',
     'libgconf-2-4',
+    'libgtk2.0-0',
     'libnss3',
     'libxss1',
     'libxtst6',
-    ('libgtk-3-0' if is_gtk3 else 'libgtk2.0-0'),
   ),
-  'group-electron-gtk3': lambda: expand_package('group-electron', True),
-  'group-firefox': lambda: (
+  'group-nwjs': (
+    'libasound2',
+    'libgconf-2-4',
+    'libgtk-3-0',
+    'libnss3',
+    'libxss1',
+    'libxtst6',
+  ),
+  'group-firefox': (
     'libdbus-glib-1-2',
     'libgtk-3-0',
     'libxt6',
   )
-}.get(package, lambda: (package,))(*args, **kwargs)
+}.get(package, (package,))
 
 extract_app = lambda string: os.path.basename(string)
 
