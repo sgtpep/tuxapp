@@ -421,10 +421,10 @@ fetch_appfile = \
 fetch_grep_url = \
   asserts("Failed to fetch and match {}")(
   logs("Fetching {}")(
-    lambda url, arguments: read_process("{} | grep {}".format(
+    lambda url, arguments: read_process("{} | zcat -f | grep {}".format(
       join_command_arguments(build_request_arguments(
-        ('-Ss', url),
-        ('-q', '-O', '-', url),
+        ('-Ss', '-H', "Accept-Encoding: gzip", url),
+        ('-q', '-O', '-', '--header', "Accept-Encoding: gzip", url),
       )),
       join_command_arguments(arguments),
     )).rstrip('\n')
@@ -444,10 +444,10 @@ fetch_last_modified_header = lambda url: time.mktime(email.utils.parsedate(searc
 fetch_url = \
   asserts("Failed to fetch {}")(
   logs("Fetching {}")(
-    lambda url: read_process(build_request_arguments(
-      ('-Ss', url),
-      ('-q', '-O', '-', url),
-    ))
+    lambda url: read_process("{} | zcat -f".format(join_command_arguments(build_request_arguments(
+      ('-Ss', '-H', "Accept-Encoding: gzip", url),
+      ('-q', '-O', '-', '--header', "Accept-Encoding: gzip", url),
+    ))))
   ))
 
 filter_app_executable = lambda app, path='': \
