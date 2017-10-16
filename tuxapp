@@ -957,9 +957,11 @@ remove_app = logs_after("Removed {}")(
 )
 
 resolve_app_path = lambda app, path: \
-  "{}{}".format(get_app_distribution_path(app), os.path.realpath(path)) \
-    if os.path.islink(path) else \
-  path
+  path \
+    if not os.path.islink(path) else \
+  "{}{}".format(get_app_distribution_path(app), os.readlink(path)) \
+    if os.readlink(path).startswith('/') else \
+  os.path.realpath(path)
 
 resolve_outdated_app_packages = lambda app, packages: tuple(extract_package_name(url) for url in resolve_package_urls_cached(packages) if not is_app_package_updated(app, url))
 
