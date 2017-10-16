@@ -811,7 +811,7 @@ function check_firejail {
     read_app_firejail_options app_firejail_options
 
     [[ ${WAYLAND_DISPLAY-} || " ${firejail_options[@]} ${app_firejail_options[@]} " == " --x11[ =]" ]] || echo "Warning: X11 sandboxing is not enabled for this app" >&2
-    [[ ! ${firejail_options-} ]] || echo "Warning: firejail will run this app with custom options: $firejail_options" >&2
+    [[ ! ${firejail_options-} ]] || echo "Warning: firejail will run this app with custom options: ${firejail_options[@]}" >&2
   else
     [[ ${TUXAPP_TEST-} ]] || echo "Warning: firejail is not installed on your system and will not be used to sandbox this app" >&2
   fi
