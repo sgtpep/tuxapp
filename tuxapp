@@ -429,7 +429,11 @@ fetch_appfile = \
 fetch_grep_url = \
   asserts("Failed to fetch and match {}")(
   logs("Fetching {}")(
-    lambda url, arguments: read_process("{} | zcat -f | grep {}".format(
+    lambda url, arguments: read_process(r"""
+    {} | \
+    zcat -f | \
+    grep {}
+    """.format(
       join_command_arguments(build_request_arguments(
         ('-Ss', url),
         ('-q', '-O', '-', url),
