@@ -1,0 +1,16 @@
+category=network
+description=Opera is a fast and secure browser. Developed in Europe, used by millions around the world. Now with a built-in ad blocker and free VPN.
+download-x86-64-url=https://download1.operacdn.com/pub/opera/desktop/{version}/linux/opera-stable_{version}_amd64.deb
+download-x86-url=https://download1.operacdn.com/pub/opera/desktop/{version}/linux/opera-stable_{version}_i386.deb
+executable=/usr/lib/x86_64-linux-gnu/opera/opera --no-sandbox
+firejail=
+free-license=
+group=web-browsers
+homepage-url=https://www.opera.com/
+icon-url=https://www-static.operacdn.com/static-heap/75/759b5d5a74e1be5fdfd0fd1fed338c9d1c6cbb33/opera-152.png
+name=Opera
+note=
+packages=group-chromium libcurl3 libnotify4
+title=Fast, secure, easy-to-use browser
+version-regex=ver=([^&"]+)
+version-url=https://www.opera.com/download/index.dml/?os=linux-x86-64&list=all
