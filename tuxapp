@@ -374,18 +374,18 @@ execute_process = lambda arguments, environment=None: \
 
 expand_package = lambda package: \
   {
-    'group-electron': (
+    'group-chromium': (
       'libasound2',
       'libgconf-2-4',
-      'libgtk2.0-0',
+      'libgtk-3-0',
       'libnss3',
       'libxss1',
       'libxtst6',
     ),
-    'group-nwjs': (
+    'group-electron': (
       'libasound2',
       'libgconf-2-4',
-      'libgtk-3-0',
+      'libgtk2.0-0',
       'libnss3',
       'libxss1',
       'libxtst6',
