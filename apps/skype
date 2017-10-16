@@ -13,4 +13,4 @@ note=GNOME Keyring needs to be installed on your system to enable automatic sign
 packages=group-electron
 title=Free calls to friends and family
 version-regex=/skypeforlinux_([^_]+)
-version-url=https://repo.skype.com/deb/dists/stable/main/binary-amd64/Packages
+version-url=https://repo.skype.com/deb/dists/stable/main/binary-amd64/Packages.gz
