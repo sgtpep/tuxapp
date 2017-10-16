@@ -198,14 +198,16 @@ def read_file(path, size=-1):
   else:
     return ''
 
-def remove_directory(path, is_ascending=False):
+def remove_directory(path):
   if os.path.isdir(path):
     shutil.rmtree(path)
-    if is_ascending:
-      try:
-        os.removedirs(os.path.dirname(path))
-      except OSError:
-        pass
+  return True
+
+def remove_empty_directories(path):
+  try:
+    os.removedirs(os.path.dirname(path))
+  except OSError:
+    pass
   return True
 
 def remove_file(path):
@@ -909,7 +911,8 @@ main = handles_exceptions(
 
 move_directory = lambda path, destination_path: \
   copy_directory(path, destination_path) and \
-  remove_directory(path, True) and \
+  remove_directory(path) and \
+  remove_empty_directories(path) and \
   destination_path
 
 pipe_process = lambda file, process, offset=0, size=None: \
