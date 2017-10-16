@@ -12,5 +12,5 @@ name=Stremio
 note=
 packages=libasound2 libgtk2.0-0 libnss3 libusb-1.0-0
 title=Watch videos, movies, TV series and TV channels instantly
-version-regex="Stremio ([^"]+)"
+version-regex="Stremio ([^"]+)
 version-url=https://www.strem.io/downloads
