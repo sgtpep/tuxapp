@@ -1,0 +1,16 @@
+category=network
+description=Firefox Developer Edition is the blazing fast browser that offers cutting edge developer tools and latest features like CSS Grid support and framework debugging.
+download-x86-64-url=https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=linux64&lang=en-US
+download-x86-url=https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=linux&lang=en-US
+executable=firefox
+firejail=
+free-license=yes
+group=web-browsers
+homepage-url=https://www.mozilla.org/en-US/firefox/developer/
+icon-url=https://www.mozilla.org/media/img/firefox/products/developer/quantum/favicon-196.44a728ad9ca5.png
+name=Firefox Developer Edition
+note=
+packages=group-firefox
+title=The Firefox browser made for developers
+version-regex=/releases/([^/]+)
+version-url=https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=linux64&lang=en-US

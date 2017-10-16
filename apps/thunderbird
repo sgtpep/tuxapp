@@ -1,0 +1,16 @@
+category=network
+description=Thunderbird is a free email application that’s easy to set up and customize - and it’s loaded with great features!
+download-x86-64-url=https://download.mozilla.org/?product=thunderbird-{version}-SSL&os=linux64&lang=en-US
+download-x86-url=https://download.mozilla.org/?product=thunderbird-{version}-SSL&os=linux&lang=en-US
+executable=
+firejail=
+free-license=yes
+group=email-clients
+homepage-url=https://www.mozilla.org/en-US/thunderbird/
+icon-url=https://www.mozilla.org/media/img/thunderbird/favicon-196.444b5ada9921.png
+name=Thunderbird
+note=
+packages=group-firefox
+title=Software made to make email easier
+version-regex==thunderbird-([^&]+)-SSL
+version-url=https://www.mozilla.org/en-US/thunderbird/all/

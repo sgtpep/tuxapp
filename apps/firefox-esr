@@ -1,0 +1,17 @@
+category=network
+description=Firefox ESR is intended for groups who deploy and maintain the desktop environment in large organizations such as schools, governments and
+businesses.
+download-x86-64-url=https://download.mozilla.org/?product=firefox-{version}esr-SSL&os=linux64&lang=en-US
+download-x86-url=https://download.mozilla.org/?product=firefox-{version}esr-SSL&os=linux&lang=en-US
+executable=firefox
+firejail=
+free-license=yes
+group=web-browsers
+homepage-url=https://www.mozilla.org/en-US/firefox/organizations/
+icon-url=https://www.mozilla.org/media/img/firefox/favicon-196.223e1bcaf067.png
+name=Firefox ESR
+note=
+packages=group-firefox
+title=Firefox Extended Support Release for your organization, business, enterprise
+version-regex==firefox-([^&]+)esr
+version-url=https://www.mozilla.org/en-US/firefox/organizations/all/
