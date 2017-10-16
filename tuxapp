@@ -299,19 +299,21 @@ detect_app_executable = asserts("Unable to determine the executable file of {}")
 )
 
 detect_architecture = asserts(lambda *args, **kwargs: "Unknown architecture: {}".format(platform.machine()))(
-  lambda: {
-    'i386': 'x86',
-    'i686': 'x86',
-    'ia64': 'x86-64',
-    'x86_64': 'x86-64',
-  }.get(platform.machine())
+  lambda: \
+    {
+      'i386': 'x86',
+      'i686': 'x86',
+      'ia64': 'x86-64',
+      'x86_64': 'x86-64',
+    }.get(platform.machine())
 )
 
 detect_debian_architecture = asserts(lambda *args, **kwargs: "Unsupported architecture: {}".format(detect_architecture()))(
-  lambda: {
-    'x86': 'i386',
-    'x86-64': 'amd64',
-  }.get(detect_architecture())
+  lambda: \
+    {
+      'x86': 'i386',
+      'x86-64': 'amd64',
+    }.get(detect_architecture())
 )
 
 download_app_packages = lambda app, urls: \
@@ -370,29 +372,30 @@ execute_process = lambda arguments, environment=None: \
     if environment else \
   os.execvp(arguments[0], arguments)
 
-expand_package = lambda package: {
-  'group-electron': (
-    'libasound2',
-    'libgconf-2-4',
-    'libgtk2.0-0',
-    'libnss3',
-    'libxss1',
-    'libxtst6',
-  ),
-  'group-nwjs': (
-    'libasound2',
-    'libgconf-2-4',
-    'libgtk-3-0',
-    'libnss3',
-    'libxss1',
-    'libxtst6',
-  ),
-  'group-firefox': (
-    'libdbus-glib-1-2',
-    'libgtk-3-0',
-    'libxt6',
-  )
-}.get(package, (package,))
+expand_package = lambda package: \
+  {
+    'group-electron': (
+      'libasound2',
+      'libgconf-2-4',
+      'libgtk2.0-0',
+      'libnss3',
+      'libxss1',
+      'libxtst6',
+    ),
+    'group-nwjs': (
+      'libasound2',
+      'libgconf-2-4',
+      'libgtk-3-0',
+      'libnss3',
+      'libxss1',
+      'libxtst6',
+    ),
+    'group-firefox': (
+      'libdbus-glib-1-2',
+      'libgtk-3-0',
+      'libxt6',
+    )
+  }.get(package, (package,))
 
 extract_app = lambda string: os.path.basename(string)
 
@@ -404,20 +407,21 @@ fetch_app_version = \
   memoizes(
   asserts(lambda app, *args, **kwargs: "Failed to fetch the version number of {} on {}".format(app, query_appfile(app, 'version-url')))(
   logs(lambda app, *args, **kwargs: "Fetching the version number of {} on {}".format(app, query_appfile(app, 'version-url')))(
-    lambda app: re.sub(r"\n.*$", '', read_process(r"""
-    (
-      {} | \
-      gzip -df
-    ) 2>&1 | \
-    head -c 1000000 2> /dev/null | \
-    grep -Pao -m 1 {}
-    """.format(
-      join_command_arguments(build_request_arguments(
-        ('-Ss', '-D', "/dev/stderr", query_appfile(app, 'version-url')),
-        ('-Sq', '-O', '-', query_appfile(app, 'version-url')),
-      )),
-      quote(re.sub(r"^(.*?)(?<!\\)\((.*)(?<!\\)\)(.*?)$", r"(?<=\1)\2(?=\3)", query_appfile(app, 'version-regex'), 1))
-    )), flags=re.S).replace('/', '-')
+    lambda app: \
+      re.sub(r"\n.*$", '', read_process(r"""
+      (
+        {} | \
+        gzip -df
+      ) 2>&1 | \
+      head -c 1000000 2> /dev/null | \
+      grep -Pao -m 1 {}
+      """.format(
+        join_command_arguments(build_request_arguments(
+          ('-Ss', '-D', "/dev/stderr", query_appfile(app, 'version-url')),
+          ('-Sq', '-O', '-', query_appfile(app, 'version-url')),
+        )),
+        quote(re.sub(r"^(.*?)(?<!\\)\((.*)(?<!\\)\)(.*?)$", r"(?<=\1)\2(?=\3)", query_appfile(app, 'version-regex'), 1))
+      )), flags=re.S).replace('/', '-')
   )))
 
 fetch_appfile = \
@@ -429,26 +433,28 @@ fetch_appfile = \
 fetch_grep_url = \
   asserts("Failed to fetch and match {}")(
   logs("Fetching {}")(
-    lambda url, arguments: read_process(r"""
-    {} | \
-    gzip -df | \
-    grep {}
-    """.format(
-      join_command_arguments(build_request_arguments(
-        ('-Ss', url),
-        ('-q', '-O', '-', url),
-      )),
-      join_command_arguments(arguments),
-    )).rstrip('\n')
+    lambda url, arguments: \
+      read_process(r"""
+      {} | \
+      gzip -df | \
+      grep {}
+      """.format(
+        join_command_arguments(build_request_arguments(
+          ('-Ss', url),
+          ('-q', '-O', '-', url),
+        )),
+        join_command_arguments(arguments),
+      )).rstrip('\n')
   ))
 
 fetch_headers = \
   asserts("Failed to fetch {}")(
   logs("Fetching {}")(
-    lambda url: read_process(build_request_arguments(
-      ('-ISs', '-X', 'GET', url),
-      ('-Sq', '-O', '-', '--spider', url),
-    ), stderr=subprocess.STDOUT if get_request_command() == 'wget' else None)
+    lambda url: \
+      read_process(build_request_arguments(
+        ('-ISs', '-X', 'GET', url),
+        ('-Sq', '-O', '-', '--spider', url),
+      ), stderr=subprocess.STDOUT if get_request_command() == 'wget' else None)
   ))
 
 fetch_last_modified_header = lambda url: time.mktime(email.utils.parsedate(search(r"(?<=\bLast-Modified: ).+$", fetch_headers(url), re.I | re.M)) or time.localtime())
@@ -456,10 +462,11 @@ fetch_last_modified_header = lambda url: time.mktime(email.utils.parsedate(searc
 fetch_url = \
   asserts("Failed to fetch {}")(
   logs("Fetching {}")(
-    lambda url: read_process("{} | gzip -df".format(join_command_arguments(build_request_arguments(
-      ('-Ss', url),
-      ('-q', '-O', '-', url),
-    ))))
+    lambda url: \
+      read_process("{} | gzip -df".format(join_command_arguments(build_request_arguments(
+        ('-Ss', url),
+        ('-q', '-O', '-', url),
+      ))))
   ))
 
 filter_app_executable = lambda app, path='': \
@@ -471,10 +478,11 @@ filter_app_executable = lambda app, path='': \
 
 filter_app_executables = lambda app, path='', is_all=False: tuple(resolve_app_path(app, path).replace("{}/".format(get_app_distribution_path(app)), '') for path in glob.iglob("{}{}/*".format(get_app_distribution_path(app), path)) if os.access(resolve_app_path(app, path), os.X_OK) and (is_all or os.path.basename(path).lower() == app.lower()))
 
-generate_desktop_entry_category = lambda category: "{}{};".format(
-  "AudioVideo;" if category in ('audio', 'video') else '',
-  category.title(),
-)
+generate_desktop_entry_category = lambda category: \
+  "{}{};".format(
+    "AudioVideo;" if category in ('audio', 'video') else '',
+    category.title(),
+  )
 
 get_app_desktop_entry_path = lambda app: "{}/applications/tuxapp-{}.desktop".format(os.environ.get('XDG_DATA_HOME', os.path.expanduser("~/.local/share")), app)
 
@@ -498,9 +506,10 @@ get_app_version_path = lambda app: "{}/version".format(get_app_path(app))
 
 get_base_path = lambda: os.path.expanduser("~/.tuxapp")
 
-get_blacklisted_paths = lambda: (
-  "~/.electron-cash",
-)
+get_blacklisted_paths = lambda: \
+  (
+    "~/.electron-cash",
+  )
 
 get_cache_path = lambda: "{}/tuxapp".format(get_xdg_cache_path())
 
@@ -527,10 +536,11 @@ get_package_list_path = memoizes(
 )
 
 get_package_urls_cache_path = memoizes(
-  lambda packages: "{}/package-urls-{}".format(
-    get_cache_path(),
-    hashlib.md5(str(sorted(packages))).hexdigest(),
-  )
+  lambda packages: \
+    "{}/package-urls-{}".format(
+      get_cache_path(),
+      hashlib.md5(str(sorted(packages))).hexdigest(),
+    )
 )
 
 get_request_command = asserts("Neither wget nor curl is installed")(
@@ -543,19 +553,21 @@ get_request_command = asserts("Neither wget nor curl is installed")(
 )
 
 get_tar_filter_option = asserts("Unknown archive extension: {}")(
-  lambda extension: {
-    'bz2': '-j',
-    'gz': '-z',
-    'lzma': '--lzma',
-    'xz': '-J',
-  }.get(extension)
+  lambda extension: \
+    {
+      'bz2': '-j',
+      'gz': '-z',
+      'lzma': '--lzma',
+      'xz': '-J',
+    }.get(extension)
 )
 
-get_temp_download_path = lambda path='', is_url=False: "{}/downloads{}{}".format(
-  get_cache_path(),
-  '/' if path else '',
-  os.path.basename(urlparse(path).path if is_url else path),
-)
+get_temp_download_path = lambda path='', is_url=False: \
+  "{}/downloads{}{}".format(
+    get_cache_path(),
+    '/' if path else '',
+    os.path.basename(urlparse(path).path if is_url else path),
+  )
 
 get_xdg_cache_path = lambda: os.environ.get('XDG_CACHE_HOME', os.path.expanduser("~/.cache"))
 
@@ -588,22 +600,25 @@ install_app = \
       get_app_path(app)
   ))
 
-install_app_appfile_packages = lambda app: all(install_app_packages(app, query_appfile_packages(app), (
-  "/bin",
-  "/etc",
-  "/sbin",
-  "/usr/bin",
-  "/usr/sbin",
-  "/usr/share",
-  "/var",
-)))
+install_app_appfile_packages = lambda app: \
+  all(install_app_packages(app, query_appfile_packages(app), (
+    "/bin",
+    "/etc",
+    "/sbin",
+    "/usr/bin",
+    "/usr/sbin",
+    "/usr/share",
+    "/var",
+  )))
 
-install_app_browser = lambda app: write_executable_file("{}/usr/bin/browser".format(get_app_root_path(app)), r"""#!/bin/sh
+install_app_browser = lambda app: \
+  write_executable_file("{}/usr/bin/browser".format(get_app_root_path(app)), r"""#!/bin/sh
 echo "$1" > "$TUXAPP_URLS"
 """)
 
 install_app_desktop_entry = logs_after(lambda app, *args, **kwargs: not os.path.isfile(get_app_desktop_entry_path(app)) and "Added the menu item: {}".format(query_appfile_name(app)))(
-  lambda app: write_file(get_app_desktop_entry_path(app), r"""[Desktop Entry]
+  lambda app: \
+    write_file(get_app_desktop_entry_path(app), r"""[Desktop Entry]
 Categories={category}
 Comment={title}
 Exec={runner_path} %U
@@ -1060,18 +1075,19 @@ update_package_list_archive = lambda url: \
   get_package_list_archive_path(url)
 
 update_package_lists = memoizes(
-  lambda: (
-    update_package_list("{}debian-security/dists/{}/updates/main/binary-{}/Packages.xz".format(
-      get_debian_url(),
-      get_debian_release(),
-      detect_debian_architecture(),
-    )),
-    update_package_list("{}debian/dists/{}/main/binary-{}/Packages.xz".format(
-      get_debian_url(),
-      get_debian_release(),
-      detect_debian_architecture(),
-    )),
-  )
+  lambda: \
+    (
+      update_package_list("{}debian-security/dists/{}/updates/main/binary-{}/Packages.xz".format(
+        get_debian_url(),
+        get_debian_release(),
+        detect_debian_architecture(),
+      )),
+      update_package_list("{}debian/dists/{}/main/binary-{}/Packages.xz".format(
+        get_debian_url(),
+        get_debian_release(),
+        detect_debian_architecture(),
+      )),
+    )
 )
 
 write_executable_file = lambda path, contents: change_file_mode(write_file(path, contents), lambda mode: mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)

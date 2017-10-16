@@ -111,7 +111,8 @@ get_arch_package_url = lambda package: get_arch_url("{}/os/x86_64/".format('extr
 
 get_arch_url = lambda path='': "https://mirrors.kernel.org/archlinux/{}".format(path)
 
-get_bwrap_bind_paths = lambda: (
+get_bwrap_bind_paths = lambda: \
+  (
     "/usr/lib/locale",
     "/usr/share/alsa",
   ) + \
@@ -126,11 +127,12 @@ get_container_path = lambda distribution: tuxapp.get_app_path(distribution)
 
 get_debian_container_url = lambda: "https://download.openvz.org/template/precreated/contrib/debian-9.0-{}-minimal.tar.gz".format(tuxapp.detect_architecture().replace('-', '_'))
 
-get_debian_package_url = lambda package: "https://packages.debian.org/{}/{}/{}/download".format(
-  tuxapp.get_debian_release(),
-  tuxapp.detect_debian_architecture(),
-  package,
-)
+get_debian_package_url = lambda package: \
+  "https://packages.debian.org/{}/{}/{}/download".format(
+    tuxapp.get_debian_release(),
+    tuxapp.detect_debian_architecture(),
+    package,
+  )
 
 install_arch_container = lambda: \
   tuxapp.unpack_tarball(tuxapp.download_missing_cache_file(fetch_arch_container_url()), get_container_path('arch'), ("--strip-components=1",)) and \
