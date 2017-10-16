@@ -205,7 +205,7 @@ def remove_directory(path):
 
 def remove_empty_directories(path):
   try:
-    os.removedirs(os.path.dirname(path))
+    os.removedirs(path)
   except OSError:
     pass
   return True
@@ -912,7 +912,7 @@ main = handles_exceptions(
 move_directory = lambda path, destination_path: \
   copy_directory(path, destination_path) and \
   remove_directory(path) and \
-  remove_empty_directories(path) and \
+  remove_empty_directories(os.path.dirname(path)) and \
   destination_path
 
 pipe_process = lambda file, process, offset=0, size=None: \
