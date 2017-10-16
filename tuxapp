@@ -466,7 +466,7 @@ generate_desktop_entry_category = lambda category: "{}{};".format(
 
 get_app_desktop_entry_path = lambda app: "{}/applications/tuxapp-{}.desktop".format(os.environ.get('XDG_DATA_HOME', os.path.expanduser("~/.local/share")), app)
 
-get_app_distribution_path = lambda app: "{}/distribution".format(get_app_path(app))
+get_app_distribution_path = lambda app: "{}/dist".format(get_app_path(app))
 
 get_app_firejail_options_path = lambda app: "{}/firejail".format(get_app_path(app))
 
