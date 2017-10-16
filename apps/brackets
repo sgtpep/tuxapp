@@ -12,5 +12,5 @@ name=Brackets
 note=
 packages=group-electron
 title=A modern, open source text editor that understands web design
-version-regex=/download/release-([^/]+)
-version-url=https://github.com/adobe/brackets/releases
+version-regex=/tag/release-([^/]+)
+version-url=https://github.com/adobe/brackets/releases/latest

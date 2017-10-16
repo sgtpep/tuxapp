@@ -12,5 +12,5 @@ name=DuckieTV
 note=
 packages=group-nwjs
 title=TV show tracker
-version-regex=/download/([^/]+)
-version-url=https://github.com/SchizoDuckie/DuckieTV/releases
+version-regex=/tag/([^/]+)
+version-url=https://github.com/SchizoDuckie/DuckieTV/releases/latest

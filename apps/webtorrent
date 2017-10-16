@@ -12,5 +12,5 @@ name=WebTorrent Desktop
 note=
 packages=group-electron
 title=Streaming torrent app
-version-regex=/download/v([^/]+)
-version-url=https://github.com/webtorrent/webtorrent-desktop/releases
+version-regex=/tag/v([^/]+)
+version-url=https://github.com/webtorrent/webtorrent-desktop/releases/latest
