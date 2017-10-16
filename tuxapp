@@ -396,7 +396,7 @@ extract_package_version = lambda path: path.split('_', 2)[1]
 
 fetch_app_version = \
   memoizes(
-  asserts(lambda app, *args, **kwargs: "Failed the version number of {} on {}".format(app, query_appfile(app, 'version-url')))(
+  asserts(lambda app, *args, **kwargs: "Failed to fetch the version number of {} on {}".format(app, query_appfile(app, 'version-url')))(
   logs(lambda app, *args, **kwargs: "Fetching the version number of {} on {}".format(app, query_appfile(app, 'version-url')))(
     lambda app: re.sub(r"\n.*$", '', read_process(r"""
     {}{} | \
