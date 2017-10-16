@@ -12,5 +12,5 @@ name=Insomnia
 note=
 packages=group-electron
 title=REST client
-version-regex=/tag/v([^/]+)
+version-regex=/download/v([^/]+)
 version-url=https://github.com/getinsomnia/insomnia/releases/latest

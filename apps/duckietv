@@ -12,5 +12,5 @@ name=DuckieTV
 note=
 packages=group-chromium
 title=TV show tracker
-version-regex=/tag/([^/]+)
+version-regex=/download/([^/]+)
 version-url=https://github.com/SchizoDuckie/DuckieTV/releases/latest
