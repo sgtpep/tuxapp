@@ -293,7 +293,7 @@ detect_app_executable = asserts("Unable to determine the executable file of {}")
       if query_appfile(app, 'executable') else \
     'AppRun' \
       if os.access("{}/AppRun".format(get_app_distribution_path(app)), os.X_OK) else \
-    filter_app_executable(app, "/usr/bin") \
+    "/{}".format(filter_app_executable(app, "/usr/bin")) \
       if os.path.isdir("{}/usr/bin".format(get_app_distribution_path(app))) else \
     filter_app_executable(app)
 )
@@ -690,7 +690,7 @@ function build_arguments {
     cd "$distribution_path"
     result_arguments+=("${executable_arguments[@]}")
   else
-    result_arguments+=("$distribution_path"/"${executable_arguments[0]}")
+    result_arguments+=("$distribution_path"/"${executable_arguments[0]#/}")
     result_arguments+=("${executable_arguments[@]:1}")
   fi
 
