@@ -1,0 +1,16 @@
+category=network
+description=A fast, secure, and free web browser built for the modern web. Chrome syncs bookmarks across all your devices, fills out forms automatically, and so much more.
+download-x86-64-url=https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+download-x86-url=
+executable=/opt/google/chrome/google-chrome --no-sandbox
+firejail=
+free-license=
+group=web-browsers
+homepage-url=https://www.google.com/chrome/
+icon-url=https://www.google.com/chrome/assets/landing/images/icons/product/chrome-flat-32.png
+name=Google Chrome
+note=Google Chrome will show an infobar with a warning which can be ignored as long as you have firejail installed.
+packages=group-chromium
+title=Chrome Web Browser
+version-regex=/google-chrome-stable_([^_]+)
+version-url=https://dl.google.com/linux/chrome/deb/dists/stable/main/binary-amd64/Packages.gz

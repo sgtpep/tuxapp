@@ -1,0 +1,16 @@
+category=network
+description=Google Chrome is a fast, secure, and free web browser, built for the modern web.
+download-x86-64-url=https://dl.google.com/linux/direct/google-chrome-unstable_current_amd64.deb
+download-x86-url=
+executable=/opt/google/chrome-unstable/google-chrome-unstable --no-sandbox
+firejail=
+free-license=
+group=web-browsers
+homepage-url=https://www.google.com/chrome/browser/desktop/index.html?extra=devchannel
+icon-url=https://www.google.com/chrome/assets/landing/images/icons/product/chrome-flat-32.png
+name=Google Chrome Dev
+note=This is a Dev channel of Google Chrome which provides early access to latest features for developers. Google Chrome will show an infobar with a warning which can be ignored as long as you have firejail installed.
+packages=group-chromium
+title=Web browser
+version-regex=/google-chrome-unstable_([^_]+)
+version-url=https://dl.google.com/linux/chrome/deb/dists/stable/main/binary-amd64/Packages.gz
