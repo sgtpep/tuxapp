@@ -12,5 +12,5 @@ name=Thunderbird
 note=
 packages=group-firefox
 title=Software made to make email easier
-version-regex==thunderbird-([^&]+)-SSL
+version-regex==thunderbird-([^&"]+)-SSL
 version-url=https://www.mozilla.org/en-US/thunderbird/all/

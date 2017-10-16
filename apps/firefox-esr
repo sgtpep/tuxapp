@@ -13,5 +13,5 @@ name=Firefox ESR
 note=
 packages=group-firefox
 title=Firefox Extended Support Release for your organization, business, enterprise
-version-regex==firefox-([^&]+)esr
+version-regex==firefox-([^&"]+)esr
 version-url=https://www.mozilla.org/en-US/firefox/organizations/all/
