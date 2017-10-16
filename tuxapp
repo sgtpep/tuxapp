@@ -186,7 +186,7 @@ def parse_package_data(path):
     if start != -1 and end != -1:
       filename, _, _, _, _, size = map[start:end].decode('utf8').split()
       return {
-        'extension': os.path.splitext(filename)[1].lstrip('.'),
+        'extension': re.sub(r"\W.*$", '', filename.replace("data.tar.", '', 1)),
         'offset': end + 2,
         'size': int(size),
       }
