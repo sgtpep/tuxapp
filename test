@@ -34,6 +34,7 @@ build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_strace=F
     '--ro-bind', "/sys", "/sys",
     '--setenv', 'TUXAPP_TEST', '1',
     '--tmpfs', "/tmp",
+    '--unshare-pid',
   ) + \
   tuple(option for path in get_bwrap_bind_paths() if os.path.isdir(path) for option in ('--ro-bind', path, path)) + \
   (('--setenv', 'TUXAPP_STRACE', '1') if is_strace else ()) + \
@@ -53,6 +54,7 @@ build_root_bwrap_arguments = lambda distribution: \
     '--proc', "/proc",
     '--ro-bind', "/etc/resolv.conf", "/etc/resolv.conf",
     '--tmpfs', "/tmp",
+    '--unshare-pid',
   ) + \
   ('env', '-u', 'LANG') + \
   (('fakechroot', 'fakeroot') if distribution == 'arch' else ('fakeroot-sysv',)) + \
