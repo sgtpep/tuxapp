@@ -689,7 +689,7 @@ declare -r base_path=${0%/*/*}
 declare -r browser_path=${0%/*}/""" + quote(get_app_relative_path(app, install_app_browser(app))) + r"""
 declare -r cache_path=${XDG_CACHE_HOME-~/.cache}/""" + quote(os.path.relpath(get_cache_path(), get_xdg_cache_path())) + r"""
 declare -r distribution_path=${0%/*}/""" + quote(get_app_relative_path(app, get_app_distribution_path(app))) + r"""
-declare -r executable_arguments=(""" + sanitize_command(detect_app_executable(app)) + r""")
+declare -r executable_arguments=(""" + sanitize_app_executable(app, detect_app_executable(app)) + r""")
 declare -r firejail_options=(""" + sanitize_command(query_appfile(app, 'firejail')) + r""")
 declare -r root_path=${0%/*}/""" + quote(get_app_relative_path(app, get_app_root_path(app))) + r"""
 declare -r urls_path=${0%/*}/urls
@@ -994,6 +994,8 @@ resolve_packages = lambda packages, resolved_packages=set(): functools.reduce(la
     packages | {package},
   ),
 packages, set())
+
+sanitize_app_executable = lambda app, executable_command: join_command_arguments((os.path.realpath("{}/{}".format(get_app_distribution_path(app), split_command(executable_command)[0])).replace("{}/".format(get_app_distribution_path(app)), '', 1),) + split_command(executable_command)[1:])
 
 sanitize_command = lambda command: join_command_arguments(split_command(command))
 
