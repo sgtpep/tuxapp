@@ -149,7 +149,7 @@ def copy_contents(file, destination_file, offset=0, size=None, chunk_size=65536)
       return False
 
 def copy_directory(path, destination_path):
-  import distutils.dir_util
+  import distutils.dir_util # pylint: disable=redefined-outer-name
   distutils.dir_util._path_created = {} # pylint: disable=protected-access
   distutils.dir_util.copy_tree(path, destination_path, update=True)
   return destination_path
