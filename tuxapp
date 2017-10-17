@@ -224,6 +224,12 @@ def rename_file(path, destination_path):
   os.rename(path, make_file_directories(destination_path))
   return destination_path
 
+def symlink_file(path, target_path):
+  if os.path.islink(path):
+    os.remove(path)
+  os.symlink(target_path, path)
+  return path
+
 @asserts(lambda command, *args, **kwargs: kwargs['result'] is None and "Failed to parse the command: {}".format(command))
 def split_command(command):
   try:
