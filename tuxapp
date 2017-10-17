@@ -758,7 +758,7 @@ function build_firejail_arguments {
 
   declare path
   for path in "${blacklisted_paths[@]}"; do
-    result_firejail_arguments+=(--blacklist="$path")
+    [[ ! -e ${path/#~/$HOME} ]] || result_firejail_arguments+=(--blacklist="$path")
   done
 
   declare -r profile_path=/etc/firejail/${executable_arguments[0]##*/}.profile
