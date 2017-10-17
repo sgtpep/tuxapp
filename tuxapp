@@ -306,7 +306,6 @@ detect_app_executable = asserts("Unable to determine the executable file of {}")
       if query_appfile(app, 'executable') else \
     'AppRun' \
       if os.access("{}/AppRun".format(get_app_distribution_path(app)), os.X_OK) else \
-    all(symlink_file(path, os.path.relpath("{}{}".format(get_app_distribution_path(app), os.readlink(path)), os.path.dirname(path))) for path in glob.glob("{}/usr/bin/*".format(get_app_distribution_path(app))) if os.path.islink(path) and os.readlink(path).startswith('/')) and \
     filter_app_executable(app, "/usr/bin") \
       if os.path.isdir("{}/usr/bin".format(get_app_distribution_path(app))) else \
     filter_app_executable(app)
@@ -1035,7 +1034,10 @@ unpack_app_distribution = lambda app, path: \
     if is_file_magic_number(path, "PK") else \
   unpack_app_tarball_distribution(app, path)
 
-unpack_app_package_distribution = lambda app, path: unpack_package(path, get_app_distribution_path(app))
+unpack_app_package_distribution = lambda app, path: \
+  unpack_package(path, get_app_distribution_path(app)) and \
+  all(symlink_file(path, os.path.relpath("{}{}".format(get_app_distribution_path(app), os.readlink(path)), os.path.dirname(path))) for path in glob.glob("{}/usr/bin/*".format(get_app_distribution_path(app))) if os.path.islink(path) and os.readlink(path).startswith('/')) and \
+  get_app_distribution_path(app)
 
 unpack_app_tarball_distribution = logs(lambda app, path, *args, **kwargs: "Preparing to unpack {}".format(os.path.basename(path)))(
   lambda app, path: \
