@@ -306,6 +306,7 @@ detect_app_executable = asserts("Unable to determine the executable file of {}")
       if query_appfile(app, 'executable') else \
     'AppRun' \
       if os.access("{}/AppRun".format(get_app_distribution_path(app)), os.X_OK) else \
+    all(symlink_file(path, os.path.relpath("{}{}".format(get_app_distribution_path(app), os.readlink(path)), os.path.dirname(path))) for path in glob.glob("{}/usr/bin/*".format(get_app_distribution_path(app))) if os.path.islink(path) and os.readlink(path).startswith('/')) and \
     filter_app_executable(app, "/usr/bin") \
       if os.path.isdir("{}/usr/bin".format(get_app_distribution_path(app))) else \
     filter_app_executable(app)
@@ -489,7 +490,7 @@ filter_app_executable = lambda app, path='': \
     if len(filter_app_executables(app, path, True)) == 1 else \
   None
 
-filter_app_executables = lambda app, path='', is_all=False: tuple(resolve_app_path(app, path).replace("{}/".format(get_app_distribution_path(app)), '') for path in glob.glob("{}{}/*".format(get_app_distribution_path(app), path)) if os.access(resolve_app_path(app, path), os.X_OK) and (is_all or os.path.basename(path).lower() == app.lower()))
+filter_app_executables = lambda app, path='', is_all=False: tuple(path.replace("{}/".format(get_app_distribution_path(app)), '') for path in glob.glob("{}{}/*".format(get_app_distribution_path(app), path)) if os.access(path, os.X_OK) and (is_all or os.path.basename(path).lower() == app.lower()))
 
 generate_desktop_entry_category = lambda category: \
   "{}{};".format(
@@ -974,13 +975,6 @@ read_process = lambda arguments, *args, **kwargs: subprocess.Popen(arguments, *a
 remove_app = logs_after("Removed {}")(
   lambda app: remove_directory(get_app_path(app)) and remove_file(get_app_desktop_entry_path(app))
 )
-
-resolve_app_path = lambda app, path: \
-  path \
-    if not os.path.islink(path) else \
-  "{}{}".format(get_app_distribution_path(app), os.readlink(path)) \
-    if os.readlink(path).startswith('/') else \
-  os.path.realpath(path)
 
 resolve_outdated_app_packages = lambda app, packages: tuple(extract_package_name(url) for url in resolve_package_urls_cached(packages) if not is_app_package_updated(app, url))
 
