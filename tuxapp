@@ -79,16 +79,23 @@ def logs_after(message, is_result=False):
     return wrapper
   return decorator
 
-def memoizes(function):
-  cache = {}
-  function.unmemoized = function
-  @functools.wraps(function)
-  def wrapper(*args, **kwargs):
-    key = "{}{}".format(args, kwargs)
-    if key not in cache or cache[key][1] < time.time() - 5 * 60:
-      cache[key] = function(*args, **kwargs), time.time()
-    return cache[key][0]
-  return wrapper
+def memoizes(is_persistent=False):
+  def decorator(function):
+    cache = [None] if is_persistent else [{}]
+    function.unmemoized = function
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+      if is_persistent and not cache[0]:
+        import shelve
+        cache[0] = shelve.open("{}/memoized".format(get_cache_path()))
+      key = "{}{}".format(args, kwargs)
+      if key not in cache[0] or cache[0][key][1] < time.time() - 5 * 60:
+        cache[0][key] = function(*args, **kwargs), time.time()
+        if is_persistent:
+          cache[0].sync()
+      return cache[0][key][0]
+    return wrapper
+  return decorator
 
 def outputs(message):
   def decorator(function):
@@ -155,7 +162,7 @@ def make_directories(path):
 def make_file_directories(path):
   return make_directories(os.path.dirname(path)) and path
 
-@memoizes
+@memoizes()
 def parse_arguments(arguments):
   import argparse
   parser = argparse.ArgumentParser(
@@ -175,7 +182,7 @@ def parse_arguments(arguments):
   parsed_arguments.apps = tuple(extract_app(app) for app in parsed_arguments.apps)
   return parsed_arguments
 
-@memoizes
+@memoizes()
 @asserts(lambda path, *args, **kwargs: "Failed to parse {}".format(os.path.basename(path)))
 def parse_package_data(path):
   import contextlib
@@ -418,7 +425,7 @@ extract_package_name = lambda path: os.path.basename(path).split('_', 1)[0]
 extract_package_version = lambda path: path.split('_', 2)[1]
 
 fetch_app_version = \
-  memoizes(
+  memoizes(True)(
   asserts(lambda app, *args, **kwargs: "Failed to fetch the version number of {} on {}".format(app, query_appfile(app, 'version-url')))(
   logs(lambda app, *args, **kwargs: "Fetching the version number of {} on {}".format(app, query_appfile(app, 'version-url')))(
     lambda app: \
@@ -439,7 +446,7 @@ fetch_app_version = \
   )))
 
 fetch_appfile = \
-  memoizes(
+  memoizes()(
   asserts("{} was not found")(
     lambda app: unasserts(fetch_url)("https://raw.githubusercontent.com/{}/master/apps/{}".format(get_github_repository(), app))
   ))
@@ -545,11 +552,11 @@ get_installed_apps = asserts("No apps are installed")(
 
 get_package_list_archive_path = lambda url: "{}{}".format(get_package_list_path(url), os.path.splitext(url)[1])
 
-get_package_list_path = memoizes(
+get_package_list_path = memoizes()(
   lambda url: "{}/package-list-{}".format(get_cache_path(), hashlib.md5(url).hexdigest())
 )
 
-get_package_urls_cache_path = memoizes(
+get_package_urls_cache_path = memoizes()(
   lambda packages: \
     "{}/package-urls-{}".format(
       get_cache_path(),
@@ -586,7 +593,7 @@ get_temp_download_path = lambda path='', is_url=False: \
 get_xdg_cache_path = lambda: os.environ.get('XDG_CACHE_HOME', os.path.expanduser("~/.cache"))
 
 grep_package_lists = \
-  memoizes(
+  memoizes()(
   asserts("Unknown package: {}")(
     lambda package: read_process(('grep', '-Fh', '-C', '1', '-m', '1', "/{}_".format(package)) + update_package_lists()).rstrip('\n').split("\n--\n", 1)[0]
   ))
@@ -954,11 +961,11 @@ query_appfile_packages = lambda app: tuple(package for package in query_appfile(
 
 query_package_data = lambda path, key: parse_package_data(path).get(key)
 
-query_package_depends = memoizes(
+query_package_depends = memoizes()(
   lambda package: tuple((search(r"(?<=^Depends: ).*$", grep_package_lists(package), re.M) or '').split())
 )
 
-query_package_url = memoizes(
+query_package_url = memoizes()(
   lambda package: "{}{}".format(get_debian_url(), search(r"(?<=^Filename: ).*$", grep_package_lists(package), re.M))
 )
 
@@ -1108,7 +1115,7 @@ update_package_list_archive = lambda url: \
     if fetch_last_modified_header(url) > get_file_mtime(get_package_list_archive_path(url)) else \
   get_package_list_archive_path(url)
 
-update_package_lists = memoizes(
+update_package_lists = memoizes(True)(
   lambda: \
     (
       update_package_list("{}debian-security/dists/{}/updates/main/binary-{}/Packages.xz".format(

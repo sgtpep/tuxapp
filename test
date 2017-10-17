@@ -8,7 +8,7 @@ import sys
 
 tuxapp = imp.load_source('tuxapp', "{}/tuxapp".format(os.path.dirname(__file__)))
 
-@tuxapp.memoizes
+@tuxapp.memoizes()
 def parse_arguments(arguments):
   import argparse
   parser = argparse.ArgumentParser()
