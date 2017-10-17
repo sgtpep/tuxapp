@@ -977,7 +977,14 @@ remove_app = logs_after("Removed {}")(
 
 resolve_app_executable = lambda app, command: join_command_arguments((resolve_app_executable_path(app, split_command(command)[0]),) + split_command(command)[1:])
 
-resolve_app_executable_path = lambda app, path: "usr/bin/{}".format(path) if os.access("{}/usr/bin/{}".format(get_app_distribution_path(app), path), os.X_OK) else path
+resolve_app_executable_path = asserts("Failed to find the executable file: {1}")(
+  lambda app, path: \
+    "usr/bin/{}".format(path) \
+      if os.access("{}/usr/bin/{}".format(get_app_distribution_path(app), path), os.X_OK) else \
+    path
+      if os.access("{}/{}".format(get_app_distribution_path(app), path), os.X_OK) else \
+    None
+)
 
 resolve_outdated_app_packages = lambda app, packages: tuple(extract_package_name(url) for url in resolve_package_urls_cached(packages) if not is_app_package_updated(app, url))
 
