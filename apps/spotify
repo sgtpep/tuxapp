@@ -1,0 +1,16 @@
+category=audio
+description=There are millions of songs on Spotify. Play your favorites, discover new tracks, and build the perfect collection.
+download-x86-64-url=http://repository.spotify.com/pool/non-free/s/spotify-client/spotify-client_{version}_amd64.deb {debian}debian/pool/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u6_amd64.deb
+download-x86-url=http://repository.spotify.com/pool/non-free/s/spotify-client/spotify-client_{version}_i386.deb {debian}debian/pool/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u6_i386.deb
+executable=
+firejail=
+free-license=yes
+group=audio-streaming
+homepage-url=https://www.spotify.com/us/
+icon-url=https://www.scdn.co/i/_global/favicon.png
+name=Spotify
+note=
+packages=group-electron libatomic1 libcurl3
+title=Music for everyone
+version-regex=/spotify-client_([^_]+)
+version-url=http://repository.spotify.com/dists/stable/non-free/binary-amd64/Packages
