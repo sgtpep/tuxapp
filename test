@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import argparse
 import glob
 import imp
 import os
@@ -11,6 +10,7 @@ tuxapp = imp.load_source('tuxapp', "{}/tuxapp".format(os.path.dirname(__file__))
 
 @tuxapp.memoizes
 def parse_arguments(arguments):
+  import argparse
   parser = argparse.ArgumentParser()
   parser.add_argument('-a', '--arch', action='store_true')
   parser.add_argument('-d', '--debian', action='store_true')

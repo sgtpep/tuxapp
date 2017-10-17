@@ -1,20 +1,14 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import argparse
-import contextlib
-import distutils.dir_util
 import distutils.spawn
 import email.utils
 import fnmatch
 import functools
 import glob
 import hashlib
-import mmap
 import os
 import platform
 import re
-import shlex
-import shutil
 import stat
 import subprocess
 import sys
@@ -141,12 +135,14 @@ def copy_contents(file, destination_file, offset=0, size=None, chunk_size=65536)
           destination_file.write(file.read(chunk_size))
         destination_file.write(file.read(size % chunk_size))
       else:
+        import shutil
         shutil.copyfileobj(file, destination_file, chunk_size)
       return True
     except IOError:
       return False
 
 def copy_directory(path, destination_path):
+  import distutils.dir_util
   distutils.dir_util._path_created = {} # pylint: disable=protected-access
   distutils.dir_util.copy_tree(path, destination_path, update=True)
   return destination_path
@@ -161,6 +157,7 @@ def make_file_directories(path):
 
 @memoizes
 def parse_arguments(arguments):
+  import argparse
   parser = argparse.ArgumentParser(
     description=u"%(prog)s downloads and installs the latest official releases of Linux\N{COPYRIGHT SIGN} applications including dependencies without root permissions and allows to run them sandboxed.",
     epilog="ISC License, (c) {} Danil Semelenov, https://github.com/{}".format(time.strftime("%Y"), get_github_repository()),
@@ -181,6 +178,8 @@ def parse_arguments(arguments):
 @memoizes
 @asserts(lambda path, *args, **kwargs: "Failed to parse {}".format(os.path.basename(path)))
 def parse_package_data(path):
+  import contextlib
+  import mmap
   with open(path, 'rb') as file, contextlib.closing(mmap.mmap(file.fileno(), 0, access=mmap.ACCESS_READ)) as map:
     start = map.find(b"data.tar.")
     end = map.find(b"`\n", start)
@@ -201,6 +200,7 @@ def read_file(path, size=-1):
 
 def remove_directory(path, is_ascending=False):
   if os.path.isdir(path):
+    import shutil
     shutil.rmtree(path)
   if is_ascending:
     remove_empty_directories(os.path.dirname(path))
@@ -227,6 +227,7 @@ def rename_file(path, destination_path):
 @asserts(lambda command, *args, **kwargs: kwargs['result'] is None and "Failed to parse the command: {}".format(command))
 def split_command(command):
   try:
+    import shlex
     return tuple(shlex.split(command))
   except ValueError:
     pass
