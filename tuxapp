@@ -300,16 +300,16 @@ check_apps_updated = outputs(
   lambda apps: tuple(check_app_updated(app) for app in apps)
 )
 
-detect_app_executable_command = asserts("Unable to determine the executable file of {}")(
+detect_app_executable = asserts("Unable to determine the executable file of {}")(
   lambda app: \
     query_appfile(app, 'executable').lstrip('/') \
       if query_appfile(app, 'executable') else \
     'AppRun' \
       if os.access("{}/AppRun".format(get_app_distribution_path(app)), os.X_OK) else \
     all(symlink_file(path, os.path.relpath("{}{}".format(get_app_distribution_path(app), os.readlink(path)), os.path.dirname(path))) for path in glob.glob("{}/usr/bin/*".format(get_app_distribution_path(app))) if os.path.islink(path) and os.readlink(path).startswith('/')) and \
-    filter_app_executable_path(app, "/usr/bin") \
+    filter_app_executable(app, "/usr/bin") \
       if os.path.isdir("{}/usr/bin".format(get_app_distribution_path(app))) else \
-    filter_app_executable_path(app)
+    filter_app_executable(app)
 )
 
 detect_architecture = asserts(lambda *args, **kwargs: "Unknown architecture: {}".format(platform.machine()))(
@@ -483,14 +483,14 @@ fetch_url = \
       ))))
   ))
 
-filter_app_executable_path = lambda app, path='': \
-  filter_app_executable_paths(app, path)[0] \
-    if len(filter_app_executable_paths(app, path)) == 1 else \
-  filter_app_executable_paths(app, path, True)[0] \
-    if len(filter_app_executable_paths(app, path, True)) == 1 else \
+filter_app_executable = lambda app, path='': \
+  filter_app_executables(app, path)[0] \
+    if len(filter_app_executables(app, path)) == 1 else \
+  filter_app_executables(app, path, True)[0] \
+    if len(filter_app_executables(app, path, True)) == 1 else \
   None
 
-filter_app_executable_paths = lambda app, path='', is_all=False: tuple(path.replace("{}/".format(get_app_distribution_path(app)), '') for path in glob.glob("{}{}/*".format(get_app_distribution_path(app), path)) if os.access(path, os.X_OK) and (is_all or os.path.basename(path).lower() == app.lower()))
+filter_app_executables = lambda app, path='', is_all=False: tuple(path.replace("{}/".format(get_app_distribution_path(app)), '') for path in glob.glob("{}{}/*".format(get_app_distribution_path(app), path)) if os.access(path, os.X_OK) and (is_all or os.path.basename(path).lower() == app.lower()))
 
 generate_desktop_entry_category = lambda category: \
   "{}{};".format(
@@ -687,7 +687,7 @@ declare -r app_path=${0%/*}
 declare -r base_path=${0%/*/*}
 declare -r browser_path=${0%/*}/""" + quote(get_app_relative_path(app, install_app_browser(app))) + r"""
 declare -r cache_path=${XDG_CACHE_HOME-~/.cache}/""" + quote(os.path.relpath(get_cache_path(), get_xdg_cache_path())) + r"""
-declare -r executable_arguments=(""" + sanitize_app_executable_command(app, detect_app_executable_command(app)) + r""")
+declare -r executable_arguments=(""" + sanitize_app_executable(app, detect_app_executable(app)) + r""")
 declare -r distribution_path=${0%/*}/""" + quote(get_app_relative_path(app, get_app_distribution_path(app))) + r"""
 declare -r firejail_options=(""" + sanitize_command(query_appfile(app, 'firejail')) + r""")
 declare -r firejail_options_path=${0%/*}/""" + quote(get_app_relative_path(app, get_app_firejail_options_path(app))) + r"""
@@ -995,7 +995,7 @@ resolve_packages = lambda packages, resolved_packages=set(): functools.reduce(la
   ),
 packages, set())
 
-sanitize_app_executable_command = lambda app, command: join_command_arguments((os.path.realpath("{}/{}".format(get_app_distribution_path(app), split_command(command)[0])).replace("{}/".format(get_app_distribution_path(app)), '', 1),) + split_command(command)[1:])
+sanitize_app_executable = lambda app, command: join_command_arguments((os.path.realpath("{}/{}".format(get_app_distribution_path(app), split_command(command)[0])).replace("{}/".format(get_app_distribution_path(app)), '', 1),) + split_command(command)[1:])
 
 sanitize_command = lambda command: join_command_arguments(split_command(command))
 
