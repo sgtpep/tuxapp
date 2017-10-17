@@ -644,7 +644,12 @@ Type=Application
 install_app_distribution = lambda app: \
   get_app_distribution_path(app) \
     if is_app_updated(app) else \
-  all(unpack_app_distribution(app, download_missing_file(url, "{}/{}-{}{}".format(get_cache_path(), app, fetch_app_version(app), "-{}".format(index + 1) if index else ''))) for index, url in enumerate(query_appfile_download_urls(app))) and \
+  all(unpack_app_distribution(app, path) for path in (download_missing_file(url, "{}/{}-{}-{}".format(
+    get_cache_path(),
+    app,
+    fetch_app_version(app),
+    hashlib.md5(url).hexdigest(),
+  )) for url in query_appfile_download_urls(app))) and \
   write_file(get_app_version_path(app), "{}\n".format(fetch_app_version(app))) and \
   get_app_distribution_path(app) \
 
