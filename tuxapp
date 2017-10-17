@@ -123,7 +123,7 @@ def change_file_mode(path, get_mode):
   return path
 
 def check_app_firejail(app):
-  if is_command_executable('firejail'):
+  if is_command_exist('firejail'):
     if 'WAYLAND_DISPLAY' not in os.environ and not re.search(r" --x11[ =]", " {} {} ".format(query_appfile(app, 'firejail'), read_app_firejail_options(app))):
       print("Warning: X11 sandboxing is not enabled for this app", file=sys.stderr)
     if read_app_firejail_options(app):
@@ -253,11 +253,11 @@ are_app_packages_updated = lambda app, packages: all(is_app_package_updated(app,
 
 build_app_bsdtar_arguments = lambda app: \
   ('bsdtar',) \
-    if is_command_executable('bsdtar') else \
+    if is_command_exist('bsdtar') else \
   install_app_packages(app, ('libarchive-tools',)) and \
   (
     ('firejail', '--quiet', "--env=LD_LIBRARY_PATH={}/usr/lib/x86_64-linux-gnu".format(get_app_root_path(app))) \
-      if is_command_executable('firejail') else \
+      if is_command_exist('firejail') else \
     ('env', "LD_LIBRARY_PATH={}/usr/lib/x86_64-linux-gnu".format(get_app_root_path(app)))
   ) + ("{}/usr/bin/bsdtar".format(get_app_root_path(app)),)
 
@@ -285,7 +285,7 @@ check_app_updated = \
         if kwargs['result'] else \
       "{} can be updated from {} to {}".format(app, read_app_version(app), fetch_app_version(app))
   , True)(
-  logs_after(lambda app, *args, **kwargs: not is_command_executable('firejail') and not are_app_packages_updated(app, query_appfile_packages(app)) and "Warning: packages of {} are outdated".format(app))(
+  logs_after(lambda app, *args, **kwargs: not is_command_exist('firejail') and not are_app_packages_updated(app, query_appfile_packages(app)) and "Warning: packages of {} are outdated".format(app))(
     lambda app: is_app_updated(app)
   ))
 
@@ -560,9 +560,9 @@ get_package_urls_cache_path = memoizes(
 get_request_command = asserts("Neither wget nor curl is installed")(
   lambda: \
     'wget' \
-      if is_command_executable('wget') and not os.environ.get('TUXAPP_CURL') else \
+      if is_command_exist('wget') and not os.environ.get('TUXAPP_CURL') else \
     'curl' \
-      if is_command_executable('curl') else \
+      if is_command_exist('curl') else \
     None
 )
 
@@ -884,7 +884,7 @@ is_app_package_updated = lambda app, path: extract_package_version(path) == read
 
 is_app_updated = lambda app: read_app_version(app) == fetch_app_version(app)
 
-is_command_executable = lambda command: bool(distutils.spawn.find_executable(command))
+is_command_exist = lambda command: bool(distutils.spawn.find_executable(command))
 
 is_file_list_nested = lambda paths: all(path.lstrip("./").split('/', 1)[0] == paths[0].lstrip("./").split('/', 1)[0] for path in paths)
 
@@ -1015,7 +1015,7 @@ unpack_app_appimage2_distribution = \
     lambda app, path: \
       call_process("cd {} && {}".format(
         make_directories(get_app_path(app)),
-        join_command_arguments((('firejail',) if is_command_executable('firejail') else ()) + (change_file_mode(path, lambda mode: mode | stat.S_IXUSR), '--appimage-extract')),
+        join_command_arguments((('firejail',) if is_command_exist('firejail') else ()) + (change_file_mode(path, lambda mode: mode | stat.S_IXUSR), '--appimage-extract')),
       )) and \
       move_directory("{}/squashfs-root".format(get_app_path(app)), get_app_distribution_path(app))
   ))

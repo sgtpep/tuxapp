@@ -147,7 +147,7 @@ install_arch_container_package = lambda package: \
 install_bubblewrap = \
   tuxapp.asserts("bubblewrap is not installed")(
   tuxapp.logs("Installing bubblewrap")(
-    lambda: tuxapp.is_command_executable('apt') and call_process_verbose("sudo apt update && sudo apt install -y bubblewrap")
+    lambda: tuxapp.is_command_exist('apt') and call_process_verbose("sudo apt update && sudo apt install -y bubblewrap")
   ))
 
 install_container = tuxapp.asserts("Failed to install {}")(
@@ -163,7 +163,7 @@ install_debian_container_package = lambda package: \
   tuxapp.unpack_package(tuxapp.download_missing_cache_file(fetch_debian_package_url(package)), get_container_path('debian'), (), True) and \
   package
 
-install_missing_bubblewrap = lambda: tuxapp.is_command_executable('bwrap') or install_bubblewrap()
+install_missing_bubblewrap = lambda: tuxapp.is_command_exist('bwrap') or install_bubblewrap()
 
 install_missing_container = lambda distribution: \
   distribution \
