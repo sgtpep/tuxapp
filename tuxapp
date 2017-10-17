@@ -483,7 +483,7 @@ filter_app_executable = lambda app, path='': \
     if len(filter_app_executables(app, path, True)) == 1 else \
   None
 
-filter_app_executables = lambda app, path='', is_all=False: tuple(resolve_app_path(app, path).replace("{}/".format(get_app_distribution_path(app)), '') for path in glob.iglob("{}{}/*".format(get_app_distribution_path(app), path)) if os.access(resolve_app_path(app, path), os.X_OK) and (is_all or os.path.basename(path).lower() == app.lower()))
+filter_app_executables = lambda app, path='', is_all=False: tuple(resolve_app_path(app, path).replace("{}/".format(get_app_distribution_path(app)), '') for path in glob.glob("{}{}/*".format(get_app_distribution_path(app), path)) if os.access(resolve_app_path(app, path), os.X_OK) and (is_all or os.path.basename(path).lower() == app.lower()))
 
 generate_desktop_entry_category = lambda category: \
   "{}{};".format(
@@ -533,7 +533,7 @@ get_file_mtime = lambda path: os.path.getmtime(path) if os.path.isfile(path) els
 get_github_repository = lambda: "sgtpep/tuxapp"
 
 get_installed_apps = asserts("No apps are installed")(
-  lambda: tuple(sorted(os.path.basename(os.path.dirname(path)) for path in glob.iglob("{}/*/version".format(get_base_path()))))
+  lambda: tuple(sorted(os.path.basename(os.path.dirname(path)) for path in glob.glob("{}/*/version".format(get_base_path()))))
 )
 
 get_package_list_archive_path = lambda url: "{}{}".format(get_package_list_path(url), os.path.splitext(url)[1])
