@@ -644,6 +644,7 @@ Type=Application
 install_app_distribution = lambda app: \
   get_app_distribution_path(app) \
     if is_app_updated(app) else \
+  all(remove_file(path) for path in glob.glob("{}/*".format(get_app_distribution_path(app))) + glob.glob("{}/usr/bin/*".format(get_app_distribution_path(app))) if os.access(path, os.X_OK)) and \
   all(unpack_app_distribution(app, path) for path in (download_missing_file(url, "{}/{}-{}-{}".format(
     get_cache_path(),
     app,
