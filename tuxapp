@@ -87,7 +87,7 @@ def memoizes(is_persistent=False):
     def wrapper(*args, **kwargs):
       if is_persistent and not cache[0]:
         import shelve
-        cache[0] = shelve.open("{}/memoized".format(get_cache_path()))
+        cache[0] = shelve.open("{}/memoized-python{}".format(get_cache_path(), sys.version_info.major))
       key = "{}{}".format(args, kwargs)
       if key not in cache[0] or cache[0][key][1] < time.time() - 5 * 60:
         cache[0][key] = function(*args, **kwargs), time.time()
