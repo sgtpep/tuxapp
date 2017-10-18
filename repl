@@ -79,4 +79,4 @@ def reload(*args, **kwargs):
 
 main()
 EOF
-PYTHONSTARTUP=<(echo "$script") exec python
+PYTHONSTARTUP=<(echo "$script") exec "${TUXAPP_PYTHON-python}"
