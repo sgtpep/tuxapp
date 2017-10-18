@@ -82,7 +82,7 @@ def logs_after(message, is_result=False):
 def memoizes(is_persistent=False):
   def decorator(function):
     cache = [None] if is_persistent else [{}]
-    function.unmemoized = function
+    function.unmemoize = lambda: cache[0].clear()
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
       if is_persistent and not cache[0]:
