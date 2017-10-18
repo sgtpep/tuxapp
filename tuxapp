@@ -897,9 +897,9 @@ is_command_exist = lambda command: bool(distutils.spawn.find_executable(command)
 
 is_file_list_nested = lambda paths: all(path.lstrip("./").split('/', 1)[0] == paths[0].lstrip("./").split('/', 1)[0] for path in paths)
 
-is_file_magic_number = lambda path, magic_number: read_file(path, len(magic_number)) == magic_number
-
 is_file_newer = lambda path, reference_path: get_file_mtime(path) > get_file_mtime(reference_path)
+
+is_magic_in_file = lambda path, magic_number: read_file(path, len(magic_number)) == magic_number
 
 is_string = lambda value: isinstance(value, (''.__class__, u''.__class__))
 
@@ -1042,13 +1042,13 @@ unpack_app_appimage2_distribution = \
 
 unpack_app_distribution = lambda app, path: \
   unpack_app_appimage1_distribution(app, path) \
-    if is_file_magic_number(path, "\x7fELF\x02\x01\x01\x00AI\x01") else \
+    if is_magic_in_file(path, "\x7fELF\x02\x01\x01\x00AI\x01") else \
   unpack_app_appimage2_distribution(app, path) \
-    if is_file_magic_number(path, "\x7fELF\x02\x01\x01\x00AI\x02") else \
+    if is_magic_in_file(path, "\x7fELF\x02\x01\x01\x00AI\x02") else \
   unpack_app_package_distribution(app, path) \
-    if is_file_magic_number(path, "!<arch>\n") else \
+    if is_magic_in_file(path, "!<arch>\n") else \
   unpack_app_zipfile_distribution(app, path) \
-    if is_file_magic_number(path, "PK") else \
+    if is_magic_in_file(path, "PK") else \
   unpack_app_tarball_distribution(app, path)
 
 unpack_app_package_distribution = lambda app, path: \
