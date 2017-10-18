@@ -431,7 +431,7 @@ fetch_app_version = \
   asserts(lambda app, *args, **kwargs: "Failed to fetch the version number of {} on {}".format(app, query_appfile(app, 'version-url')))(
   logs(lambda app, *args, **kwargs: "Fetching the version number of {} on {}".format(app, query_appfile(app, 'version-url')))(
     lambda app: \
-      re.sub(r"\n.*$", '', read_process(r"""
+      (search(query_appfile(app, 'version-regex'), re.sub(r"\n.*$", '', read_process(r"""
       (
         {} | \
         gzip -df
@@ -443,8 +443,8 @@ fetch_app_version = \
           ('-Ss', '-D', "/dev/stderr", query_appfile(app, 'version-url')),
           ('-Sq', '-O', '-', query_appfile(app, 'version-url')),
         )),
-        quote(re.sub(r"^(.*?)(?<!\\)\((.*)(?<!\\)\)(.*?)$", r"(?<=\1)\2(?=\3)", query_appfile(app, 'version-regex'), 1))
-      )), flags=re.S).replace('/', '-')
+        quote(query_appfile(app, 'version-regex')),
+      )), flags=re.S), 0, 1) or '').replace('/', '-')
   )))
 
 fetch_appfile = \
@@ -1025,7 +1025,7 @@ sanitize_app_executable = lambda app, command: \
 
 sanitize_command = lambda command: join_command_arguments(split_command(command))
 
-search = lambda *args, **kwargs: getattr(re.search(*args, **kwargs), 'group', lambda: None)()
+search = lambda pattern, string, flags=0, group=0: getattr(re.search(pattern, string, flags), 'group', lambda *args, **kwargs: None)(group)
 
 unpack_app_appimage1_distribution = \
   asserts(lambda app, path, *args, **kwargs: "Failed to unpack {}".format(os.path.basename(path)))(
