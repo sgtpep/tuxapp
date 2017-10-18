@@ -167,7 +167,7 @@ def parse_arguments(arguments):
   import argparse
   parser = argparse.ArgumentParser(
     description=u"%(prog)s downloads and installs the latest official releases of Linux\N{COPYRIGHT SIGN} applications including dependencies without root permissions and allows to run them sandboxed.",
-    epilog="ISC License, (c) {} Danil Semelenov, https://github.com/{}".format(time.strftime("%Y"), get_github_repository()),
+    epilog="MIT License, (c) {} Danil Semelenov, https://github.com/{}".format(time.strftime("%Y"), get_github_repository()),
   )
   parser.add_argument('-a', '--all', action='store_true', help="list apps available for installation")
   parser.add_argument('-c', '--check', action='store_true', help="check installed apps for updates")
