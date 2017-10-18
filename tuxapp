@@ -138,7 +138,7 @@ def copy_contents(file, destination_file, offset=0, size=None, chunk_size=65536)
     file.seek(offset)
     try:
       if size:
-        for _ in getattr(__builtins__, 'xrange', 'range')(size / chunk_size):
+        for _ in getattr(__builtins__, 'xrange', range)(size // chunk_size):
           destination_file.write(file.read(chunk_size))
         destination_file.write(file.read(size % chunk_size))
       else:
@@ -198,10 +198,10 @@ def parse_package_data(path):
         'size': int(size),
       }
 
-def read_file(path, size=-1):
+def read_file(path, is_binary=False, size=-1):
   if os.path.isfile(path):
     import io
-    with io.open(path) as file:
+    with io.open(path, 'rb' if is_binary else 'rt') as file:
       return file.read(size)
   else:
     return ''
@@ -901,7 +901,7 @@ is_file_list_nested = lambda paths: all(path.lstrip("./").split('/', 1)[0] == pa
 
 is_file_newer = lambda path, reference_path: get_file_mtime(path) > get_file_mtime(reference_path)
 
-is_magic_in_file = lambda path, magic_number: read_file(path, len(magic_number)) == magic_number
+is_magic_in_file = lambda path, magic_number: read_file(path, True, len(magic_number)) == magic_number
 
 is_string = lambda value: isinstance(value, (''.__class__, u''.__class__))
 
@@ -1044,13 +1044,13 @@ unpack_app_appimage2_distribution = \
 
 unpack_app_distribution = lambda app, path: \
   unpack_app_appimage1_distribution(app, path) \
-    if is_magic_in_file(path, "\x7fELF\x02\x01\x01\x00AI\x01") else \
+    if is_magic_in_file(path, b"\x7fELF\x02\x01\x01\x00AI\x01") else \
   unpack_app_appimage2_distribution(app, path) \
-    if is_magic_in_file(path, "\x7fELF\x02\x01\x01\x00AI\x02") else \
+    if is_magic_in_file(path, b"\x7fELF\x02\x01\x01\x00AI\x02") else \
   unpack_app_package_distribution(app, path) \
-    if is_magic_in_file(path, "!<arch>\n") else \
+    if is_magic_in_file(path, b"!<arch>\n") else \
   unpack_app_zipfile_distribution(app, path) \
-    if is_magic_in_file(path, "PK") else \
+    if is_magic_in_file(path, b"PK") else \
   unpack_app_tarball_distribution(app, path)
 
 unpack_app_package_distribution = lambda app, path: \
