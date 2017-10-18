@@ -138,7 +138,7 @@ def copy_contents(file, destination_file, offset=0, size=None, chunk_size=65536)
     file.seek(offset)
     try:
       if size:
-        for _ in xrange(size / chunk_size):
+        for _ in getattr(__builtins__, 'xrange', 'range')(size / chunk_size):
           destination_file.write(file.read(chunk_size))
         destination_file.write(file.read(size % chunk_size))
       else:
@@ -200,8 +200,9 @@ def parse_package_data(path):
 
 def read_file(path, size=-1):
   if os.path.isfile(path):
-    with open(path) as file:
-      return file.read(size).decode('utf8', 'replace')
+    import io
+    with io.open(path, encoding='utf8', errors='replace') as file:
+      return file.read(size)
   else:
     return ''
 
@@ -253,8 +254,9 @@ def touch_file(path, timestamp=None):
   return path
 
 def write_file(path, contents=''):
-  with open(make_file_directories(path), 'w') as file:
-    file.write(contents.encode('utf8'))
+  import io
+  with io.open(make_file_directories(path), 'w', encoding='utf8', errors='replace') as file:
+    file.write(contents)
     return file.name
 
 are_app_packages_updated = lambda app, packages: all(is_app_package_updated(app, url) for url in resolve_package_urls_cached(packages))
