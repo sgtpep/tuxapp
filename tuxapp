@@ -555,14 +555,14 @@ get_installed_apps = asserts("No apps are installed")(
 get_package_list_archive_path = lambda url: "{}{}".format(get_package_list_path(url), os.path.splitext(url)[1])
 
 get_package_list_path = memoizes()(
-  lambda url: "{}/package-list-{}".format(get_cache_path(), hashlib.md5(url).hexdigest())
+  lambda url: "{}/package-list-{}".format(get_cache_path(), hash_md5(url))
 )
 
 get_package_urls_cache_path = memoizes()(
   lambda packages: \
     "{}/package-urls-{}".format(
       get_cache_path(),
-      hashlib.md5(str(sorted(packages))).hexdigest(),
+      hash_md5(str(sorted(packages))),
     )
 )
 
@@ -599,6 +599,8 @@ grep_package_lists = \
   asserts("Unknown package: {}")(
     lambda package: read_process(('grep', '-Fh', '-C', '1', '-m', '1', "/{}_".format(package)) + update_package_lists()).rstrip('\n').split("\n--\n", 1)[0]
   ))
+
+hash_md5 = lambda string: hashlib.md5(string.encode('utf-8', 'replace')).hexdigest()
 
 install_app = \
   logs_after(
@@ -665,7 +667,7 @@ install_app_distribution = lambda app: \
     get_cache_path(),
     app,
     fetch_app_version(app),
-    hashlib.md5(url).hexdigest(),
+    hash_md5(url),
   )) for url in query_appfile_download_urls(app))) and \
   write_file(get_app_version_path(app), "{}\n".format(fetch_app_version(app))) and \
   get_app_distribution_path(app) \
