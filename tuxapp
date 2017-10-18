@@ -201,7 +201,7 @@ def parse_package_data(path):
 def read_file(path, size=-1):
   if os.path.isfile(path):
     import io
-    with io.open(path, encoding='utf8', errors='replace') as file:
+    with io.open(path) as file:
       return file.read(size)
   else:
     return ''
@@ -255,8 +255,8 @@ def touch_file(path, timestamp=None):
 
 def write_file(path, contents=''):
   import io
-  with io.open(make_file_directories(path), 'w', encoding='utf8', errors='replace') as file:
-    file.write(contents)
+  with io.open(make_file_directories(path), 'w') as file:
+    file.write(contents if isinstance(contents, u''.__class__) or not hasattr(contents, 'decode') else contents.decode('utf8', 'replace'))
     return file.name
 
 are_app_packages_updated = lambda app, packages: all(is_app_package_updated(app, url) for url in resolve_package_urls_cached(packages))
