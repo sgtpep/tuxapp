@@ -1,0 +1,127 @@
+#!/usr/bin/env python
+from __future__ import print_function
+import functools
+import imp
+import os
+import sys
+
+try:
+  from html.parser import HTMLParser
+except ImportError:
+  from HTMLParser import HTMLParser
+try:
+  import builtins
+except ImportError:
+  import __builtin__ as builtins
+try:
+  from urllib.parse import urlparse
+except ImportError:
+  from urlparse import urlparse
+
+tuxapp = imp.load_source('tuxapp', "{}/tuxapp".format(os.path.dirname(__file__)))
+
+class NameParser(HTMLParser):
+  def handle_starttag(self, tag, attributes):
+    if tag == 'meta':
+      raise ResultException('TODO')
+
+class ResultException(Exception):
+  def __init__(self, result):
+    self.result = result
+    super(ResultException, self).__init__()
+
+def validates(message):
+  def decorator(function):
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+      while True:
+        result = function(*args, **kwargs)
+        formatted_message = message(result)
+        if formatted_message:
+          print(formatted_message, file=sys.stderr)
+        else:
+          return result
+    return wrapper
+  return decorator
+
+@validates(lambda result: not result and "Value is required")
+def input_text(question="Text: ", prefill=''):
+  import readline
+  path = os.path.expanduser("~/.python_history")
+  if hasattr(sys, 'ps1') and os.path.isfile(path):
+    readline.write_history_file(path)
+  readline.set_startup_hook(lambda: readline.insert_text(prefill))
+  try:
+    result = getattr(builtins, 'raw_input', input)(question).strip()
+  finally:
+    readline.set_startup_hook()
+  if hasattr(sys, 'ps1') and os.path.isfile(path):
+    readline.clear_history()
+    readline.read_history_file(path)
+  return result
+
+def is_url_existing(url):
+  try:
+    from urllib.request import URLError
+  except ImportError:
+    from urllib2 import URLError
+  try:
+    return open_url(url).getcode() == 200
+  except URLError:
+    return False
+
+def is_url_valid(url):
+  result = urlparse(url)
+  return result.scheme in ('http', 'https') and bool(result.netloc)
+
+def open_url(url):
+  try:
+    from urllib.request import Request, urlopen
+  except ImportError:
+    from urllib2 import Request, urlopen
+  return urlopen(Request(url, headers={'User-Agent': "Mozilla/5.0"}))
+
+def parse_html(parser, html):
+  try:
+    parser().feed(html)
+  except ResultException as exception:
+    return exception.result
+
+ask_homepage = lambda appfile={}: update_appfile(appfile, 'homepage-url', input_url("Homepage: "))
+
+ask_name = lambda appfile={}: update_appfile(appfile, 'name', input_text("Name: ", parse_name(appfile['homepage-url']) if 'homepage-url' in appfile else ''))
+
+check_url_path = lambda url: "{}/".format(url) if is_url_valid(url) and not urlparse(url).path else url
+
+check_url_protocol = lambda url: \
+  url.replace("http://", "https://", 1) \
+    if is_url_valid(url) and url.startswith("http://") and is_url_existing(url.replace("http://", "https://", 1)) else \
+  url
+
+detect_name = lambda url: \
+  'Foo'
+
+input_url = \
+  validates(lambda result: not is_url_existing(result) and "URL does not exist")(
+  validates(lambda result: not is_url_valid(result) and "URL is not valid")(
+    lambda question="URL: ": check_url_protocol(check_url_path(input_text(question)))
+  ))
+
+main = tuxapp.handles_exceptions(
+  lambda: ask_name(ask_homepage())
+)
+
+parse_name = lambda url: parse_html(NameParser, open_url(url).read())
+
+update_appfile = tuxapp.outputs(
+  lambda *args, **kwargs: \
+    "\nGenerated appfile{}:\n{}\n".format(
+      " for {}".format(kwargs['result']['app']) if 'app' in kwargs['result'] else '',
+      '\n'.join("{}={}".format(key, kwargs['result'][key]) for key in sorted(kwargs['result']) if key != 'app'),
+    )
+)(
+  lambda appfile, key, value: dict(appfile, **{key: value})
+)
+
+if __name__ == '__main__':
+  main()
