@@ -51,7 +51,7 @@ def handles_exceptions(function):
       if exception.args:
         print(*exception.args, file=sys.stderr)
       sys.exit(1)
-    except KeyboardInterrupt:
+    except (EOFError, KeyboardInterrupt):
       print("\nInterrupted", file=sys.stderr)
       sys.exit(130)
   return wrapper
