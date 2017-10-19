@@ -61,7 +61,10 @@ def reload(*args, **kwargs):
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
           reload()
-          return variables[variable](*args, **kwargs)
+          try:
+            return variables[variable](*args, **kwargs)
+          except SystemExit as exception:
+            print("Exit with code {}".format(exception.code), file=sys.stderr)
         return wrapper
       return decorator
 
