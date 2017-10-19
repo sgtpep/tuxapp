@@ -13,4 +13,4 @@ note=
 packages=group-electron
 title=A modern, open source text editor that understands web design
 version-regex=-version">([^<]+)
-version-url=http://brackets.io/
+version-url=

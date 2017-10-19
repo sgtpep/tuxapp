@@ -13,4 +13,4 @@ note=
 packages=group-firefox
 title=The 100% fresh, free-range, ethical browser
 version-regex= data-latest-firefox="([^"]+)
-version-url=https://www.mozilla.org/en-US/firefox/
+version-url=

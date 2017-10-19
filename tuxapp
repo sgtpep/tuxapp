@@ -432,8 +432,8 @@ extract_package_version = lambda path: path.split('_', 2)[1]
 
 fetch_app_version = \
   memoizes(True)(
-  asserts(lambda app, *args, **kwargs: "Failed to fetch the version number of {} on {}".format(app, query_appfile(app, 'version-url')))(
-  logs(lambda app, *args, **kwargs: "Fetching the version number of {} on {}".format(app, query_appfile(app, 'version-url')))(
+  asserts(lambda app, *args, **kwargs: "Failed to fetch the version number of {} on {}".format(app, query_appfile_version_url(app)))(
+  logs(lambda app, *args, **kwargs: "Fetching the version number of {} on {}".format(app, query_appfile_version_url(app)))(
     lambda app: \
       (search(query_appfile(app, 'version-regex'), re.sub(r"\n.*$", '', read_process(r"""
       (
@@ -444,8 +444,8 @@ fetch_app_version = \
       grep -Pao -m 1 {}
       """.format(
         join_command_arguments(build_request_arguments(
-          ('-Ss', '-D', "/dev/stderr", query_appfile(app, 'version-url')),
-          ('-Sq', '-O', '-', query_appfile(app, 'version-url')),
+          ('-Ss', '-D', "/dev/stderr", query_appfile_version_url(app)),
+          ('-Sq', '-O', '-', query_appfile_version_url(app)),
         )),
         quote(query_appfile(app, 'version-regex')),
       )), flags=re.S), 0, 1) or '').replace('/', '-')
@@ -968,6 +968,8 @@ query_appfile_download_urls = asserts("No download URL of {} for your architectu
 query_appfile_name = lambda app: query_appfile(app, 'name') or app
 
 query_appfile_packages = lambda app: tuple(package for package in query_appfile(app, 'packages').split() for package in expand_package(package))
+
+query_appfile_version_url = lambda app: query_appfile(app, 'version-url') or query_appfile(app, 'homepage-url')
 
 query_package_data = lambda path, key: parse_package_data(path).get(key)
 
