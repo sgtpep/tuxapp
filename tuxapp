@@ -62,7 +62,7 @@ def logs(message):
     def wrapper(*args, **kwargs):
       formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
       if formatted_message:
-        print(formatted_message)
+        print(formatted_message, file=sys.stderr)
       return function(*args, **kwargs)
     return wrapper
   return decorator
