@@ -441,7 +441,7 @@ fetch_app_version = \
         gzip -df
       ) 2>&1 | \
       head -c 1000000 2> /dev/null | \
-      grep -Pao -m 1 {}
+      grep -Pao -m 1 -- {}
       """.format(
         join_command_arguments(build_request_arguments(
           ('-Ss', '-D', "/dev/stderr", query_appfile_version_url(app)),
