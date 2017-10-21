@@ -593,6 +593,8 @@ get_tar_filter_option = asserts("Unknown archive extension: {}")(
     }.get(extension)
 )
 
+get_tar_progress_options = lambda: () if is_silent() else ("--checkpoint=.250",)
+
 get_temp_download_path = lambda path='', is_url=False: \
   "{}/downloads{}{}".format(
     get_cache_path(),
@@ -1091,7 +1093,7 @@ unpack_package = \
     lambda path, output_path, options=(), is_silent=False: \
       pipe_process(
         open(path, 'rb'),
-        subprocess.Popen(('tar', '-x', get_tar_filter_option(query_package_data(path, 'extension')), '-C', make_directories(output_path)) + (() if is_silent else ("--checkpoint=.250",)) + options, stdin=subprocess.PIPE),
+        subprocess.Popen(('tar', '-x', get_tar_filter_option(query_package_data(path, 'extension')), '-C', make_directories(output_path)) + get_tar_progress_options() + options, stdin=subprocess.PIPE),
         query_package_data(path, 'offset'),
         query_package_data(path, 'size'),
       ) and \
@@ -1103,7 +1105,7 @@ unpack_tarball = \
   asserts(lambda path, *args, **kwargs: "Failed to unpack {}".format(os.path.basename(path)))(
   logs(lambda path, output_path, options=(), is_silent=False, *args, **kwargs: not is_silent and "Unpacking {}".format(os.path.basename(path)))(
     lambda path, output_path, options=(), is_silent=False: \
-      call_process(('tar', '-x', '-C', make_directories(output_path), '-f', path) + (() if is_silent else ("--checkpoint=.250",)) + options) and \
+      call_process(('tar', '-x', '-C', make_directories(output_path), '-f', path) + get_tar_progress_options() + options) and \
       output_path
   )))
 
