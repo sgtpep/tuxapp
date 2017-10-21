@@ -61,7 +61,7 @@ def logs(message):
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
       formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
-      if formatted_message:
+      if formatted_message and not is_silent():
         print(formatted_message, file=sys.stderr)
       return function(*args, **kwargs)
     return wrapper
@@ -77,7 +77,7 @@ def logs_after(message, is_result=False):
       if is_result:
         kwargs['result'] = result
         formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
-      if formatted_message:
+      if formatted_message and not is_silent():
         print(formatted_message, file=sys.stderr)
       return result
     return wrapper
@@ -113,6 +113,16 @@ def outputs(message):
       return result
     return wrapper
   return decorator
+
+def silences(function):
+  @functools.wraps(function)
+  def wrapper(*args, **kwargs):
+    with open(os.devnull, 'w') as file:
+      sys.stdout = file
+      result = function(*args, **kwargs)
+      sys.stdout = sys.__stdout__
+      return result
+  return wrapper
 
 def unasserts(function):
   @functools.wraps(function)
@@ -691,7 +701,7 @@ install_app_icon = lambda app: \
 install_app_package = lambda app, path, excludes=(): \
   extract_package_name(path) \
     if is_app_package_updated(app, path) else \
-  unpack_package(path, get_app_root_path(app), tuple("--exclude=.{}".format(path) for path in excludes), True) and \
+  silences(unpack_package)(path, get_app_root_path(app), tuple("--exclude=.{}".format(path) for path in excludes)) and \
   write_file(get_app_package_version_path(app, extract_package_name(path)), "{}\n".format(extract_package_version(path))) and \
   extract_package_name(path)
 
@@ -913,6 +923,8 @@ is_file_newer = lambda path, reference_path: get_file_mtime(path) > get_file_mti
 
 is_magic_in_file = lambda path, magic_number: read_file(path, True, len(magic_number)) == magic_number
 
+is_silent = lambda: sys.stdout.name == "/dev/null"
+
 is_string = lambda value: isinstance(value, (''.__class__, u''.__class__))
 
 is_tarball_nested = lambda path: is_file_list_nested(read_process(('tar', '-t', '-f', path)).splitlines())
@@ -1087,10 +1099,10 @@ unpack_app_zipfile_distribution = lambda app, path: \
   unpack_zipfile(path, get_app_distribution_path(app))
 
 unpack_package = \
-  outputs(lambda path, output_path, options=(), is_silent=False, *args, **kwargs: not is_silent and ' ')(
+  outputs(' ')(
   asserts(lambda path, *args, **kwargs: "Failed to unpack {}".format(os.path.basename(path)))(
-  logs(lambda path, output_path, options=(), is_silent=False, *args, **kwargs: not is_silent and "Unpacking {}".format(os.path.basename(path)))(
-    lambda path, output_path, options=(), is_silent=False: \
+  logs(lambda path, *args, **kwargs: "Unpacking {}".format(os.path.basename(path)))(
+    lambda path, output_path, options=(): \
       pipe_process(
         open(path, 'rb'),
         subprocess.Popen(('tar', '-x', get_tar_filter_option(query_package_data(path, 'extension')), '-C', make_directories(output_path)) + get_tar_progress_options() + options, stdin=subprocess.PIPE),
@@ -1101,10 +1113,10 @@ unpack_package = \
   )))
 
 unpack_tarball = \
-  outputs(lambda path, output_path, options=(), is_silent=False, *args, **kwargs: not is_silent and ' ')(
+  outputs(' ')(
   asserts(lambda path, *args, **kwargs: "Failed to unpack {}".format(os.path.basename(path)))(
-  logs(lambda path, output_path, options=(), is_silent=False, *args, **kwargs: not is_silent and "Unpacking {}".format(os.path.basename(path)))(
-    lambda path, output_path, options=(), is_silent=False: \
+  logs(lambda path, *args, **kwargs: "Unpacking {}".format(os.path.basename(path)))(
+    lambda path, output_path, options=(): \
       call_process(('tar', '-x', '-C', make_directories(output_path), '-f', path) + get_tar_progress_options() + options) and \
       output_path
   )))

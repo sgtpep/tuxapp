@@ -141,7 +141,7 @@ install_arch_container = lambda: \
   'arch'
 
 install_arch_container_package = lambda package: \
-  tuxapp.unpack_tarball(tuxapp.download_missing_cache_file(fetch_arch_package_url(package)), get_container_path('arch'), ("--exclude=.*", "--warning=no-unknown-keyword"), True) and \
+  tuxapp.silences(tuxapp.unpack_tarball)(tuxapp.download_missing_cache_file(fetch_arch_package_url(package)), get_container_path('arch'), ("--exclude=.*", "--warning=no-unknown-keyword")) and \
   package
 
 install_bubblewrap = \
@@ -160,7 +160,7 @@ install_debian_container = lambda: \
   'debian'
 
 install_debian_container_package = lambda package: \
-  tuxapp.unpack_package(tuxapp.download_missing_cache_file(fetch_debian_package_url(package)), get_container_path('debian'), (), True) and \
+  tuxapp.silences(tuxapp.unpack_package)(tuxapp.download_missing_cache_file(fetch_debian_package_url(package)), get_container_path('debian')) and \
   package
 
 install_missing_bubblewrap = lambda: tuxapp.is_command_exist('bwrap') or install_bubblewrap()
