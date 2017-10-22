@@ -117,11 +117,11 @@ def outputs(message):
 def silences(function):
   @functools.wraps(function)
   def wrapper(*args, **kwargs):
-    with open(os.devnull, 'w') as file:
-      sys.stdout = file
-      result = function(*args, **kwargs)
-      sys.stdout = sys.__stdout__
-      return result
+    with open(os.devnull, 'w') as sys.stdout:
+      try:
+        return function(*args, **kwargs)
+      finally:
+        sys.stdout = sys.__stdout__
   return wrapper
 
 def unasserts(function):
