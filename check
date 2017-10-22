@@ -27,7 +27,7 @@ def overrides_message(message):
     return wrapper
   return decorator
 
-def check_appfile_wrapper(app):
+def check_appfile_wrapped(app):
   return check_appfile(app)
 
 @tuxapp.memoizes()
@@ -50,7 +50,7 @@ def check_appfiles(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
-    return all(pool.imap_unordered(check_appfile_wrapper, apps))
+    return all(pool.imap_unordered(check_appfile_wrapped, apps))
 
 check_app = lambda app: \
   tuxapp.asserts("Invalid characters")(lambda: bool(re.match("^[a-z0-9-]*$", app)))() and \
@@ -60,24 +60,50 @@ check_app = lambda app: \
 check_appfile = lambda app: \
   overrides_message("{}: {message}")(check_app)(app) and \
   overrides_message("{}: {message}")(check_appfile_keys)(app) and \
-  all(get_overrides_message(app, key, value)(check_appfile_value)(key, value) for key, value in parse_appfile(app)) and \
-  all(get_overrides_message(app, key, value)(check_appfile_item)(key, value) for key, value in parse_appfile(app)) and \
-  all(get_overrides_message(app, key, url)(check_url)(url) for key, url in parse_appfile_urls(app))
+  all(overrides_message(u"{}.{}: {{message}}{}".format(
+    app,
+    key,
+    u" ({})".format(value.replace('{', "{{").replace('}', "}}")) if value else '',
+  ))(check_appfile_item)(app, key, value) for key, value in parse_appfile(app))
 
 check_appfile_exists = tuxapp.asserts("{}: unknown app")(
   lambda app: os.path.isfile(tuxapp.get_appfile_path(app)) and app
 )
 
 check_appfile_item = tuxapp.asserts("Unknown key")(
-  lambda key, value: \
+  lambda app, key, value: \
     check_category(value) \
       if key == 'category' else \
+    check_description(app, value) \
+      if key == 'description' else \
+    True \
+      if key == 'download-x86-64-url' else \
+    True \
+      if key == 'download-x86-url' else \
+    True \
+      if key == 'executable' else \
+    True \
+      if key == 'firejail' else \
     check_free_license(value) \
       if key == 'free-license' else \
-    check_required(value) \
+    check_homepage_url(value) \
       if key == 'homepage-url' else \
+    check_icon_url(value) \
+      if key == 'icon-url' else \
     check_group(value) \
       if key == 'group' else \
+    check_name(app, value) \
+      if key == 'name' else \
+    check_note(value) \
+      if key == 'note' else \
+    True \
+      if key == 'packages' else \
+    check_title(app, value) \
+      if key == 'title' else \
+    True \
+      if key == 'version-regex' else \
+    True \
+      if key == 'version-url' else \
     None
 )
 
@@ -89,32 +115,70 @@ check_appfile_keys = lambda app: \
   tuxapp.asserts("Missing keys")(lambda: not set(get_appfile_keys()) - set(parse_appfile_keys(app)))() and \
   tuxapp.asserts("Doubled keys")(lambda: parse_appfile_keys(app) == get_appfile_keys())()
 
-check_appfile_value = lambda key, value: \
-  (key == 'version-regex' or tuxapp.asserts("Edge whitespace")(lambda: not re.search(r"^\s", value) and not re.search(r"\s$", value))()) and \
-  tuxapp.asserts("Continuous whitespace")(lambda: not re.search(r"\s{2}", value))() and \
-  tuxapp.asserts("Tab character")(lambda: '\t' not in value)()
-
 check_category = lambda category: \
-  check_required(category) and \
+  check_value(category) and \
   tuxapp.asserts("Unknown category")(lambda: category in get_categories())()
 
-check_free_license = tuxapp.asserts("Wrong value")(
-  lambda value: value in ('', 'yes')
-)
+check_description = lambda app, description: \
+  not description or \
+  tuxapp.asserts("Not capitalized")(lambda: description[0].upper() == description[0])() and \
+  tuxapp.asserts("No terminal punctuation")(lambda: description[-1] in get_terminal_punctuation())() and \
+  check_homepage_contains(app, description)
+
+check_free_license = lambda value: \
+  not value or \
+  tuxapp.asserts("Value is not 'yes'")(lambda: value == 'yes')()
 
 check_group = lambda group: \
-  check_required(group) and \
+  check_value(group) and \
   tuxapp.asserts("Unknown group")(lambda: group in get_groups())()
 
-
-check_required = tuxapp.asserts("Is required")(
-  lambda value: bool(value)
+check_homepage_contains = tuxapp.asserts("Not found on the homepage")(
+  lambda app, string, is_case_sensitive=False: \
+    bool(re.search(
+      r"\b{}\b".format(re.escape(re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', string)))),
+      fetch_url_text(tuxapp.query_appfile(app, 'homepage-url')),
+      0 if is_case_sensitive else re.I | re.U,
+    ))
 )
+
+check_homepage_url = lambda url: \
+  check_value(url) and \
+  check_url(url)
+
+check_icon_url = lambda url: \
+  check_value(url) and \
+  check_url(url)
+
+check_name = lambda app, name: \
+  check_value(name) and \
+  (name in get_ignored_names() or check_homepage_contains(app, name, True))
+
+check_note = lambda note: \
+  not note or \
+  tuxapp.asserts("Not capitalized")(lambda: note[0].upper() == note[0])() and \
+  tuxapp.asserts("No terminal punctuation")(lambda: note[-1] in get_terminal_punctuation())()
+
+check_title = lambda app, title: \
+  not title or \
+  tuxapp.asserts("Not capitalized")(lambda: title[0].upper() == title[0])() and \
+  tuxapp.asserts("Terminal punctuation")(lambda: title[-1] not in get_terminal_punctuation())() and \
+  check_homepage_contains(app, title)
 
 check_url = lambda url: \
   tuxapp.asserts("Invalid URL")(lambda: urlparse(url).scheme in ('http', 'https') and bool(urlparse(url).netloc) and bool(urlparse(url).path))() and \
   tuxapp.asserts("URL is accessible by HTTPS")(lambda: url.startswith("https://") or not check_url_status(url.replace("http://", "https://", 1)))() and \
   tuxapp.asserts("Inaccessible URL")(check_url_status)(url)
+
+check_value = lambda string: \
+  tuxapp.asserts("Is required")(lambda: bool(string))() and \
+  tuxapp.asserts("Edge whitespace")(lambda: not re.search(r"^\s", string) and not re.search(r"\s$", string))() and \
+  tuxapp.asserts("Continuous whitespace")(lambda: not re.search(r"\s{2}", string))() and \
+  tuxapp.asserts("Tab character")(lambda: '\t' not in string)()
+
+fetch_url_text = tuxapp.memoizes()(
+  lambda url: re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', re.sub(r"&[\w#]+;", ' ', re.sub(r"<(?!meta)[^>]+>", ' ', tuxapp.fetch_url(url)))))
+)
 
 get_appfile_keys = lambda: \
   (
@@ -135,6 +199,8 @@ get_appfile_keys = lambda: \
     'version-regex',
     'version-url',
   )
+
+get_appfiles = lambda: tuple(sorted(tuxapp.extract_app(path) for path in glob.glob(tuxapp.get_appfile_path('*'))))
 
 get_categories = lambda: \
   (
@@ -169,21 +235,20 @@ get_groups = lambda: \
     'web-development',
   )
 
-get_overrides_message = lambda app, key, value: overrides_message(u"{}.{}: {{message}} ({})".format(app, key, value))
+get_ignored_names = lambda: \
+  (
+    "Google Chrome Dev",
+  )
 
-get_appfiles = lambda: tuple(sorted(tuxapp.extract_app(path) for path in glob.glob(tuxapp.get_appfile_path('*'))))
+get_terminal_punctuation = lambda: ('.', '!', '?')
 
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): check_appfiles(tuple(check_appfile_exists(tuxapp.extract_app(argument)) for argument in arguments) or get_appfiles())
 )
 
-parse_appfile = tuxapp.memoizes()(
-  lambda app: tuple(line.split('=', 1) for line in read_appfile(app).splitlines())
-)
+parse_appfile = lambda app: tuple(line.split('=', 1) for line in read_appfile(app).splitlines())
 
 parse_appfile_keys = lambda app: tuple(key for key, _ in parse_appfile(app))
-
-parse_appfile_urls = lambda app: tuple((key, url) for key, value in parse_appfile(app) if key.endswith('-url') and value for url in (tuple(tuxapp.filter_app_download_url(app, url) for url in value.split()) if key.startswith('download-') else (value,)))
 
 read_appfile = lambda app: tuxapp.read_file(tuxapp.get_appfile_path(app))
 
