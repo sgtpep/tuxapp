@@ -448,7 +448,7 @@ fetch_app_version = \
       (search(query_appfile(app, 'version-regex'), re.sub(r"\n.*$", '', read_process(r"""
       (
         {} | \
-        gzip -df
+        gzip -df 2> /dev/null
       ) 2>&1 | \
       head -c 1000000 2> /dev/null | \
       grep -Pao -m 1 -- {}
@@ -473,7 +473,7 @@ fetch_grep_url = \
     lambda url, arguments: \
       read_process(r"""
       {} | \
-      gzip -df | \
+      gzip -df 2> /dev/null | \
       grep {}
       """.format(
         join_command_arguments(build_request_arguments(
@@ -500,7 +500,7 @@ fetch_url = \
   asserts("Failed to fetch {}")(
   logs("Fetching {}")(
     lambda url: \
-      read_process("{} | gzip -df".format(join_command_arguments(build_request_arguments(
+      read_process("{} | gzip -df 2> /dev/null".format(join_command_arguments(build_request_arguments(
         ('-Ss', url),
         ('-q', '-O', '-', url),
       ))))
