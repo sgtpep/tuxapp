@@ -444,8 +444,8 @@ fetch_app_version = \
   memoizes(True)(
   asserts(lambda app, *args, **kwargs: "Failed to fetch the version number of {} on {}".format(app, query_appfile_version_url(app)))(
   logs(lambda app, *args, **kwargs: "Fetching the version number of {} on {}".format(app, query_appfile_version_url(app)))(
-    lambda app: \
-      (search(query_appfile(app, 'version-regex'), re.sub(r"\n.*$", '', read_process(r"""
+    lambda app, pattern=None: \
+      (search(pattern or query_appfile(app, 'version-regex'), re.sub(r"\n.*$", '', read_process(r"""
       (
         {} | \
         gzip -df 2> /dev/null
@@ -457,7 +457,7 @@ fetch_app_version = \
           ('-Ss', '-D', "/dev/stderr", query_appfile_version_url(app)),
           ('-Sq', '-O', '-', query_appfile_version_url(app)),
         )),
-        quote(query_appfile(app, 'version-regex')),
+        quote(pattern or query_appfile(app, 'version-regex')),
       )), flags=re.S), 0, 1) or '').replace('/', '-')
   )))
 
