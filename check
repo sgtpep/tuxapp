@@ -52,6 +52,13 @@ def check_appfiles(apps):
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
     return all(pool.imap_unordered(check_appfile_wrapped, apps))
 
+@tuxapp.asserts("Malformed pattern")
+def check_regex(pattern):
+  try:
+    return bool(re.compile(pattern))
+  except re.error:
+    return False
+
 check_app = lambda app: \
   tuxapp.asserts("Invalid characters")(lambda: bool(re.match("^[a-z0-9-]*$", app)))() and \
   tuxapp.asserts("Edge dash")(lambda: not app.startswith('-') and not app.endswith('-'))() and \
@@ -76,13 +83,11 @@ check_appfile_item = tuxapp.asserts("Unknown key")(
       if key == 'category' else \
     check_description(app, value) \
       if key == 'description' else \
-    True \
-      if key == 'download-x86-64-url' else \
-    True \
-      if key == 'download-x86-url' else \
+    all(check_download_url(app, url, re.sub(r"^download-(.+)-url", r'\1', key)) for url in value.split()) \
+      if key.startswith('download-') and key.endswith('-url') else \
     True \
       if key == 'executable' else \
-    True \
+    check_firejail(value) \
       if key == 'firejail' else \
     check_free_license(value) \
       if key == 'free-license' else \
@@ -100,9 +105,9 @@ check_appfile_item = tuxapp.asserts("Unknown key")(
       if key == 'packages' else \
     check_title(app, value) \
       if key == 'title' else \
-    True \
+    check_version_regex(app, value) \
       if key == 'version-regex' else \
-    True \
+    check_version_url(value) \
       if key == 'version-url' else \
     None
 )
@@ -115,18 +120,34 @@ check_appfile_keys = lambda app: \
   tuxapp.asserts("Missing keys")(lambda: not set(get_appfile_keys()) - set(parse_appfile_keys(app)))() and \
   tuxapp.asserts("Doubled keys")(lambda: parse_appfile_keys(app) == get_appfile_keys())()
 
+check_capitalized = tuxapp.asserts("Not capitalized")(
+  lambda string: string[0] == string[0].upper()
+)
+
 check_category = lambda category: \
   check_value(category) and \
   tuxapp.asserts("Unknown category")(lambda: category in get_categories())()
 
 check_description = lambda app, description: \
   not description or \
-  tuxapp.asserts("Not capitalized")(lambda: description[0].upper() == description[0])() and \
-  tuxapp.asserts("No terminal punctuation")(lambda: description[-1] in get_terminal_punctuation())() and \
+  check_value(description) and \
+  check_capitalized(description) and \
+  check_terminal_punctuation(description) and \
   check_homepage_contains(app, description)
+
+check_download_url = lambda app, url, architecture: \
+  architecture != 'x86-64' and not url or \
+  tuxapp.asserts("Contains the version number")(lambda: tuxapp.fetch_app_version(app) not in url)() and \
+  check_url(tuxapp.filter_app_download_url(app, url))
+
+check_firejail = lambda options: \
+  not options or \
+  check_value(options) and \
+  tuxapp.asserts("Failed to parse")(lambda: bool(tuxapp.unasserts(tuxapp.split_command)(options)))()
 
 check_free_license = lambda value: \
   not value or \
+  check_value(value) and \
   tuxapp.asserts("Value is not 'yes'")(lambda: value == 'yes')()
 
 check_group = lambda group: \
@@ -142,13 +163,9 @@ check_homepage_contains = tuxapp.asserts("Not found on the homepage")(
     ))
 )
 
-check_homepage_url = lambda url: \
-  check_value(url) and \
-  check_url(url)
+check_homepage_url = lambda url: check_url(url)
 
-check_icon_url = lambda url: \
-  check_value(url) and \
-  check_url(url)
+check_icon_url = lambda url: check_url(url)
 
 check_name = lambda app, name: \
   check_value(name) and \
@@ -156,25 +173,39 @@ check_name = lambda app, name: \
 
 check_note = lambda note: \
   not note or \
-  tuxapp.asserts("Not capitalized")(lambda: note[0].upper() == note[0])() and \
-  tuxapp.asserts("No terminal punctuation")(lambda: note[-1] in get_terminal_punctuation())()
+  check_value(note) and \
+  check_capitalized(note) and \
+  check_terminal_punctuation(note)
+
+check_terminal_punctuation = tuxapp.asserts(lambda string, is_inverted=False, *args, **kwargs: "Terminal punctuation" if is_inverted else "No terminal punctuation")(
+  lambda string, is_inverted=False: (string[-1] in ('.', '!', '?')) ^ is_inverted
+)
 
 check_title = lambda app, title: \
   not title or \
-  tuxapp.asserts("Not capitalized")(lambda: title[0].upper() == title[0])() and \
-  tuxapp.asserts("Terminal punctuation")(lambda: title[-1] not in get_terminal_punctuation())() and \
+  check_value(title) and \
+  check_capitalized(title) and \
+  check_terminal_punctuation(title, True) and \
   check_homepage_contains(app, title)
 
 check_url = lambda url: \
+  check_value(url) and \
   tuxapp.asserts("Invalid URL")(lambda: urlparse(url).scheme in ('http', 'https') and bool(urlparse(url).netloc) and bool(urlparse(url).path))() and \
   tuxapp.asserts("URL is accessible by HTTPS")(lambda: url.startswith("https://") or not check_url_status(url.replace("http://", "https://", 1)))() and \
   tuxapp.asserts("Inaccessible URL")(check_url_status)(url)
 
-check_value = lambda string: \
+check_value = lambda string, is_whitespace_allowed=False: \
   tuxapp.asserts("Is required")(lambda: bool(string))() and \
-  tuxapp.asserts("Edge whitespace")(lambda: not re.search(r"^\s", string) and not re.search(r"\s$", string))() and \
-  tuxapp.asserts("Continuous whitespace")(lambda: not re.search(r"\s{2}", string))() and \
-  tuxapp.asserts("Tab character")(lambda: '\t' not in string)()
+  tuxapp.asserts("Tab character")(lambda: '\t' not in string)() and \
+  tuxapp.asserts("Edge whitespace")(lambda: is_whitespace_allowed or not re.search(r"^\s", string) and not re.search(r"\s$", string))() and \
+  tuxapp.asserts("Continuous whitespace")(lambda: is_whitespace_allowed or not re.search(r"\s{2}", string))()
+
+check_version_regex = lambda app, pattern: \
+  check_value(pattern, True) and \
+  check_regex(pattern) and \
+  bool(tuxapp.fetch_app_version(app, pattern))
+
+check_version_url = lambda url: not url or check_url(url)
 
 fetch_url_text = tuxapp.memoizes()(
   lambda url: re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', re.sub(r"&[\w#]+;", ' ', re.sub(r"<(?!meta)[^>]+>", ' ', tuxapp.fetch_url(url)))))
@@ -234,8 +265,6 @@ get_groups = lambda: \
     'web-browsers',
     'web-development',
   )
-
-get_terminal_punctuation = lambda: ('.', '!', '?')
 
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): check_appfiles(tuple(check_appfile_exists(tuxapp.extract_app(argument)) for argument in arguments) or get_appfiles())
