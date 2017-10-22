@@ -152,7 +152,7 @@ check_icon_url = lambda url: \
 
 check_name = lambda app, name: \
   check_value(name) and \
-  (name in get_ignored_names() or check_homepage_contains(app, name, True))
+  (name.startswith('~') or check_homepage_contains(app, name, True))
 
 check_note = lambda note: \
   not note or \
@@ -233,11 +233,6 @@ get_groups = lambda: \
     'video-streaming',
     'web-browsers',
     'web-development',
-  )
-
-get_ignored_names = lambda: \
-  (
-    "Google Chrome Dev",
   )
 
 get_terminal_punctuation = lambda: ('.', '!', '?')
