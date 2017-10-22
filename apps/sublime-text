@@ -11,6 +11,6 @@ icon-url=http://c758482.r82.cf2.rackcdn.com/sublime_text_icon_2181.png
 name=Sublime Text
 note=
 packages=libgtk2.0-0
-title=The text editor you'll fall in love with
+title=A sophisticated text editor for code, markup and prose
 version-regex=\(Build ([^\)]+)
 version-url=

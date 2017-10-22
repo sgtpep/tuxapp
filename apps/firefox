@@ -1,5 +1,5 @@
 category=network
-description=Firefox is a powerful, extensible web browser with support for modern web application technologies.
+description=Use a web browser you have more control over, and which has more plug-ins that you can use for privacy, such as Firefox.
 download-x86-64-url=https://download.mozilla.org/?product=firefox-{version}-SSL&os=linux64&lang=en-US
 download-x86-url=https://download.mozilla.org/?product=firefox-{version}-SSL&os=linux&lang=en-US
 executable=
