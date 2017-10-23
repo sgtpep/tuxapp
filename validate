@@ -1,0 +1,280 @@
+#!/usr/bin/env python
+from __future__ import print_function
+import functools
+import glob
+import imp
+import os
+import re
+import sys
+
+try:
+  from urllib.parse import urlparse
+except ImportError:
+  from urlparse import urlparse
+
+tuxapp = imp.load_source('tuxapp', "{}/tuxapp".format(os.path.dirname(__file__)))
+
+def reasserts(message):
+  def decorator(function):
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+      try:
+        return function(*args, **kwargs)
+      except AssertionError as exception:
+        kwargs['message'] = "{}{}".format(exception.args[0][0].lower(), exception.args[0][1:])
+        formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
+        raise AssertionError(formatted_message.encode('utf-8'))
+    return wrapper
+  return decorator
+
+@tuxapp.memoizes()
+@tuxapp.logs("Checking {}")
+def check_url(url):
+  import ssl
+  try:
+    from http.client import BadStatusLine
+    from urllib.request import Request, URLError, urlopen
+  except ImportError:
+    from httplib import BadStatusLine
+    from urllib2 import Request, URLError, urlopen
+  try:
+    return urlopen(Request(url, headers={'User-Agent': "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0"})).getcode() == 200
+  except (BadStatusLine, URLError, ssl.CertificateError):
+    return False
+
+def validate_appfile_wrapped(app):
+  return validate_appfile(app)
+
+@tuxapp.silences
+def validate_appfiles(apps):
+  import contextlib
+  import multiprocessing
+  with contextlib.closing(multiprocessing.Pool(10)) as pool:
+    return all(pool.imap_unordered(validate_appfile_wrapped, apps))
+
+@tuxapp.asserts("Malformed pattern")
+def validate_regex(pattern):
+  try:
+    return bool(re.compile(pattern))
+  except re.error:
+    return False
+
+fetch_url_text = tuxapp.memoizes()(
+  lambda url: re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', re.sub(r"&[\w#]+;", ' ', re.sub(r"<(?!meta)[^>]+>", ' ', tuxapp.fetch_url(url)))))
+)
+
+get_appfile_keys = lambda: \
+  (
+    'category',
+    'description',
+    'download-x86-64-url',
+    'download-x86-url',
+    'executable',
+    'firejail',
+    'free-license',
+    'group',
+    'homepage-url',
+    'icon-url',
+    'name',
+    'note',
+    'packages',
+    'title',
+    'version-regex',
+    'version-url',
+  )
+
+get_appfiles = lambda: tuple(sorted(tuxapp.extract_app(path) for path in glob.glob(tuxapp.get_appfile_path('*'))))
+
+get_categories = lambda: \
+  (
+    'audio',
+    'development',
+    'education',
+    'game',
+    'graphics',
+    'network',
+    'office',
+    'science',
+    'settings',
+    'system',
+    'utility',
+    'video',
+  )
+
+get_groups = lambda: \
+  (
+    'audio-streaming',
+    'code-editors',
+    'content-management',
+    'e-book-readers',
+    'email-clients',
+    'instant-messengers',
+    'note-taking',
+    'office-suits',
+    'role-playing',
+    'version-control',
+    'video-streaming',
+    'web-browsers',
+    'web-development',
+  )
+
+main = tuxapp.handles_exceptions(
+  lambda arguments=tuple(sys.argv[1:]): validate_appfiles(tuple(validate_appfile_exists(tuxapp.extract_app(argument)) for argument in arguments) or get_appfiles())
+)
+
+parse_appfile = lambda app: tuple(line.split('=', 1) for line in read_appfile(app).splitlines())
+
+parse_appfile_keys = lambda app: tuple(key for key, _ in parse_appfile(app))
+
+read_appfile = lambda app: tuxapp.read_file(tuxapp.get_appfile_path(app))
+
+validate_app = lambda app: \
+  tuxapp.asserts("Invalid characters")(lambda app: bool(re.match("^[a-z0-9-]*$", app)))(app) and \
+  tuxapp.asserts("Edge dash")(lambda app: not app.startswith('-') and not app.endswith('-'))(app) and \
+  tuxapp.asserts("Continuous dashes")(lambda app: not re.search(r"-{2}", app))(app)
+
+validate_appfile = lambda app: \
+  reasserts("{}: {message}")(validate_app)(app) and \
+  reasserts("{}: {message}")(validate_appfile_keys)(app) and \
+  all(reasserts(u"{}.{}: {{message}}{}".format(
+    app,
+    key,
+    u" ({})".format(value.replace('{', "{{").replace('}', "}}")) if value else '',
+  ))(validate_appfile_item)(app, key, value) for key, value in parse_appfile(app))
+
+validate_appfile_exists = tuxapp.asserts("{}: unknown app")(
+  lambda app: os.path.isfile(tuxapp.get_appfile_path(app)) and app
+)
+
+validate_appfile_item = tuxapp.asserts("Unknown key")(
+  lambda app, key, value: \
+    validate_category(value) \
+      if key == 'category' else \
+    validate_description(app, value) \
+      if key == 'description' else \
+    all(validate_download_url(app, url, re.sub(r"^download-(.+)-url", r'\1', key)) for url in value.split()) \
+      if key.startswith('download-') and key.endswith('-url') else \
+    True \
+      if key == 'executable' else \
+    validate_firejail(value) \
+      if key == 'firejail' else \
+    validate_free_license(value) \
+      if key == 'free-license' else \
+    validate_homepage_url(value) \
+      if key == 'homepage-url' else \
+    validate_icon_url(value) \
+      if key == 'icon-url' else \
+    validate_group(value) \
+      if key == 'group' else \
+    validate_name(app, value) \
+      if key == 'name' else \
+    validate_note(value) \
+      if key == 'note' else \
+    True \
+      if key == 'packages' else \
+    validate_title(app, value) \
+      if key == 'title' else \
+    validate_version_regex(app, value) \
+      if key == 'version-regex' else \
+    validate_version_url(value) \
+      if key == 'version-url' else \
+    None
+)
+
+validate_appfile_keys = lambda app: \
+  tuxapp.asserts("Extra lines")(lambda app: all('=' in line for line in read_appfile(app).splitlines()))(app) and \
+  tuxapp.asserts("No trailing newline")(lambda app: read_appfile(app).endswith('\n'))(app) and \
+  tuxapp.asserts("Not sorted")(lambda app: parse_appfile_keys(app) == tuple(sorted(parse_appfile_keys(app))))(app) and \
+  tuxapp.asserts("Extraneous keys")(lambda app: not set(parse_appfile_keys(app)) - set(get_appfile_keys()))(app) and \
+  tuxapp.asserts("Missing keys")(lambda app: not set(get_appfile_keys()) - set(parse_appfile_keys(app)))(app) and \
+  tuxapp.asserts("Doubled keys")(lambda app: parse_appfile_keys(app) == get_appfile_keys())(app)
+
+validate_capitalized = tuxapp.asserts("Not capitalized")(
+  lambda string: string[0] == string[0].upper()
+)
+
+validate_category = lambda category: \
+  validate_value(category) and \
+  tuxapp.asserts("Unknown category")(lambda category: category in get_categories())(category)
+
+validate_description = lambda app, description: \
+  not description or \
+  validate_value(description) and \
+  validate_capitalized(description) and \
+  validate_terminal_punctuation(description) and \
+  validate_homepage_contains(app, description)
+
+validate_download_url = lambda app, url, architecture: \
+  architecture != 'x86-64' and not url or \
+  tuxapp.asserts("Contains the version number")(lambda app: tuxapp.fetch_app_version(app) not in url)(app) and \
+  validate_url(tuxapp.filter_app_download_url(app, url))
+
+validate_firejail = lambda options: \
+  not options or \
+  validate_value(options) and \
+  tuxapp.asserts("Failed to parse")(lambda options: bool(tuxapp.unasserts(tuxapp.split_command)(options)))(options)
+
+validate_free_license = lambda value: \
+  not value or \
+  validate_value(value) and \
+  tuxapp.asserts("Value is not 'yes'")(lambda value: value == 'yes')(value)
+
+validate_group = lambda group: \
+  validate_value(group) and \
+  tuxapp.asserts("Unknown group")(lambda group: group in get_groups())(group)
+
+validate_homepage_contains = tuxapp.asserts("Not found on the homepage")(
+  lambda app, string, is_case_sensitive=False: \
+    bool(re.search(
+      r"\b{}\b".format(re.escape(re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', string)))),
+      fetch_url_text(tuxapp.query_appfile(app, 'homepage-url')),
+      0 if is_case_sensitive else re.I | re.U,
+    ))
+)
+
+validate_homepage_url = lambda url: validate_url(url)
+
+validate_icon_url = lambda url: validate_url(url)
+
+validate_name = lambda app, name: \
+  validate_value(name) and \
+  (name.startswith('~') or validate_homepage_contains(app, name, True))
+
+validate_note = lambda note: \
+  not note or \
+  validate_value(note) and \
+  validate_capitalized(note) and \
+  validate_terminal_punctuation(note)
+
+validate_terminal_punctuation = tuxapp.asserts(lambda string, is_inverted=False, *args, **kwargs: "Terminal punctuation" if is_inverted else "No terminal punctuation")(
+  lambda string, is_inverted=False: (string[-1] in ('.', '!', '?')) ^ is_inverted
+)
+
+validate_title = lambda app, title: \
+  not title or \
+  validate_value(title) and \
+  validate_capitalized(title) and \
+  validate_terminal_punctuation(title, True) and \
+  validate_homepage_contains(app, title)
+
+validate_url = lambda url: \
+  validate_value(url) and \
+  tuxapp.asserts("Invalid URL")(lambda url: urlparse(url).scheme in ('http', 'https') and bool(urlparse(url).netloc) and bool(urlparse(url).path))(url) and \
+  tuxapp.asserts("URL is accessible by HTTPS")(lambda url: url.startswith("https://") or not check_url(url.replace("http://", "https://", 1)))(url) and \
+  tuxapp.asserts("Inaccessible URL")(check_url)(url)
+
+validate_value = lambda string, is_whitespacy=False: \
+  tuxapp.asserts("Is required")(lambda string: bool(string))(string) and \
+  tuxapp.asserts("Tab character")(lambda string: '\t' not in string)(string) and \
+  tuxapp.asserts("Edge whitespace")(lambda string, is_whitespacy: is_whitespacy or not re.search(r"^\s", string) and not re.search(r"\s$", string))(string, is_whitespacy) and \
+  tuxapp.asserts("Continuous whitespace")(lambda string, is_whitespacy: is_whitespacy or not re.search(r"\s{2}", string))(string, is_whitespacy)
+
+validate_version_regex = lambda app, pattern: \
+  validate_value(pattern, True) and \
+  validate_regex(pattern) and \
+  bool(tuxapp.fetch_app_version(app, pattern))
+
+validate_version_url = lambda url: not url or validate_url(url)
+
+if __name__ == '__main__':
+  main()
