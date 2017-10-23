@@ -520,6 +520,8 @@ get_app_runner_path = lambda app: "{}/run".format(get_app_path(app))
 
 get_app_version_path = lambda app: "{}/version".format(get_app_path(app))
 
+get_appfile_names = lambda: tuple(sorted(extract_app(path) for path in glob.glob(get_appfile_path('*'))))
+
 get_appfile_path = lambda app: "{}/apps/{}".format(os.path.dirname(__file__), app)
 
 get_base_path = lambda: os.path.expanduser("~/.tuxapp")
