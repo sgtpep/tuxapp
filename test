@@ -3,7 +3,9 @@ from __future__ import print_function
 import glob
 import imp
 import os
+import re
 import stat
+import subprocess
 import sys
 
 tuxapp = imp.load_source('tuxapp', "{}/tuxapp".format(os.path.dirname(__file__)))
@@ -21,6 +23,15 @@ def parse_arguments(arguments):
   parsed_arguments = parser.parse_args(arguments)
   parsed_arguments.apps = tuple(tuxapp.extract_app(app) for app in parsed_arguments.apps)
   return parsed_arguments
+
+@tuxapp.silences
+def test_apps(apps):
+  get_base_path, tuxapp.get_base_path = tuxapp.get_base_path, lambda: os.path.expanduser("~/.tuxapp-test")
+  get_cache_path, tuxapp.get_cache_path = tuxapp.get_cache_path, lambda: "{}/tuxapp-test".format(tuxapp.get_xdg_cache_path())
+  result = all(test_updated_app(app, get_app_tested_path(app)) for app in apps)
+  tuxapp.get_base_path = get_base_path
+  tuxapp.get_cache_path = get_cache_path
+  return result
 
 call_process_verbose = tuxapp.logs("Running the command: {}")(
   lambda arguments, *args, **kwargs: tuxapp.call_process(arguments, *args, **kwargs)
@@ -99,6 +110,16 @@ deb http://security.debian.org/ {0}/updates main
   """) and \
   all(tuxapp.remove_file(path) for filename in ("libSM.so", "libXt.so") for path in glob.glob("{}/usr/lib/x86_64-linux-gnu/{}*".format(get_container_path('debian'), filename)))
 
+detect_missing_libraries = tuxapp.outputs(lambda distribution, app, *args, **kwargs: \
+  kwargs['result'] and print("{} on {}: missing {}".format(
+    app,
+    distribution,
+    ", ".join(kwargs['result']),
+  ), file=sys.stderr)
+)(
+  lambda distribution, app: tuple(sorted(set(re.search(r"[\w.-]+\.so[\w.-]*", line).group() for line in read_app_process(distribution, app).splitlines() if re.search(r"\.so\b", line))))
+)
+
 execute_bwrap = lambda distribution, app=None, arguments=(), is_trace=False: tuxapp.execute_process(build_bwrap_arguments(install_missing_container(distribution), app, arguments, is_trace))
 
 execute_root_bwrap = lambda distribution: tuxapp.execute_process(build_root_bwrap_arguments(install_missing_container(distribution)))
@@ -108,6 +129,14 @@ fetch_arch_container_url = lambda: get_arch_url("iso/latest/") + tuxapp.fetch_gr
 fetch_arch_package_url = lambda package: get_arch_package_url(package) + tuxapp.fetch_grep_url(get_arch_package_url(package), ('-Po', '-m', '1', "(?<=\"){}-[^\"]+".format(package)))
 
 fetch_debian_package_url = lambda package: "{}{}".format(tuxapp.get_debian_url(), tuxapp.fetch_grep_url(get_debian_package_url(package), ('-o', '-m', '1', "[^/]*/pool/[^\"]*")))
+
+get_app_tested_path = lambda app: \
+  "{}/test-{}-{}-{}".format(
+    tuxapp.get_cache_path(),
+    app,
+    tuxapp.fetch_app_version(app),
+    tuxapp.hash_md5(tuxapp.read_appfile(app))
+  )
 
 get_arch_package_url = lambda package: get_arch_url("{}/os/x86_64/".format('extra' if package == 'fakechroot' else 'core'))
 
@@ -182,10 +211,24 @@ main = tuxapp.handles_exceptions(
       if parse_arguments(arguments).root else \
     execute_bwrap(parse_distribution_arguments(arguments)) \
       if parse_arguments(arguments).shell else \
-    print('TODO')
+    test_apps(parse_arguments(arguments).apps or tuxapp.get_appfile_names())
 )
 
 parse_distribution_arguments = lambda arguments: 'arch' if parse_arguments(arguments).arch else 'debian'
+
+read_app_process = lambda distribution, app: tuxapp.read_process(('timeout', '-s', 'KILL', '3') + build_bwrap_arguments(install_missing_container(distribution), app), stderr=subprocess.STDOUT)
+
+test_app = lambda app: \
+  tuxapp.install_app(app) and \
+  all(not detect_missing_libraries(distribution, app) for distribution in ('debian', 'arch')) and \
+  tuxapp.remove_app(app) and \
+  all(tuxapp.remove_file(path) for path in glob.glob("{}/{}-*".format(tuxapp.get_cache_path(), app)))
+
+test_updated_app = lambda app, path: \
+  True \
+    if os.path.isfile(path) else \
+  test_app(app) and \
+  tuxapp.write_file(path)
 
 if __name__ == '__main__':
   main()
