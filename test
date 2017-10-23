@@ -14,10 +14,12 @@ def parse_arguments(arguments):
   parser = argparse.ArgumentParser()
   parser.add_argument('-a', '--arch', action='store_true')
   parser.add_argument('-r', '--root', action='store_true')
+  parser.add_argument('-s', '--shell', action='store_true')
   parser.add_argument('-t', '--trace', action='store_true')
-  parser.add_argument('app', nargs='?')
-  parser.add_argument('arguments', nargs=argparse.REMAINDER)
-  return parser.parse_args(arguments)
+  parser.add_argument('apps', metavar='app', nargs='*')
+  parsed_arguments = parser.parse_args(arguments)
+  parsed_arguments.apps = tuple(tuxapp.extract_app(app) for app in parsed_arguments.apps)
+  return parsed_arguments
 
 call_process_verbose = tuxapp.logs("Running the command: {}")(
   lambda arguments, *args, **kwargs: tuxapp.call_process(arguments, *args, **kwargs)
@@ -175,9 +177,10 @@ main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): \
     execute_root_bwrap(install_missing_container(parse_distribution_arguments(arguments))) \
       if parse_arguments(arguments).root else \
-    execute_bwrap(install_missing_container(parse_distribution_arguments(arguments)), tuxapp.check_app_installed(tuxapp.extract_app(parse_arguments(arguments).app)), tuple(parse_arguments(arguments).arguments), parse_arguments(arguments).trace) \
-      if parse_arguments(arguments).app else \
-    execute_bwrap(install_missing_container(parse_distribution_arguments(arguments)))
+    execute_bwrap(install_missing_container(parse_distribution_arguments(arguments))) \
+      if parse_arguments(arguments).shell else \
+    print(tuple(parse_arguments(arguments).apps))
+#     execute_bwrap(install_missing_container(parse_distribution_arguments(arguments)), tuxapp.check_app_installed(tuxapp.extract_app(parse_arguments(arguments).app)), tuple(parse_arguments(arguments).arguments), parse_arguments(arguments).trace) \
 )
 
 parse_distribution_arguments = lambda arguments: 'arch' if parse_arguments(arguments).arch else 'debian'
