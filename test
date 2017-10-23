@@ -123,7 +123,7 @@ get_bwrap_bind_paths = lambda: \
 
 get_container_cache_path = lambda distribution: "{}/{}".format(tuxapp.get_cache_path(), distribution)
 
-get_container_check_path = lambda distribution: "{}/var/lib/tuxapp".format(get_container_path(distribution))
+get_container_installed_path = lambda distribution: "{}/var/lib/tuxapp".format(get_container_path(distribution))
 
 get_container_path = lambda distribution: tuxapp.get_app_path(distribution)
 
@@ -169,9 +169,9 @@ install_missing_bubblewrap = lambda: tuxapp.is_command_exist('bwrap') or install
 
 install_missing_container = lambda distribution: \
   distribution \
-    if os.path.isfile(get_container_check_path(distribution)) else \
+    if os.path.isfile(get_container_installed_path(distribution)) else \
   install_container(distribution) and \
-  tuxapp.write_file(get_container_check_path(distribution)) and \
+  tuxapp.write_file(get_container_installed_path(distribution)) and \
   distribution
 
 main = tuxapp.handles_exceptions(
