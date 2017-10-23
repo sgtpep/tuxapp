@@ -154,7 +154,7 @@ validate_appfile_item = tuxapp.asserts("Unknown key")(
       if key == 'description' else \
     all(validate_download_url(app, url, re.sub(r"^download-(.+)-url", r'\1', key)) for url in value.split()) \
       if key.startswith('download-') and key.endswith('-url') else \
-    True \
+    validate_executable(value) \
       if key == 'executable' else \
     validate_firejail(value) \
       if key == 'firejail' else \
@@ -170,7 +170,7 @@ validate_appfile_item = tuxapp.asserts("Unknown key")(
       if key == 'name' else \
     validate_note(value) \
       if key == 'note' else \
-    True \
+    validate_packages(value) \
       if key == 'packages' else \
     validate_title(app, value) \
       if key == 'title' else \
@@ -187,7 +187,8 @@ validate_appfile_keys = lambda app: \
   tuxapp.asserts("Not sorted")(lambda app: parse_appfile_keys(app) == tuple(sorted(parse_appfile_keys(app))))(app) and \
   tuxapp.asserts("Extraneous keys")(lambda app: not set(parse_appfile_keys(app)) - set(get_appfile_keys()))(app) and \
   tuxapp.asserts("Missing keys")(lambda app: not set(get_appfile_keys()) - set(parse_appfile_keys(app)))(app) and \
-  tuxapp.asserts("Doubled keys")(lambda app: parse_appfile_keys(app) == get_appfile_keys())(app)
+  tuxapp.asserts("Duplicated keys")(lambda app: sorted(set(parse_appfile_keys(app))) == sorted(parse_appfile_keys(app)))(app) and \
+  tuxapp.asserts("Unknown error")(lambda app: parse_appfile_keys(app) == get_appfile_keys())(app)
 
 validate_capitalized = tuxapp.asserts("Not capitalized")(
   lambda string: string[0] == string[0].upper()
@@ -196,6 +197,10 @@ validate_capitalized = tuxapp.asserts("Not capitalized")(
 validate_category = lambda category: \
   validate_value(category) and \
   tuxapp.asserts("Unknown category")(lambda category: category in get_categories())(category)
+
+validate_command = tuxapp.asserts("Failed to parse")(
+  lambda command: bool(tuxapp.unasserts(tuxapp.split_command)(command))
+)
 
 validate_description = lambda app, description: \
   not description or \
@@ -209,10 +214,16 @@ validate_download_url = lambda app, url, architecture: \
   tuxapp.asserts("Contains the version number")(lambda app: tuxapp.fetch_app_version(app) not in url)(app) and \
   validate_url(tuxapp.filter_app_download_url(app, url))
 
+validate_executable = lambda command: \
+  not command or \
+  validate_value(command) and \
+  validate_command(command) and \
+  tuxapp.asserts("Malformed path")(lambda command: bool(re.match(r"^(/|\./)?[\w/-]+$", command.split(' ', 1)[0])))(command)
+
 validate_firejail = lambda options: \
   not options or \
   validate_value(options) and \
-  tuxapp.asserts("Failed to parse")(lambda options: bool(tuxapp.unasserts(tuxapp.split_command)(options)))(options)
+  validate_command(options)
 
 validate_free_license = lambda value: \
   not value or \
@@ -245,6 +256,15 @@ validate_note = lambda note: \
   validate_value(note) and \
   validate_capitalized(note) and \
   validate_terminal_punctuation(note)
+
+validate_packages = lambda packages: \
+  not packages or \
+  validate_value(packages) and \
+  tuxapp.asserts("Not sorted")(lambda packages: packages.split() == sorted(packages.split()))(packages) and \
+  tuxapp.asserts("Unknown group")(lambda packages: all(package in tuxapp.get_package_groups() for package in packages.split() if package.startswith('group-')))(packages) and \
+  tuxapp.asserts("Duplicated items")(lambda packages: sorted(set(packages.split())) == sorted(packages.split()))(packages) and \
+  tuxapp.asserts("Group already contains a package")(lambda packages: not set(packages.split()) & set(package for package in packages.split() if package.startswith('group-') for package in tuxapp.expand_package(package)))(packages) and \
+  tuxapp.asserts("Unknown package")(lambda packages: all(tuxapp.unasserts(tuxapp.parse_package_lists)(package) for package in packages.split() if not package.startswith('group-')))(packages)
 
 validate_terminal_punctuation = tuxapp.asserts(lambda string, is_inverted=False, *args, **kwargs: "Terminal punctuation" if is_inverted else "No terminal punctuation")(
   lambda string, is_inverted=False: (string[-1] in ('.', '!', '?')) ^ is_inverted
