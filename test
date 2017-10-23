@@ -13,7 +13,6 @@ def parse_arguments(arguments):
   import argparse
   parser = argparse.ArgumentParser()
   parser.add_argument('-a', '--arch', action='store_true')
-  parser.add_argument('-d', '--debian', action='store_true')
   parser.add_argument('-r', '--root', action='store_true')
   parser.add_argument('-t', '--trace', action='store_true')
   parser.add_argument('app', nargs='?')
@@ -181,12 +180,7 @@ main = tuxapp.handles_exceptions(
     execute_bwrap(install_missing_container(parse_distribution_arguments(arguments)))
 )
 
-parse_distribution_arguments = lambda arguments: \
-  'arch' \
-    if parse_arguments(arguments).arch else \
-  'debian' \
-    if parse_arguments(arguments).debian else \
-  'debian'
+parse_distribution_arguments = lambda arguments: 'arch' if parse_arguments(arguments).arch else 'debian'
 
 if __name__ == '__main__':
   main()
