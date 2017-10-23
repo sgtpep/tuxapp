@@ -15,7 +15,7 @@ def parse_arguments(arguments):
   parser.add_argument('-a', '--arch', action='store_true')
   parser.add_argument('-d', '--debian', action='store_true')
   parser.add_argument('-r', '--root', action='store_true')
-  parser.add_argument('-s', '--strace', action='store_true')
+  parser.add_argument('-t', '--trace', action='store_true')
   parser.add_argument('app', nargs='?')
   parser.add_argument('arguments', nargs=argparse.REMAINDER)
   return parser.parse_args(arguments)
@@ -24,7 +24,7 @@ call_process_verbose = tuxapp.logs("Running the command: {}")(
   lambda arguments, *args, **kwargs: tuxapp.call_process(arguments, *args, **kwargs)
 )
 
-build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_strace=False: \
+build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_trace=False: \
   install_missing_bubblewrap() and \
   ('bwrap', '--bind', get_container_path(distribution), '/',
     '--bind', "/run", "/run",
@@ -37,7 +37,7 @@ build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_strace=F
     '--unshare-pid',
   ) + \
   tuple(option for path in get_bwrap_bind_paths() if os.path.isdir(path) for option in ('--ro-bind', path, path)) + \
-  (('--setenv', 'TUXAPP_STRACE', '1') if is_strace else ()) + \
+  (('--setenv', 'TUXAPP_TRACE', '1') if is_trace else ()) + \
   (
     ('--bind', tuxapp.get_app_path(app), tuxapp.get_app_path(app)) \
       if app else \
@@ -97,7 +97,7 @@ deb http://security.debian.org/ {0}/updates main
   """) and \
   all(tuxapp.remove_file(path) for filename in ("libSM.so", "libXt.so") for path in glob.glob("{}/usr/lib/x86_64-linux-gnu/{}*".format(get_container_path('debian'), filename)))
 
-execute_bwrap = lambda distribution, app=None, arguments=(), is_strace=False: tuxapp.execute_process(build_bwrap_arguments(distribution, app, arguments, is_strace))
+execute_bwrap = lambda distribution, app=None, arguments=(), is_trace=False: tuxapp.execute_process(build_bwrap_arguments(distribution, app, arguments, is_trace))
 
 execute_root_bwrap = lambda distribution: tuxapp.execute_process(build_root_bwrap_arguments(distribution))
 
@@ -176,7 +176,7 @@ main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): \
     execute_root_bwrap(install_missing_container(parse_distribution_arguments(arguments))) \
       if parse_arguments(arguments).root else \
-    execute_bwrap(install_missing_container(parse_distribution_arguments(arguments)), tuxapp.check_app_installed(tuxapp.extract_app(parse_arguments(arguments).app)), tuple(parse_arguments(arguments).arguments), parse_arguments(arguments).strace) \
+    execute_bwrap(install_missing_container(parse_distribution_arguments(arguments)), tuxapp.check_app_installed(tuxapp.extract_app(parse_arguments(arguments).app)), tuple(parse_arguments(arguments).arguments), parse_arguments(arguments).trace) \
       if parse_arguments(arguments).app else \
     execute_bwrap(install_missing_container(parse_distribution_arguments(arguments)))
 )

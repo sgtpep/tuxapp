@@ -731,7 +731,7 @@ function build_command_arguments {
 
   result_command_arguments=()
 
-  [[ ! ${TUXAPP_STRACE-} ]] || result_command_arguments+=(strace -e open,openat)
+  [[ ! ${TUXAPP_TRACE-} ]] || result_command_arguments+=(strace -e open,openat)
 
   if [[ ${executable_arguments[0]} == ./* ]]; then
     cd "$distribution_path"
@@ -770,7 +770,7 @@ function build_firejail_arguments {
 
   result_firejail_arguments=(firejail --protocol="unix,inet,inet6,netlink")
 
-  [[ ! ${TUXAPP_STRACE-} ]] || result_firejail_arguments+=(--allow-debuggers)
+  [[ ! ${TUXAPP_TRACE-} ]] || result_firejail_arguments+=(--allow-debuggers)
 
   declare name
   for name in "${!argument_environment[@]}"; do
