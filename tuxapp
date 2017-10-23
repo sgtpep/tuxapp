@@ -61,7 +61,7 @@ def logs(message):
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
       formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
-      if formatted_message and not is_silent():
+      if formatted_message and not is_silenced():
         print(formatted_message, file=sys.stderr)
       return function(*args, **kwargs)
     return wrapper
@@ -77,7 +77,7 @@ def logs_after(message, is_result=False):
       if is_result:
         kwargs['result'] = result
         formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
-      if formatted_message and not is_silent():
+      if formatted_message and not is_silenced():
         print(formatted_message, file=sys.stderr)
       return result
     return wrapper
@@ -607,7 +607,7 @@ get_tar_filter_option = asserts("Unknown archive extension: {}")(
     }.get(extension)
 )
 
-get_tar_progress_options = lambda: () if is_silent() else ("--checkpoint=.250",)
+get_tar_progress_options = lambda: () if is_silenced() else ("--checkpoint=.250",)
 
 get_temp_download_path = lambda path='', is_url=False: \
   "{}/downloads{}{}".format(
@@ -921,7 +921,7 @@ is_file_newer = lambda path, reference_path: get_file_mtime(path) > get_file_mti
 
 is_magic_in_file = lambda path, magic_number: read_file(path, True, len(magic_number)) == magic_number
 
-is_silent = lambda: sys.stdout.name == "/dev/null"
+is_silenced = lambda: sys.stdout.name == "/dev/null"
 
 is_string = lambda value: isinstance(value, (''.__class__, u''.__class__))
 
