@@ -58,6 +58,10 @@ def validate_regex(pattern):
   except re.error:
     return False
 
+check_appfile_exists = tuxapp.asserts("{}: unknown app")(
+  lambda app: os.path.isfile(tuxapp.get_appfile_path(app)) and app
+)
+
 fetch_url_text = tuxapp.memoizes()(
   lambda url: re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', re.sub(r"&[\w#]+;", ' ', re.sub(r"<(?!meta)[^>]+>", ' ', tuxapp.fetch_url(url)))))
 )
@@ -116,7 +120,7 @@ get_groups = lambda: \
   )
 
 main = tuxapp.handles_exceptions(
-  lambda arguments=tuple(sys.argv[1:]): validate_appfiles(tuple(validate_appfile_exists(tuxapp.extract_app(argument)) for argument in arguments) or get_appfiles())
+  lambda arguments=tuple(sys.argv[1:]): validate_appfiles(tuple(check_appfile_exists(tuxapp.extract_app(argument)) for argument in arguments) or tuxapp.get_appfile_names())
 )
 
 parse_appfile = lambda app: tuple(line.split('=', 1) for line in read_appfile(app).splitlines())
@@ -138,10 +142,6 @@ validate_appfile = lambda app: \
     key,
     u" ({})".format(value.replace('{', "{{").replace('}', "}}")) if value else '',
   ))(validate_appfile_item)(app, key, value) for key, value in parse_appfile(app))
-
-validate_appfile_exists = tuxapp.asserts("{}: unknown app")(
-  lambda app: os.path.isfile(tuxapp.get_appfile_path(app)) and app
-)
 
 validate_appfile_item = tuxapp.asserts("Unknown key")(
   lambda app, key, value: \
