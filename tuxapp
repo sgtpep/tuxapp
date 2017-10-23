@@ -141,13 +141,14 @@ def change_file_mode(path, get_mode):
   return path
 
 def check_app_firejail(app):
-  if is_command_exist('firejail'):
-    if 'WAYLAND_DISPLAY' not in os.environ and not re.search(r" --x11[ =]", " {} {} ".format(query_appfile(app, 'firejail'), read_app_firejail_options(app))):
-      print("Warning: X11 sandboxing is not enabled for this app", file=sys.stderr)
-    if read_app_firejail_options(app):
-      print("Warning: firejail will run this app with custom options: {}".format(read_app_firejail_options(app)), file=sys.stderr)
-  else:
-    print("Warning: firejail is not installed on your system and will not be used to sandbox this app", file=sys.stderr)
+  if not is_silenced():
+    if is_command_exist('firejail'):
+      if 'WAYLAND_DISPLAY' not in os.environ and not re.search(r" --x11[ =]", " {} {} ".format(query_appfile(app, 'firejail'), read_app_firejail_options(app))):
+        print("Warning: X11 sandboxing is not enabled for this app", file=sys.stderr)
+      if read_app_firejail_options(app):
+        print("Warning: firejail will run this app with custom options: {}".format(read_app_firejail_options(app)), file=sys.stderr)
+    else:
+      print("Warning: firejail is not installed on your system and will not be used to sandbox this app", file=sys.stderr)
   return True
 
 def copy_contents(file, destination_file, offset=0, size=None, chunk_size=65536):
@@ -368,8 +369,8 @@ download_file = \
     lambda url, path: \
       rename_file(get_temp_download_path(path), path) \
         if call_process(build_request_arguments(
-          ('-o', make_file_directories(get_temp_download_path(path)), url),
-          ('-O', make_file_directories(get_temp_download_path(path)), '--show-progress', url),
+          (('-Ss',) if is_silenced() else ()) + ('-o', make_file_directories(get_temp_download_path(path)), url),
+          (('-q',) if is_silenced() else ('--show-progress',)) + ('-O', make_file_directories(get_temp_download_path(path)), url),
         )) else \
       remove_file(get_temp_download_path(path)) and \
       False
