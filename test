@@ -99,9 +99,9 @@ deb http://security.debian.org/ {0}/updates main
   """) and \
   all(tuxapp.remove_file(path) for filename in ("libSM.so", "libXt.so") for path in glob.glob("{}/usr/lib/x86_64-linux-gnu/{}*".format(get_container_path('debian'), filename)))
 
-execute_bwrap = lambda distribution, app=None, arguments=(), is_trace=False: tuxapp.execute_process(build_bwrap_arguments(distribution, app, arguments, is_trace))
+execute_bwrap = lambda distribution, app=None, arguments=(), is_trace=False: tuxapp.execute_process(build_bwrap_arguments(install_missing_container(distribution), app, arguments, is_trace))
 
-execute_root_bwrap = lambda distribution: tuxapp.execute_process(build_root_bwrap_arguments(distribution))
+execute_root_bwrap = lambda distribution: tuxapp.execute_process(build_root_bwrap_arguments(install_missing_container(distribution)))
 
 fetch_arch_container_url = lambda: get_arch_url("iso/latest/") + tuxapp.fetch_grep_url(get_arch_url("iso/latest/"), ('-Po', '-m', '1', "(?<=\")archlinux-bootstrap-[^\"]+"))
 
@@ -176,11 +176,11 @@ install_missing_container = lambda distribution: \
 
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): \
-    execute_bwrap(install_missing_container(parse_distribution_arguments(arguments)), tuxapp.check_app_installed(parse_arguments(arguments).apps[0]), parse_arguments(arguments).apps[1:], parse_arguments(arguments).trace) \
+    execute_bwrap(parse_distribution_arguments(arguments), tuxapp.check_app_installed(parse_arguments(arguments).apps[0]), parse_arguments(arguments).apps[1:], parse_arguments(arguments).trace) \
       if parse_arguments(arguments).execute and parse_arguments(arguments).apps else \
-    execute_root_bwrap(install_missing_container(parse_distribution_arguments(arguments))) \
+    execute_root_bwrap(parse_distribution_arguments(arguments)) \
       if parse_arguments(arguments).root else \
-    execute_bwrap(install_missing_container(parse_distribution_arguments(arguments))) \
+    execute_bwrap(parse_distribution_arguments(arguments)) \
       if parse_arguments(arguments).shell else \
     print('TODO')
 )
