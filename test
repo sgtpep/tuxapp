@@ -62,7 +62,7 @@ build_root_bwrap_arguments = lambda distribution: \
   (('fakechroot', 'fakeroot') if distribution == 'arch' else ('fakeroot-sysv',)) + \
   ('bash', '-l')
 
-call_root_bwrap = lambda distribution, script: tuxapp.call_process(build_root_bwrap_arguments(distribution) + ('-c', "set -eu -o pipefail\n{}".format(script)))
+call_root_bwrap = lambda distribution, script: tuxapp.call_process(build_root_bwrap_arguments(distribution) + ('-c', "set -eu -o pipefail\n(\n{}\n){}".format(script, " &> /dev/null" if tuxapp.is_silenced() else '')))
 
 configure_arch_container = lambda: \
   all(install_arch_container_package(package) for package in ('fakechroot', 'fakeroot', 'sed')) and \
