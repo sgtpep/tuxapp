@@ -22,7 +22,7 @@ def reasserts(message):
       except AssertionError as exception:
         kwargs['message'] = "{}{}".format(exception.args[0][0].lower(), exception.args[0][1:])
         formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
-        raise AssertionError(formatted_message.encode('utf-8'))
+        print(formatted_message.encode('utf-8'), file=sys.stderr)
     return wrapper
   return decorator
 
@@ -49,7 +49,7 @@ def validate_appfiles(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
-    return all(pool.imap_unordered(validate_appfile_wrapped, apps))
+    return reduce(lambda result, is_valid: result and is_valid, pool.imap_unordered(validate_appfile_wrapped, apps))
 
 @tuxapp.asserts("Malformed pattern")
 def validate_regex(pattern):
