@@ -409,30 +409,7 @@ execute_process = lambda arguments, environment=None: \
     if environment else \
   os.execvp(arguments[0], arguments)
 
-expand_package = lambda package: \
-  {
-    'group-chromium': (
-      'libasound2',
-      'libgconf-2-4',
-      'libgtk-3-0',
-      'libnss3',
-      'libxss1',
-      'libxtst6',
-    ),
-    'group-electron': (
-      'libasound2',
-      'libgconf-2-4',
-      'libgtk2.0-0',
-      'libnss3',
-      'libxss1',
-      'libxtst6',
-    ),
-    'group-firefox': (
-      'libdbus-glib-1-2',
-      'libgtk-3-0',
-      'libxt6',
-    )
-  }.get(package, (package,))
+expand_package = lambda package: get_package_groups().get(package, (package,))
 
 extract_app = lambda string: os.path.basename(string)
 
@@ -569,6 +546,31 @@ get_github_repository = lambda: "sgtpep/tuxapp"
 get_installed_apps = asserts("No apps are installed")(
   lambda: tuple(sorted(os.path.basename(os.path.dirname(path)) for path in glob.glob("{}/*/version".format(get_base_path()))))
 )
+
+get_package_groups = lambda: \
+  {
+    'group-chromium': (
+      'libasound2',
+      'libgconf-2-4',
+      'libgtk-3-0',
+      'libnss3',
+      'libxss1',
+      'libxtst6',
+    ),
+    'group-electron': (
+      'libasound2',
+      'libgconf-2-4',
+      'libgtk2.0-0',
+      'libnss3',
+      'libxss1',
+      'libxtst6',
+    ),
+    'group-firefox': (
+      'libdbus-glib-1-2',
+      'libgtk-3-0',
+      'libxt6',
+    )
+  }
 
 get_package_list_archive_path = lambda url: "{}{}".format(get_package_list_path(url), os.path.splitext(url)[1])
 
