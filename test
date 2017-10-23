@@ -13,6 +13,7 @@ def parse_arguments(arguments):
   import argparse
   parser = argparse.ArgumentParser()
   parser.add_argument('-a', '--arch', action='store_true')
+  parser.add_argument('-e', '--execute', action='store_true')
   parser.add_argument('-r', '--root', action='store_true')
   parser.add_argument('-s', '--shell', action='store_true')
   parser.add_argument('-t', '--trace', action='store_true')
@@ -175,12 +176,13 @@ install_missing_container = lambda distribution: \
 
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): \
+    execute_bwrap(install_missing_container(parse_distribution_arguments(arguments)), tuxapp.check_app_installed(parse_arguments(arguments).apps[0]), parse_arguments(arguments).apps[1:], parse_arguments(arguments).trace) \
+      if parse_arguments(arguments).execute and parse_arguments(arguments).apps else \
     execute_root_bwrap(install_missing_container(parse_distribution_arguments(arguments))) \
       if parse_arguments(arguments).root else \
     execute_bwrap(install_missing_container(parse_distribution_arguments(arguments))) \
       if parse_arguments(arguments).shell else \
-    print(tuple(parse_arguments(arguments).apps))
-#     execute_bwrap(install_missing_container(parse_distribution_arguments(arguments)), tuxapp.check_app_installed(tuxapp.extract_app(parse_arguments(arguments).app)), tuple(parse_arguments(arguments).arguments), parse_arguments(arguments).trace) \
+    print('TODO')
 )
 
 parse_distribution_arguments = lambda arguments: 'arch' if parse_arguments(arguments).arch else 'debian'
