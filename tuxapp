@@ -614,12 +614,6 @@ get_temp_download_path = lambda path='', is_url=False: \
 
 get_xdg_cache_path = lambda: os.environ.get('XDG_CACHE_HOME', os.path.expanduser("~/.cache"))
 
-grep_package_lists = \
-  memoizes()(
-  asserts("Unknown package: {}")(
-    lambda package: read_process(('grep', '-Fh', '-C', '1', '-m', '1', "/{}_".format(package)) + update_package_lists()).rstrip('\n').split("\n--\n", 1)[0]
-  ))
-
 hash_md5 = lambda string: hashlib.md5(string.encode('utf-8', 'replace')).hexdigest()
 
 install_app = \
@@ -965,6 +959,12 @@ move_directory = lambda path, destination_path: \
   remove_directory(path, True) and \
   destination_path
 
+parse_package_lists = \
+  memoizes()(
+  asserts("Unknown package: {}")(
+    lambda package: read_process(('grep', '-Fh', '-C', '1', '-m', '1', "/{}_".format(package)) + update_package_lists()).rstrip('\n').split("\n--\n", 1)[0]
+  ))
+
 pipe_process = lambda file, process, offset=0, size=None: \
   copy_contents(file, process.stdin, offset, size) and \
   process.wait() == 0
@@ -990,11 +990,11 @@ query_appfile_version_url = lambda app: query_appfile(app, 'version-url') or que
 query_package_data = lambda path, key: parse_package_data(path).get(key)
 
 query_package_depends = memoizes()(
-  lambda package: tuple((search(r"(?<=^Depends: ).*$", grep_package_lists(package), re.M) or '').split())
+  lambda package: tuple((search(r"(?<=^Depends: ).*$", parse_package_lists(package), re.M) or '').split())
 )
 
 query_package_url = memoizes()(
-  lambda package: "{}{}".format(get_debian_url(), search(r"(?<=^Filename: ).*$", grep_package_lists(package), re.M))
+  lambda package: "{}{}".format(get_debian_url(), search(r"(?<=^Filename: ).*$", parse_package_lists(package), re.M))
 )
 
 read_app_firejail_options = lambda app: sanitize_command(read_file(get_app_firejail_options_path(app)))
