@@ -975,6 +975,11 @@ parse_package_lists = \
     lambda package: read_process(('grep', '-Fh', '-C', '1', '-m', '1', "/{}_".format(package)) + update_package_lists()).rstrip('\n').split("\n--\n", 1)[0]
   ))
 
+patch_app_executable = lambda path: \
+  write_file(path, "\nwait\n", True) \
+    if re.match(br"^#!/bin/(bash|sh)\b", read_file(path, True, 11)) and not read_file(path).endswith("\nwait\n") else \
+  path
+
 pipe_process = lambda file, process, offset=0, size=None: \
   copy_contents(file, process.stdin, offset, size) and \
   process.wait() == 0
@@ -1054,7 +1059,7 @@ packages, set())
 sanitize_app_executable = lambda app, command: \
   join_command_arguments(("{}{}".format(
     "./" if command.startswith("./") else '',
-    os.path.realpath("{}/{}".format(get_app_distribution_path(app), split_command(command)[0])).replace("{}/".format(get_app_distribution_path(app)), '', 1),
+    patch_app_executable(os.path.realpath("{}/{}".format(get_app_distribution_path(app), split_command(command)[0]))).replace("{}/".format(get_app_distribution_path(app)), '', 1),
   ),) + split_command(command)[1:])
 
 sanitize_command = lambda command: join_command_arguments(split_command(command))
