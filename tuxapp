@@ -389,12 +389,12 @@ download_files = \
   ))
 
 download_files_curl = lambda urls, path: \
-  call_process(build_request_arguments(tuple(argument for url in urls for argument in ('-o', make_file_directories(get_temp_download_path(url, True)), url)))) and \
+  call_process(build_request_arguments((('-Ss',) if is_silenced() else ()) + tuple(argument for url in urls for argument in ('-o', make_file_directories(get_temp_download_path(url, True)), url)))) and \
   all(os.path.isfile(get_temp_download_path(url, True)) for url in urls)
 
 download_files_wget = lambda urls, path: \
   all(remove_file(get_temp_download_path(url, True)) for url in urls) and \
-  call_process(build_request_arguments((), ('-P', make_directories(get_temp_download_path()), '--show-progress')) + urls)
+  call_process(build_request_arguments((), (('-q',) if is_silenced() else ('--show-progress',)) + ('-P', make_directories(get_temp_download_path()))) + urls)
 
 download_missing_cache_file = lambda url: download_missing_file(url, get_download_cache_path(url))
 
