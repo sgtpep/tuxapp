@@ -271,9 +271,9 @@ def touch_file(path, timestamp=None):
   )
   return path
 
-def write_file(path, contents=''):
+def write_file(path, contents='', is_append=False):
   import io
-  with io.open(make_file_directories(path), 'w') as file:
+  with io.open(make_file_directories(path), 'a' if is_append else 'w') as file:
     file.write(contents if isinstance(contents, u''.__class__) or not hasattr(contents, 'decode') else contents.decode('utf-8', 'replace'))
     return file.name
 
