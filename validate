@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import functools
+import glob
 import imp
 import os
 import re
@@ -49,7 +50,7 @@ def validate_appfiles(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
-    return reduce(lambda result, is_valid: result and is_valid, pool.imap_unordered(validate_appfile_worker, apps))
+    return reduce(lambda result, is_valid: result and is_valid, pool.imap_unordered(validate_appfile_worker, apps), True)
 
 @tuxapp.asserts("Malformed pattern")
 def validate_regex(pattern):
@@ -120,7 +121,7 @@ get_groups = lambda: \
   )
 
 main = tuxapp.handles_exceptions(
-  lambda arguments=tuple(sys.argv[1:]): validate_appfiles(tuple(check_appfile_exists(tuxapp.extract_app(argument)) for argument in arguments) or tuxapp.get_appfile_names())
+  lambda arguments=tuple(sys.argv[1:]): validate_appfiles(tuple(check_appfile_exists(tuxapp.extract_app(argument)) for argument in arguments) or (tuxapp.extract_app(path) for path in glob.iglob(tuxapp.get_appfile_path('*'))))
 )
 
 parse_appfile = lambda app: tuple(line.split('=', 1) for line in read_appfile(app).splitlines())

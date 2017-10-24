@@ -34,7 +34,7 @@ def test_apps(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool()) as pool:
-    result = reduce(lambda result, is_tested: result and is_tested, pool.imap_unordered(test_app_worker, apps))
+    result = reduce(lambda result, is_tested: result and is_tested, pool.imap_unordered(test_app_worker, apps), True)
   tuxapp.get_base_path = get_base_path
   tuxapp.get_cache_path = get_cache_path
   return result
@@ -223,7 +223,7 @@ main = tuxapp.handles_exceptions(
       if parse_arguments(arguments).root else \
     execute_bwrap(parse_distribution_arguments(arguments)) \
       if parse_arguments(arguments).shell else \
-    test_apps(parse_arguments(arguments).apps or tuxapp.get_appfile_names())
+    test_apps(parse_arguments(arguments).apps or (tuxapp.extract_app(path) for path in glob.iglob(tuxapp.get_appfile_path('*'))))
 )
 
 parse_distribution_arguments = lambda arguments: 'arch' if parse_arguments(arguments).arch else 'debian'
