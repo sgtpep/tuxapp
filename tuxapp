@@ -56,6 +56,29 @@ def handles_exceptions(function):
       sys.exit(130)
   return wrapper
 
+def locks(function):
+  @functools.wraps(function)
+  def wrapper(*args, **kwargs):
+    if read_file(get_lock_path()) == os.getpid():
+      return function(*args, **kwargs)
+    else:
+      previous_pid = None
+      while True:
+        pid = read_file(get_lock_path())
+        if pid and os.path.isdir("/proc/{}".format(pid)):
+          if pid != previous_pid and not is_silenced():
+            previous_pid = pid
+            print("Waiting for the process {}".format(pid), file=sys.stderr)
+          time.sleep(1)
+        else:
+          break
+      try:
+        write_file(get_lock_path(), str(os.getpid()))
+        return function(*args, **kwargs)
+      finally:
+        remove_file(get_lock_path())
+  return wrapper
+
 def logs(message):
   def decorator(function):
     @functools.wraps(function)
@@ -553,6 +576,8 @@ get_installed_apps = asserts("No apps are installed")(
   lambda: tuple(sorted(os.path.basename(os.path.dirname(path)) for path in glob.iglob("{}/*/version".format(get_base_path()))))
 )
 
+get_lock_path = lambda: "{}/pid".format(get_cache_path())
+
 get_package_groups = lambda: \
   {
     'group-chromium': (
@@ -640,12 +665,13 @@ install_app = \
       if is_app_installed(app) else \
     "Installing {} {}".format(app, fetch_app_version(app))
   )(
+  locks(
     lambda app: \
       install_app_distribution(app) and \
       install_app_appfile_packages(app) and \
       install_app_desktop_entry(app) and \
       get_app_path(app)
-  ))
+  )))
 
 install_app_appfile_packages = lambda app: \
   all(install_app_packages(app, query_appfile_packages(app), (
@@ -982,9 +1008,11 @@ pipe_process = lambda file, process, offset=0, size=None: \
   copy_contents(file, process.stdin, offset, size) and \
   process.wait() == 0
 
-purge_cache = logs_after("Purged cache")(
-  lambda: remove_directory(get_cache_path())
-)
+purge_cache = \
+  logs_after("Purged cache")(
+  locks(
+    lambda: remove_directory(get_cache_path())
+  ))
 
 query_appfile = asserts(lambda app, key, *args, **kwargs: kwargs['result'] is None and "Failed to get {}.{}".format(app, key))(
   lambda app, key: search(r"(?<=^{}=).*$".format(re.escape(key)), read_appfile(app), re.M)
@@ -1020,9 +1048,11 @@ read_appfile = lambda app: read_file(get_appfile_path(app)) or fetch_appfile(app
 
 read_process = lambda arguments, *args, **kwargs: subprocess.Popen(arguments, *args, shell=is_string(arguments), stdout=subprocess.PIPE, **kwargs).communicate()[0].decode('utf-8', 'replace')
 
-remove_app = logs_after("Removed {}")(
-  lambda app: remove_directory(get_app_path(app)) and remove_file(get_app_desktop_entry_path(app))
-)
+remove_app = \
+  logs_after("Removed {}")(
+  locks(
+    lambda app: remove_directory(get_app_path(app)) and remove_file(get_app_desktop_entry_path(app))
+  ))
 
 resolve_app_executable = lambda app, command: join_command_arguments((resolve_app_executable_path(app, split_command(command)[0]),) + split_command(command)[1:])
 
