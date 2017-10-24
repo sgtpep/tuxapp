@@ -284,9 +284,9 @@ build_app_bsdtar_arguments = lambda app: \
     if is_command_exist('bsdtar') else \
   install_app_packages(app, ('libarchive-tools',)) and \
   (
-    ('firejail', '--quiet', "--env=LD_LIBRARY_PATH={}/usr/lib/x86_64-linux-gnu".format(get_app_root_path(app))) \
+    ('firejail', '--quiet', "--env=LD_LIBRARY_PATH={}".format(get_app_library_path(app))) \
       if is_command_exist('firejail') else \
-    ('env', "LD_LIBRARY_PATH={}/usr/lib/x86_64-linux-gnu".format(get_app_root_path(app)))
+    ('env', "LD_LIBRARY_PATH={}".format(get_app_library_path(app)))
   ) + ("{}/usr/bin/bsdtar".format(get_app_root_path(app)),)
 
 build_request_arguments = lambda curl_options=(), wget_options=(): \
@@ -511,6 +511,8 @@ get_app_distribution_path = lambda app: "{}/dist".format(get_app_path(app))
 get_app_firejail_options_path = lambda app: "{}/firejail".format(get_app_path(app))
 
 get_app_icon_path = lambda app: "{}/icon".format(get_app_path(app))
+
+get_app_library_path = lambda app: (tuple(glob.glob("{}/usr/lib/*-linux-gnu".format(get_app_root_path(app)))) + ('',))[0]
 
 get_app_package_version_path = lambda app, package: "{}/var/lib/packages/{}".format(get_app_root_path(app), package)
 
@@ -843,7 +845,7 @@ function build_lib_path {
   declare lib_root_path
   for lib_root_path in "$root_path" '' "$distribution_path"; do
     declare lib_relative_path
-    for lib_relative_path in {,/usr}/lib{,32,64} {,/usr}/lib/{i386,x86_64}-linux-gnu /usr/lib/x86_64-linux-gnu/alsa-lib; do
+    for lib_relative_path in {,/usr}/lib{,32,64} {,/usr}/lib/{i386,x86_64}-linux-gnu /usr/lib/{i386,x86_64}-linux-gnu/alsa-lib; do
       declare lib_path=$lib_root_path$lib_relative_path
       [[ ! -d $lib_path ]] || lib_paths+=("$lib_path")
     done
