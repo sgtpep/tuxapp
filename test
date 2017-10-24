@@ -228,7 +228,7 @@ main = tuxapp.handles_exceptions(
 
 parse_distribution_arguments = lambda arguments: 'arch' if parse_arguments(arguments).arch else 'debian'
 
-read_app_process = lambda distribution, app: tuxapp.read_process(('timeout', '-s', 'KILL', '3') + build_bwrap_arguments(install_missing_container(distribution), tuxapp.check_app_installed(app)), stderr=subprocess.STDOUT)
+read_app_process = lambda distribution, app: tuxapp.read_process(('timeout', '-s', '9', '3') + build_bwrap_arguments(install_missing_container(distribution), tuxapp.check_app_installed(app)), stderr=subprocess.STDOUT)
 
 test_app = lambda app: \
   tuxapp.install_app(app) and \
