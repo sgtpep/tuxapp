@@ -15,10 +15,6 @@ import sys
 import time
 
 try:
-  import builtins
-except ImportError:
-  import __builtin__ as builtins
-try:
   from shlex import quote
 except ImportError:
   from pipes import quote
@@ -179,6 +175,10 @@ def copy_contents(file, destination_file, offset=0, size=None, chunk_size=65536)
     file.seek(offset)
     try:
       if size:
+        try:
+          import builtins
+        except ImportError:
+          import __builtin__ as builtins
         for _ in getattr(builtins, 'xrange', range)(size // chunk_size):
           destination_file.write(file.read(chunk_size))
         destination_file.write(file.read(size % chunk_size))
