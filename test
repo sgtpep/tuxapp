@@ -123,7 +123,7 @@ detect_missing_libraries = tuxapp.outputs(lambda distribution, app, *args, **kwa
     ", ".join(kwargs['result']),
   ), file=sys.stderr)
 )(
-  lambda distribution, app: tuple(sorted(set(re.search(r"[\w.-]+\.so[\w.-]*", line).group() for line in read_app_process(distribution, app).splitlines() if re.search(r"\.so\b", line))))
+  lambda distribution, app: tuple(sorted(set(re.search(r"[\w.-]+\.so[\w.-]*", line).group() for line in read_app_process(distribution, app).splitlines() if is_library_text(line))))
 )
 
 execute_bwrap = lambda distribution, app=None, arguments=(), is_trace=False: tuxapp.execute_process(build_bwrap_arguments(install_missing_container(distribution), app, arguments, is_trace))
@@ -208,6 +208,8 @@ install_missing_container = lambda distribution: \
   install_container(distribution) and \
   tuxapp.write_file(get_container_installed_path(distribution)) and \
   distribution
+
+is_library_text = lambda string: re.search(r"\.so\b", string) and "/nacl_helper:" not in string
 
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): \
