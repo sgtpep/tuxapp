@@ -11,15 +11,53 @@ try:
 except ImportError:
   from HTMLParser import HTMLParser
 try:
-  import builtins
-except ImportError:
-  import __builtin__ as builtins
-try:
   from urllib.parse import urlparse
 except ImportError:
   from urlparse import urlparse
 
 tuxapp = imp.load_source('tuxapp', "{}/tuxapp".format(os.path.dirname(__file__)))
+validate = imp.load_source('validate', "{}/validate".format(os.path.dirname(__file__)))
+
+def validates(validate_function):
+  def decorator(function):
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+      result = None
+      while True:
+        try:
+          if result is not None:
+            validates.prefill = result
+          result = function(*args, **kwargs)
+          validate_function(*args, result=result, **kwargs)
+          return result
+        except AssertionError as exception:
+          print(exception.args[0], file=sys.stderr)
+        finally:
+          if hasattr(validates, 'prefill'):
+            del validates.prefill
+    return wrapper
+  return decorator
+
+def input_text(prompt='', prefill='', is_whitespacy=False):
+  try:
+    import readline
+    readline.set_startup_hook(lambda: readline.insert_text(getattr(validates, 'prefill', prefill)))
+    history_path = os.path.expanduser("~/.python_history")
+    if hasattr(sys, 'ps1') and os.path.isfile(history_path):
+      readline.write_history_file(history_path)
+    try:
+      import builtins
+    except ImportError:
+      import __builtin__ as builtins
+    result = getattr(builtins, 'raw_input', input)(prompt).replace('\t', ' ')
+    if not is_whitespacy:
+      result = re.sub(r"\s+", ' ', result).strip()
+    return result
+  finally:
+    readline.set_startup_hook()
+    if hasattr(sys, 'ps1') and os.path.isfile(history_path):
+      readline.clear_history()
+      readline.read_history_file(history_path)
 
 class NameParser(HTMLParser):
   data = ''
@@ -61,116 +99,73 @@ class NameParser(HTMLParser):
     self.parent_tag = tag
 
 class ResultException(Exception):
-  def __init__(self, result):
-    self.result = result
-    super(ResultException, self).__init__()
-
-def validates(message):
-  def decorator(function):
-    @functools.wraps(function)
-    def wrapper(*args, **kwargs):
-      result = None
-      while True:
-        if result:
-          validates.prefill = result
-        result = function(*args, **kwargs)
-        if hasattr(validates, 'prefill'):
-          del validates.prefill
-        formatted_message = message(result)
-        if formatted_message:
-          print(formatted_message, file=sys.stderr)
-        else:
-          return result
-    return wrapper
-  return decorator
-
-@validates(lambda result: not result and "Value is required")
-def input_text(question="Text: ", prefill=''):
-  import readline
-  path = os.path.expanduser("~/.python_history")
-  if hasattr(sys, 'ps1') and os.path.isfile(path):
-    readline.write_history_file(path)
-  if getattr(validates, 'prefill', prefill):
-    readline.set_startup_hook(lambda: readline.insert_text(getattr(validates, 'prefill', prefill)))
-  try:
-    result = getattr(builtins, 'raw_input', input)(question).strip()
-  finally:
-    if prefill:
-      readline.set_startup_hook()
-  if hasattr(sys, 'ps1') and os.path.isfile(path):
-    readline.clear_history()
-    readline.read_history_file(path)
-  return result
-
-def is_url_valid(url):
-  result = urlparse(url)
-  return result.scheme in ('http', 'https') and bool(result.netloc)
+  pass
 
 def parse_html(parser, html):
   try:
     parser().feed(html)
   except ResultException as exception:
-    return re.sub(r"\s+", ' ', exception.result.strip())
-
-check_url = lambda url: bool(tuxapp.unasserts(tuxapp.fetch_headers)(url))
+    return re.sub(r"\s+", ' ', exception.args[0].strip())
 
 extract_url_name = lambda url: re.sub(r"-+", ' ', re.sub(r"^www\.", '', urlparse(url).netloc).split('.', 1)[0]).title()
 
 filter_app = lambda app: re.sub(r"[^a-z0-9]+", '-', app.lower()).strip('-')
 
-filter_url_path = lambda url: "{}/".format(url) if is_url_valid(url) and not urlparse(url).path else url
+filter_url_path = lambda url: "{}/".format(url) if validate.is_url_valid(url) and not urlparse(url).path else url
 
-filter_url_protocol = lambda url: \
-  url.replace("http://", "https://", 1) \
-    if is_url_valid(url) and url.startswith("http://") and check_url(url.replace("http://", "https://", 1)) else \
-  url
+filter_url_protocol = lambda url: url if not validate.is_url_valid(url) or validate.check_url_protocol(url) else url.replace("http://", "https://", 1)
 
-input_app = validates(lambda result: os.path.isfile(tuxapp.get_appfile_path(result)) and "File {} already exists".format(tildify_path(tuxapp.get_appfile_path(result))))(
+generate_appfile = lambda appfile: '\n'.join("{}={}".format(key, appfile[key]) for key in sorted(appfile) if key != 'app')
+
+get_default_app = lambda: 'temp'
+
+input_app = validates(lambda *args, **kwargs: \
+  validate.validate_app(kwargs['result']) and \
+  tuxapp.asserts("Existing appfile")(lambda app: not os.path.isfile(tuxapp.get_appfile_path(app)))(kwargs['result'])
+)(
   lambda prefill='': filter_app(input_text("Identifier: ", prefill))
 )
 
-input_url = \
-  validates(lambda result: not check_url(result) and "URL does not exist")(
-  validates(lambda result: not is_url_valid(result) and "URL is invalid")(
-    lambda question="URL: ", prefill='': filter_url_protocol(filter_url_path(input_text(question, prefill)))
-  ))
+input_homepage_url = validates(lambda *args, **kwargs: validate.validate_homepage_url(kwargs['result']))(
+  lambda prefill='': input_url("Homepage: ", prefill)
+)
+
+input_name = validates(lambda app, *args, **kwargs: validate.validate_name(app, kwargs['result']))(
+  lambda app, prefill='': input_text("Name: ", prefill)
+)
+
+input_url = lambda prompt='', prefill='': filter_url_protocol(filter_url_path(input_text(prompt, prefill)))
 
 main = tuxapp.handles_exceptions(
-  lambda: update_app(update_name(update_homepage()))
+  lambda: update_app(update_name(update_homepage_url({'app': get_default_app()})))
 )
 
 parse_name = lambda url: \
   urlparse(url).path.lstrip('/').split('/', 1)[0] \
-    if url and ".github.io/" in url and urlparse(url).path.lstrip('/') else \
-  parse_html(NameParser, tuxapp.fetch_url(url)) or extract_url_name(url) \
-    if url else \
-  ''
+    if ".github.io/" in url and urlparse(url).path.lstrip('/') else \
+  parse_html(NameParser, tuxapp.fetch_url(url)) or extract_url_name(url)
 
-tildify_path = lambda path: \
-  path.replace(os.path.expanduser('~'), '~', 1) \
-    if path.startswith("{}/".format(os.path.expanduser('~'))) or path == os.path.expanduser('~') else \
-  path
+update_app = lambda appfile: update_appfile(appfile, 'app', input_app(filter_app(appfile.get('name', ''))))
 
-update_app = lambda appfile={}: update_appfile(appfile, 'app', input_app(filter_app(appfile.get('name', ''))))
-
-update_appfile = tuxapp.outputs(
+update_appfile = tuxapp.logs_after(
   lambda *args, **kwargs: \
-    "> Appfile{}:\n{}".format(
-      " {}".format(tildify_path(tuxapp.get_appfile_path(kwargs['result']['app']))) if 'app' in kwargs['result'] else '',
-      '\n'.join("> {}={}".format(key, kwargs['result'][key]) for key in sorted(kwargs['result']) if key != 'app'),
+    "> {}:\n{}".format(
+      tuxapp.get_appfile_path(kwargs['result']['app']).replace(os.path.expanduser('~'), '~', 1),
+      '\n'.join("> {}".format(line) for line in generate_appfile(kwargs['result']).splitlines()),
     )
-)(
+, True)(
   lambda appfile, key, value: \
     write_appfile(dict(appfile, **{key: value})) and \
     dict(appfile, **{key: value})
 )
 
-update_homepage = lambda appfile={}: update_appfile(appfile, 'homepage-url', input_url("Homepage: "))
+update_homepage_url = lambda appfile: update_appfile(appfile, 'homepage-url', input_homepage_url())
 
-update_name = lambda appfile={}: update_appfile(appfile, 'name', input_text("Name: ", parse_name(appfile.get('homepage-url'))))
+update_name = lambda appfile: update_appfile(appfile, 'name', input_name(appfile['app'], parse_name(appfile['homepage-url']) if 'homepage-url' in appfile else ''))
 
 write_appfile = lambda appfile: \
-  tuxapp.write_file(tuxapp.get_appfile_path(appfile['app']), '\n'.join("{}={}".format(key, appfile[key]) for key in sorted(appfile) if key != 'app')) \
+  tuxapp.remove_file(tuxapp.get_appfile_path(get_default_app())) and \
+  tuxapp.write_file(tuxapp.get_appfile_path(appfile['app']), "{}\n".format(generate_appfile(dict(dict.fromkeys(validate.get_appfile_keys(), ''), **appfile)))) \
     if appfile.get('app') else \
   True
 
