@@ -1073,7 +1073,7 @@ unpack_app_appimage2_distribution = \
   asserts(lambda app, path, *args, **kwargs: "Failed to unpack {}".format(os.path.basename(path)))(
   logs(lambda app, path, *args, **kwargs: "Unpacking {}".format(os.path.basename(path)))(
     lambda app, path: \
-      call_process("cd {} && {}".format(
+      call_process("cd {} && {} 2> /dev/null".format(
         make_directories(get_app_path(app)),
         join_command_arguments((('firejail', '--quiet') if is_command_exist('firejail') else ()) + (change_file_mode(path, lambda mode: mode | stat.S_IXUSR), '--appimage-extract')),
       )) and \
@@ -1135,7 +1135,7 @@ unpack_zipfile = \
   asserts(lambda path, *args, **kwargs: "Failed to unpack {}".format(os.path.basename(path)))(
   logs(lambda path, *args, **kwargs: "Unpacking {}".format(os.path.basename(path)))(
     lambda path, output_path: \
-      call_process(('unzip', '-o', '-d', make_directories(output_path), path)) and \
+      call_process(('unzip', '-oq', '-d', make_directories(output_path), path)) and \
       output_path
   ))
 
