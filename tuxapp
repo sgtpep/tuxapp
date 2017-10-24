@@ -496,7 +496,7 @@ filter_app_executable = lambda app, path='': \
     if len(filter_app_executables(app, path, True)) == 1 else \
   None
 
-filter_app_executables = lambda app, path='', is_all=False: tuple(path.replace("{}/".format(get_app_distribution_path(app)), '') for path in glob.glob("{}{}/*".format(get_app_distribution_path(app), path)) if os.path.isfile(path) and os.access(path, os.X_OK) and not path.endswith(".so") and (is_all or os.path.basename(path).lower() == app.lower()))
+filter_app_executables = lambda app, path='', is_all=False: tuple(path.replace("{}/".format(get_app_distribution_path(app)), '') for path in glob.iglob("{}{}/*".format(get_app_distribution_path(app), path)) if os.path.isfile(path) and os.access(path, os.X_OK) and not path.endswith(".so") and (is_all or os.path.basename(path).lower() == app.lower()))
 
 generate_desktop_entry_category = lambda category: \
   "{}{};".format(
@@ -512,7 +512,7 @@ get_app_firejail_options_path = lambda app: "{}/firejail".format(get_app_path(ap
 
 get_app_icon_path = lambda app: "{}/icon".format(get_app_path(app))
 
-get_app_library_path = lambda app: (tuple(glob.glob("{}/usr/lib/*-linux-gnu".format(get_app_root_path(app)))) + ('',))[0]
+get_app_library_path = lambda app: next(glob.iglob("{}/usr/lib/*-linux-gnu".format(get_app_root_path(app))), '')
 
 get_app_package_version_path = lambda app, package: "{}/var/lib/packages/{}".format(get_app_root_path(app), package)
 
@@ -526,7 +526,7 @@ get_app_runner_path = lambda app: "{}/run".format(get_app_path(app))
 
 get_app_version_path = lambda app: "{}/version".format(get_app_path(app))
 
-get_appfile_names = lambda: tuple(sorted(extract_app(path) for path in glob.glob(get_appfile_path('*'))))
+get_appfile_names = lambda: tuple(sorted(extract_app(path) for path in glob.iglob(get_appfile_path('*'))))
 
 get_appfile_path = lambda app: "{}/apps/{}".format(os.path.dirname(__file__), app)
 
@@ -552,7 +552,7 @@ get_file_mtime = lambda path: os.path.getmtime(path) if os.path.isfile(path) els
 get_github_repository = lambda: "sgtpep/tuxapp"
 
 get_installed_apps = asserts("No apps are installed")(
-  lambda: tuple(sorted(os.path.basename(os.path.dirname(path)) for path in glob.glob("{}/*/version".format(get_base_path()))))
+  lambda: tuple(sorted(os.path.basename(os.path.dirname(path)) for path in glob.iglob("{}/*/version".format(get_base_path()))))
 )
 
 get_package_groups = lambda: \
@@ -686,7 +686,7 @@ Type=Application
 install_app_distribution = lambda app: \
   get_app_distribution_path(app) \
     if is_app_updated(app) else \
-  all(remove_file(path) for path in glob.glob("{}/*".format(get_app_distribution_path(app))) + glob.glob("{}/usr/bin/*".format(get_app_distribution_path(app))) if os.access(path, os.X_OK)) and \
+  all(remove_file(path) for pattern in ("/*", "/usr/bin/*") for path in glob.iglob("{}{}".format(get_app_distribution_path(app), pattern)) if os.access(path, os.X_OK)) and \
   all(unpack_app_distribution(app, path) for path in (download_missing_file(url, "{}/{}-{}-{}".format(
     get_cache_path(),
     app,
@@ -1098,7 +1098,7 @@ unpack_app_distribution = lambda app, path: \
 
 unpack_app_package_distribution = lambda app, path: \
   unpack_package(path, get_app_distribution_path(app)) and \
-  all(symlink_file(path, os.path.relpath("{}{}".format(get_app_distribution_path(app), os.readlink(path)), os.path.dirname(path))) for path in glob.glob("{}/usr/bin/*".format(get_app_distribution_path(app))) if os.path.islink(path) and os.readlink(path).startswith('/')) and \
+  all(symlink_file(path, os.path.relpath("{}{}".format(get_app_distribution_path(app), os.readlink(path)), os.path.dirname(path))) for path in glob.iglob("{}/usr/bin/*".format(get_app_distribution_path(app))) if os.path.islink(path) and os.readlink(path).startswith('/')) and \
   get_app_distribution_path(app)
 
 unpack_app_tarball_distribution = logs(lambda app, path, *args, **kwargs: "Preparing to unpack {}".format(os.path.basename(path)))(
@@ -1109,7 +1109,7 @@ unpack_app_tarball_distribution = logs(lambda app, path, *args, **kwargs: "Prepa
 )
 
 unpack_app_zipfile_distribution = lambda app, path: \
-  move_directory(glob.glob("{}/*".format(unpack_zipfile(path, "{}/unpack".format(get_app_path(app)))))[0], get_app_distribution_path(app)) \
+  move_directory(next(glob.iglob("{}/*".format(unpack_zipfile(path, "{}/unpack".format(get_app_path(app)))))), get_app_distribution_path(app)) \
     if is_zipfile_nested(path) else \
   unpack_zipfile(path, get_app_distribution_path(app))
 

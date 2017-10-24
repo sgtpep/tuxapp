@@ -114,7 +114,7 @@ deb http://security.debian.org/ {0}/updates main
   )
   DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
   """) and \
-  all(tuxapp.remove_file(path) for filename in ("libSM.so", "libXt.so") for path in glob.glob("{}/usr/lib/*-linux-gnu/{}*".format(get_container_path('debian'), filename)))
+  all(tuxapp.remove_file(path) for filename in ("libSM.so", "libXt.so") for path in glob.iglob("{}/usr/lib/*-linux-gnu/{}*".format(get_container_path('debian'), filename)))
 
 detect_missing_libraries = tuxapp.outputs(lambda distribution, app, *args, **kwargs: \
   kwargs['result'] and print("{} on {}: missing {}".format(
@@ -157,8 +157,8 @@ get_bwrap_bind_paths = lambda: \
     "/usr/lib/locale",
     "/usr/share/alsa",
   ) + \
-  tuple(glob.glob("/usr/lib/*-linux-gnu/alsa-lib")) + \
-  tuple(glob.glob("/usr/lib/*-linux-gnu/pulseaudio"))
+  tuple(glob.iglob("/usr/lib/*-linux-gnu/alsa-lib")) + \
+  tuple(glob.iglob("/usr/lib/*-linux-gnu/pulseaudio"))
 
 get_container_cache_path = lambda distribution: "{}/{}".format(tuxapp.get_cache_path(), distribution)
 
@@ -234,7 +234,7 @@ test_app = lambda app: \
   tuxapp.install_app(app) and \
   all(not detect_missing_libraries(distribution, app) for distribution in ('debian', 'arch')) and \
   tuxapp.remove_app(app) and \
-  all(tuxapp.remove_file(path) for path in glob.glob("{}/{}-*".format(tuxapp.get_cache_path(), app)))
+  all(tuxapp.remove_file(path) for path in glob.iglob("{}/{}-*".format(tuxapp.get_cache_path(), app)))
 
 test_updated_app = lambda app, path: \
   True \
