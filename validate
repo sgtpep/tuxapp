@@ -63,6 +63,8 @@ check_appfile_exists = tuxapp.asserts("{}: unknown app")(
   lambda app: os.path.isfile(tuxapp.get_appfile_path(app)) and app
 )
 
+check_url_protocol = lambda url: url.startswith("https://") or not check_url(url.replace("http://", "https://", 1))
+
 fetch_url_text = tuxapp.memoizes()(
   lambda url: re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', re.sub(r"&[\w#]+;", ' ', re.sub(r"<(?!meta)[^>]+>", ' ', tuxapp.fetch_url(url)))))
 )
@@ -119,6 +121,8 @@ get_groups = lambda: \
     'web-browsers',
     'web-development',
   )
+
+is_url_valid = lambda url: not re.search(r"\s", url) and urlparse(url).scheme in ('http', 'https') and bool(urlparse(url).netloc)
 
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): validate_appfiles(tuple(check_appfile_exists(tuxapp.extract_app(argument)) for argument in arguments) or (tuxapp.extract_app(path) for path in glob.iglob(tuxapp.get_appfile_path('*'))))
@@ -277,8 +281,9 @@ validate_title = lambda app, title: \
 
 validate_url = lambda url: \
   validate_value(url) and \
-  tuxapp.asserts("Invalid URL")(lambda url: urlparse(url).scheme in ('http', 'https') and bool(urlparse(url).netloc) and bool(urlparse(url).path))(url) and \
-  tuxapp.asserts("URL is accessible by HTTPS")(lambda url: url.startswith("https://") or not check_url(url.replace("http://", "https://", 1)))(url) and \
+  tuxapp.asserts("Invalid URL")(is_url_valid)(url) and \
+  tuxapp.asserts("No path")(lambda url: bool(urlparse(url).path))(url) and \
+  tuxapp.asserts("URL is accessible by HTTPS")(check_url_protocol)(url) and \
   tuxapp.asserts("Inaccessible URL")(check_url)(url)
 
 validate_value = lambda string, is_whitespacy=False: \
