@@ -30,8 +30,7 @@ def asserts(message):
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
       result = function(*args, **kwargs)
-      kwargs['result'] = result
-      formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
+      formatted_message = message(*args, result=result, **kwargs) if hasattr(message, '__call__') else message.format(*args, result=result, **kwargs)
       if formatted_message:
         assert result, formatted_message
       return result
@@ -94,8 +93,7 @@ def logs_after(message, is_result=False):
         formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
       result = function(*args, **kwargs)
       if is_result:
-        kwargs['result'] = result
-        formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
+        formatted_message = message(*args, result=result, **kwargs) if hasattr(message, '__call__') else message.format(*args, result=result, **kwargs)
       if formatted_message and not is_silenced():
         print(formatted_message, file=sys.stderr)
       return result
@@ -125,8 +123,7 @@ def outputs(message):
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
       result = function(*args, **kwargs)
-      kwargs['result'] = result
-      formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
+      formatted_message = message(*args, result=result, **kwargs) if hasattr(message, '__call__') else message.format(*args, result=result, **kwargs)
       if formatted_message:
         print(formatted_message)
       return result
