@@ -1075,7 +1075,7 @@ unpack_app_appimage2_distribution = \
     lambda app, path: \
       call_process("cd {} && {}".format(
         make_directories(get_app_path(app)),
-        join_command_arguments((('firejail',) if is_command_exist('firejail') else ()) + (change_file_mode(path, lambda mode: mode | stat.S_IXUSR), '--appimage-extract')),
+        join_command_arguments((('firejail', '--quiet') if is_command_exist('firejail') else ()) + (change_file_mode(path, lambda mode: mode | stat.S_IXUSR), '--appimage-extract')),
       )) and \
       move_directory("{}/squashfs-root".format(get_app_path(app)), get_app_distribution_path(app))
   ))
