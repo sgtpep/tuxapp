@@ -41,7 +41,7 @@ def check_url(url):
   except (BadStatusLine, URLError, ssl.CertificateError):
     return False
 
-def validate_appfile_wrapped(app):
+def validate_appfile_worker(app):
   return validate_appfile(app)
 
 @tuxapp.silences
@@ -49,7 +49,7 @@ def validate_appfiles(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
-    return reduce(lambda result, is_valid: result and is_valid, pool.imap_unordered(validate_appfile_wrapped, apps))
+    return reduce(lambda result, is_valid: result and is_valid, pool.imap_unordered(validate_appfile_worker, apps))
 
 @tuxapp.asserts("Malformed pattern")
 def validate_regex(pattern):
