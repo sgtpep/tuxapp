@@ -575,7 +575,7 @@ get_package_groups = lambda: \
       'libdbus-glib-1-2',
       'libgtk-3-0',
       'libxt6',
-    )
+    ),
   }
 
 get_package_list_archive_path = lambda url: "{}{}".format(get_package_list_path(url), os.path.splitext(url)[1])
