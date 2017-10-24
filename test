@@ -24,17 +24,11 @@ def parse_arguments(arguments):
   parsed_arguments.apps = tuple(tuxapp.extract_app(app) for app in parsed_arguments.apps)
   return parsed_arguments
 
-def test_app_worker(app):
-  return test_updated_app(app, get_app_tested_path(app))
-
 @tuxapp.silences
 def test_apps(apps):
   get_base_path, tuxapp.get_base_path = tuxapp.get_base_path, lambda: os.path.expanduser("~/.tuxapp-test")
   get_cache_path, tuxapp.get_cache_path = tuxapp.get_cache_path, lambda: "{}/tuxapp-test".format(tuxapp.get_xdg_cache_path())
-  import contextlib
-  import multiprocessing
-  with contextlib.closing(multiprocessing.Pool()) as pool:
-    result = reduce(lambda result, is_tested: result and is_tested, pool.imap_unordered(test_app_worker, apps), True)
+  result = reduce(lambda result, app: result and test_updated_app(app, get_app_tested_path(app)), apps, True)
   tuxapp.get_base_path = get_base_path
   tuxapp.get_cache_path = get_cache_path
   return result
