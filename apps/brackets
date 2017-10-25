@@ -11,6 +11,6 @@ icon-url=https://raw.githubusercontent.com/adobe/brackets/master/src/styles/imag
 name=Brackets
 note=
 packages=group-electron
-title=A modern, open source text editor that understands web design
+title=A modern, open source code editor that understands web design
 version-regex=-version">([^<]+)
 version-url=

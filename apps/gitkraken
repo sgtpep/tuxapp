@@ -1,5 +1,5 @@
 category=development
-description=GitKraken is the most popular Git GUI for Windows, Mac and Linux. Unleash your repo by downloading GitKraken for free now!
+description=The legendary Git GUI client.
 download-x86-64-url=https://release.gitkraken.com/linux/gitkraken-amd64.tar.gz
 download-x86-url=
 executable=

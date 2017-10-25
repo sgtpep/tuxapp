@@ -11,6 +11,6 @@ icon-url=https://telegram.org/img/t_logo.png
 name=Telegram
 note=
 packages=libasound2 libgtk2.0-0
-title=Messenger
+title=A new era of messaging
 version-regex=/download/v([^/]+)
 version-url=https://github.com/telegramdesktop/tdesktop/releases/latest
