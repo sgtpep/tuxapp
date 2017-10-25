@@ -569,6 +569,21 @@ get_file_mtime = lambda path: os.path.getmtime(path) if os.path.isfile(path) els
 
 get_github_repository = lambda: "sgtpep/tuxapp"
 
+get_install_command = lambda package, message="{}": \
+  message.format("sudo apt install {}".format(package)) \
+    if is_command_exist('apt') else \
+  message.format("sudo apt-get install {}".format(package)) \
+    if is_command_exist('apt-get') else \
+  message.format("sudo dnf install {}".format(package)) \
+    if is_command_exist('dnf') else \
+  message.format("sudo pacman -S {}".format(package)) \
+    if is_command_exist('pacman') else \
+  message.format("sudo yum install {}".format(package)) \
+    if is_command_exist('yum') else \
+  message.format("sudo zypper install {}".format(package)) \
+    if is_command_exist('zypper') else \
+  ''
+
 get_installed_apps = asserts("No apps are installed")(
   lambda: tuple(sorted(os.path.basename(os.path.dirname(path)) for path in glob.iglob("{}/*/version".format(get_base_path()))))
 )
@@ -577,9 +592,9 @@ get_lock_path = lambda: "{}/pid".format(get_cache_path())
 
 get_message = lambda name: \
   {
-    'firejail-missing': "Warning: firejail is not installed on your system and will not be used to sandbox this app",
+    'firejail-missing': "Warning: firejail is not installed on your system and will not be used to sandbox this app.{}".format(get_install_command('firejail', " Install it with the command: {}")),
     'firejail-options': "Warning: firejail will run this app with custom options: {}",
-    'firejail-x11': "Warning: X11 sandboxing is not enabled for this app",
+    'firejail-x11': "Warning: X11 sandboxing is not enabled for this app.", # "To prevent it from reading any window contents and input events install this app with the --x11 option."
   }[name]
 
 get_package_groups = lambda: \
