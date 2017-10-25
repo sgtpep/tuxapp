@@ -151,7 +151,7 @@ input_group = \
   ))
 
 input_homepage_url = validates(lambda *args, **kwargs: validate.validate_homepage_url(kwargs['result']))(
-  lambda prefill='': input_url("Homepage", prefill)
+  lambda prefill='': input_url("Homepage URL", prefill)
 )
 
 input_name = validates(lambda app, *args, **kwargs: validate.validate_name(app, kwargs['result']))(
