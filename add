@@ -31,7 +31,7 @@ def validates(validate_function):
           validate_function(*args, result=result, **kwargs)
           return result
         except AssertionError as exception:
-          print(exception.args[0], file=sys.stderr)
+          print(exception.args[0] if exception.args else "Unknown error", file=sys.stderr)
         finally:
           if hasattr(validates, 'prefill'):
             del validates.prefill
@@ -110,7 +110,8 @@ def parse_html(parser, html):
   try:
     parser().feed(html)
   except ResultException as exception:
-    return re.sub(r"\s+", ' ', exception.args[0].strip())
+    if exception.args and tuxapp.is_string(exception.args[0]):
+      return re.sub(r"\s+", ' ', exception.args[0].strip())
 
 extract_url_name = lambda url: re.sub(r"-+", ' ', re.sub(r"^www\.", '', urlparse(url).netloc).split('.', 1)[0]).title()
 
