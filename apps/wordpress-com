@@ -7,7 +7,7 @@ firejail=
 free-license=yes
 group=content-management
 homepage-url=https://wordpress.com/
-icon-url=https://s1.wp.com/i/favicon.ico?v=1447321881
+icon-url=https://0.gravatar.com/blavatar/653166773dc88127bd3afe0b6dfe5ea7?s=114&d=http%3A%2F%2Fs0.wp.com%2Fi%2Fwebclip.png
 name=WordPress.com
 note=
 packages=group-electron
