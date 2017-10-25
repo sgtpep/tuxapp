@@ -122,6 +122,15 @@ get_groups = lambda: \
     'web-development',
   )
 
+get_punctuation = lambda: ('.', '!', '?')
+
+is_page_contains = lambda url, string, is_case_sensitive=False: \
+  bool(re.search(
+    r"\b{}\b".format(re.escape(re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', string)))),
+    fetch_url_text(url),
+    0 if is_case_sensitive else re.I | re.U,
+  ))
+
 is_url_valid = lambda url: not re.search(r"\s", url) and urlparse(url).scheme in ('http', 'https') and bool(urlparse(url).netloc)
 
 main = tuxapp.handles_exceptions(
@@ -237,12 +246,7 @@ validate_group = lambda group, is_permissive=False: \
   (is_permissive or tuxapp.asserts("Unknown group")(lambda group: group in get_groups())(group))
 
 validate_homepage_contains = tuxapp.asserts("Not found on the homepage")(
-  lambda app, string, is_case_sensitive=False: \
-    bool(re.search(
-      r"\b{}\b".format(re.escape(re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', string)))),
-      fetch_url_text(tuxapp.query_appfile(app, 'homepage-url')),
-      0 if is_case_sensitive else re.I | re.U,
-    ))
+  lambda app, string, is_case_sensitive=False: is_page_contains(tuxapp.query_appfile(app, 'homepage-url'), string, is_case_sensitive)
 )
 
 validate_homepage_url = lambda url: validate_url(url)
@@ -269,7 +273,7 @@ validate_packages = lambda packages: \
   tuxapp.asserts("Unknown package")(lambda packages: all(tuxapp.unasserts(tuxapp.parse_package_lists)(package) for package in packages.split() if not package.startswith('group-')))(packages)
 
 validate_terminal_punctuation = tuxapp.asserts(lambda string, is_inverted=False, *args, **kwargs: "Terminal punctuation" if is_inverted else "No terminal punctuation")(
-  lambda string, is_inverted=False: (string[-1] in ('.', '!', '?')) ^ is_inverted
+  lambda string, is_inverted=False: (string[-1] in get_punctuation()) ^ is_inverted
 )
 
 validate_title = lambda app, title: \

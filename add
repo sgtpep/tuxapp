@@ -106,13 +106,11 @@ class NameParser(HTMLParser):
     attributes = dict(attributes)
     if tag == 'a' and self.parent_tag == 'h1' or tag == 'h1' and self.parent_tag == 'a':
       self.data_tag = tag
-    elif tag == 'meta' and self.parent_attributes.get('itemtype', '').startswith("http://schema.org/") and self.parent_attributes['itemtype'].rsplit('/', 1)[-1] in ('Product', 'SoftwareApplication'):
+    elif tag == 'meta' and attributes.get('itemprop') == 'name' and attributes.get('content') and self.parent_attributes.get('itemtype', '').startswith("http://schema.org/") and self.parent_attributes['itemtype'].rsplit('/', 1)[-1] in ('Product', 'SoftwareApplication'):
       raise ResultException(attributes['content'])
     elif tag == 'meta' and attributes.get('name') == 'application-name' and attributes.get('content'):
       raise ResultException(attributes['content'])
     elif tag == 'meta' and attributes.get('property') == 'og:site_name' and attributes.get('content'):
-      raise ResultException(attributes['content'])
-    elif tag == 'meta' and attributes.get('itemprop') == 'name' and attributes.get('content'):
       raise ResultException(attributes['content'])
     self.parent_attributes = attributes
     self.parent_tag = tag
