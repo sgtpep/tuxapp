@@ -38,13 +38,16 @@ def validates(validate_function):
     return wrapper
   return decorator
 
-def input_text(prompt, prefill='', is_whitespacy=False):
+def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
   try:
     import readline
     readline.set_startup_hook(lambda: readline.insert_text(getattr(validates, 'prefill', prefill)))
     history_path = os.path.expanduser("~/.python_history")
     if hasattr(sys, 'ps1') and os.path.isfile(history_path):
       readline.write_history_file(history_path)
+    completer, delimeters = readline.get_completer(), readline.get_completer_delims()
+    readline.set_completer(lambda text, state: tuple(choice for choice in choices if choice.startswith(text))[state])
+    readline.set_completer_delims('')
     try:
       import builtins
     except ImportError:
@@ -58,6 +61,8 @@ def input_text(prompt, prefill='', is_whitespacy=False):
     if hasattr(sys, 'ps1') and os.path.isfile(history_path):
       readline.clear_history()
       readline.read_history_file(history_path)
+    readline.set_completer(completer)
+    readline.set_completer_delims(delimeters)
 
 class NameParser(HTMLParser):
   data = ''
