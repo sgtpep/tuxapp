@@ -11,6 +11,10 @@ try:
 except ImportError:
   from HTMLParser import HTMLParser
 try:
+  from shlex import quote
+except ImportError:
+  from pipes import quote
+try:
   from urllib.parse import urlparse
 except ImportError:
   from urlparse import urlparse
@@ -37,6 +41,41 @@ def validates(validate_function):
             del validates.prefill
     return wrapper
   return decorator
+
+class BaseURLParser(HTMLParser):
+  def handle_starttag(self, tag, attributes):
+    attributes = dict(attributes)
+    if tag == 'base' and attributes.get('href'):
+      raise ResultException(attributes['href'])
+
+class IconURLParser(HTMLParser):
+  href = None
+  rel_index = -1
+  size = -1
+
+  rels = (
+    "shortcut icon",
+    'apple-touch-icon',
+    'icon',
+  )
+
+  def feed(self, *args, **kwargs):
+    HTMLParser.feed(self, *args, **kwargs)
+    raise ResultException(self.href)
+
+  def handle_endtag(self, tag):
+    if tag == 'head':
+      raise ResultException(self.href)
+
+  def handle_starttag(self, tag, attributes):
+    attributes = dict(attributes)
+    if tag == 'link' and attributes.get('href') and attributes.get('rel') in self.rels:
+      rel_index = self.rels.index(attributes['rel'])
+      size = int(attributes.get('sizes', "0x0").split('x', 1)[0])
+      if rel_index > self.rel_index or size > self.size:
+        self.href = attributes['href']
+        self.rel_index = rel_index
+        self.size = size
 
 class NameParser(HTMLParser):
   data = ''
@@ -115,7 +154,13 @@ def parse_html(parser, html):
 
 extract_url_name = lambda url: re.sub(r"-+", ' ', re.sub(r"^www\.", '', urlparse(url).netloc).split('.', 1)[0]).title()
 
+fetch_url = tuxapp.memoizes()(
+  lambda *args, **kwargs: tuxapp.fetch_url(*args, **kwargs)
+)
+
 filter_app = lambda app: re.sub(r"[^a-z0-9]+", '-', app.lower()).strip('-')
+
+filter_url = lambda url: url if validate.is_url_valid(url) and validate.check_url(url) else None
 
 filter_url_path = lambda url: "{}/".format(url) if validate.is_url_valid(url) and not urlparse(url).path else url
 
@@ -124,6 +169,17 @@ filter_url_protocol = lambda url: url if not validate.is_url_valid(url) or valid
 generate_appfile = lambda appfile: '\n'.join("{}={}".format(key, appfile[key]) for key in sorted(appfile) if key != 'app')
 
 get_default_app = lambda: 'temp'
+
+get_update_functions = lambda: \
+  (
+    update_homepage_url,
+    update_name,
+    update_app,
+    update_category,
+    update_group,
+    update_free_license,
+    update_icon_url,
+  )
 
 input_app = validates(lambda *args, **kwargs: \
   validate.validate_app(kwargs['result']) and \
@@ -154,6 +210,10 @@ input_homepage_url = validates(lambda *args, **kwargs: validate.validate_homepag
   lambda prefill='': input_url("Homepage URL", prefill)
 )
 
+input_icon_url = validates(lambda *args, **kwargs: validate.validate_icon_url(kwargs['result']))(
+  lambda prefill='': input_url("Icon URL", prefill)
+)
+
 input_name = validates(lambda app, *args, **kwargs: validate.validate_name(app, kwargs['result']))(
   lambda app, prefill='': input_text("Name", prefill)
 )
@@ -164,20 +224,30 @@ main = tuxapp.handles_exceptions(
   lambda: functools.reduce(lambda appfile, update: update(appfile), get_update_functions(), {})
 )
 
-get_update_functions = lambda: \
-  (
-    update_homepage_url,
-    update_name,
-    update_app,
-    update_category,
-    update_group,
-    update_free_license,
+normalize_url = lambda page_url, url, base_url=None: \
+  url \
+    if re.match(r"^https?://", url) else \
+  "{}:{}".format(urlparse(page_url).scheme, url) \
+    if url.startswith("//") else \
+  "{0.scheme}://{0.netloc}{1}".format(urlparse(page_url), normalize_url_path(url)) \
+    if url.startswith('/') else \
+  "{0.scheme}://{0.netloc}{1}".format(
+    urlparse(base_url or parse_base_url(page_url)),
+    normalize_url_path("/{}/{}".format(urlparse(base_url or parse_base_url(page_url)).path, url)),
   )
+
+normalize_url_path = lambda path: re.sub(r"^//", '/', os.path.normpath(path))
+
+parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url(url)) or url, url)
+
+parse_icon_url = tuxapp.does(lambda *args, **kwargs: kwargs['result'] and input_boolean("Open the determined icon in the browser?") and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(quote(kwargs['result']))))(
+  lambda url: filter_url(normalize_url(url, parse_html(IconURLParser, fetch_url(url)) or "/favicon.ico"))
+)
 
 parse_name = lambda url: \
   urlparse(url).path.lstrip('/').split('/', 1)[0] \
     if ".github.io/" in url and urlparse(url).path.lstrip('/') else \
-  parse_html(NameParser, tuxapp.fetch_url(url)) or extract_url_name(url)
+  parse_html(NameParser, fetch_url(url)) or extract_url_name(url)
 
 update_app = lambda appfile: update_appfile(appfile, 'app', input_app(filter_app(appfile.get('name', ''))))
 
@@ -199,7 +269,9 @@ update_free_license = lambda appfile: update_appfile(appfile, 'free-license', in
 
 update_group = lambda appfile: update_appfile(appfile, 'group', input_group(appfile.get('group', '')))
 
-update_homepage_url = lambda appfile={}: update_appfile(appfile, 'homepage-url', input_homepage_url(appfile.get('homepage-url')))
+update_homepage_url = lambda appfile={}: update_appfile(appfile, 'homepage-url', input_homepage_url(appfile.get('homepage-url', '')))
+
+update_icon_url = lambda appfile={}: update_appfile(appfile, 'icon-url', input_icon_url(appfile.get('icon-url', parse_icon_url(appfile['homepage-url']) if 'homepage-url' in appfile else '')))
 
 update_name = lambda appfile={}: update_appfile(appfile, 'name', input_name(appfile.get('app', get_default_app()), appfile.get('name', parse_name(appfile['homepage-url']) if 'homepage-url' in appfile else '')))
 
