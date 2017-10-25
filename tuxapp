@@ -358,7 +358,7 @@ check_apps_updated = outputs(
   lambda apps: tuple(check_app_updated(app) for app in apps)
 )
 
-detect_app_executable = asserts("Failed to determine the executable file of {}")(
+detect_app_executable = asserts("Failed to detect the executable file of {}")(
   lambda app: \
     resolve_app_executable(app, query_appfile(app, 'executable').lstrip('/')) \
       if query_appfile(app, 'executable') else \

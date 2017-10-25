@@ -240,7 +240,7 @@ normalize_url_path = lambda path: re.sub(r"^//", '/', os.path.normpath(path))
 
 parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url(url)) or url, url)
 
-parse_icon_url = tuxapp.does(lambda *args, **kwargs: kwargs['result'] and input_boolean("Open the determined icon in the browser?") and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(quote(kwargs['result']))))(
+parse_icon_url = tuxapp.does(lambda *args, **kwargs: kwargs['result'] and input_boolean("Open the detected icon in the browser?") and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(quote(kwargs['result']))))(
   lambda url: filter_url(normalize_url(url, parse_html(IconURLParser, fetch_url(url)) or "/favicon.ico"))
 )
 
