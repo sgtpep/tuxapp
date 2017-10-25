@@ -21,8 +21,8 @@ def reasserts(message):
       try:
         return function(*args, **kwargs)
       except AssertionError as exception:
-        kwargs['message'] = "{}{}".format(exception.args[0][0].lower(), exception.args[0][1:])
-        formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
+        exception_message = "{}{}".format(exception.args[0][0].lower(), exception.args[0][1:]) if exception.args else "unknown error"
+        formatted_message = message(*args, message=exception_message, **kwargs) if hasattr(message, '__call__') else message.format(*args, message=exception_message, **kwargs)
         print(formatted_message.encode('utf-8'), file=sys.stderr)
     return wrapper
   return decorator
