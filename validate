@@ -232,9 +232,9 @@ validate_free_license = lambda value: \
   validate_value(value) and \
   tuxapp.asserts("Value is not 'yes'")(lambda value: value == 'yes')(value)
 
-validate_group = lambda group: \
+validate_group = lambda group, is_permissive=False: \
   validate_value(group) and \
-  tuxapp.asserts("Unknown group")(lambda group: group in get_groups())(group)
+  (is_permissive or tuxapp.asserts("Unknown group")(lambda group: group in get_groups())(group))
 
 validate_homepage_contains = tuxapp.asserts("Not found on the homepage")(
   lambda app, string, is_case_sensitive=False: \

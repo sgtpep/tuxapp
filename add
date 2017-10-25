@@ -131,6 +131,24 @@ input_app = validates(lambda *args, **kwargs: \
   lambda prefill='': filter_app(input_text("Identifier", prefill))
 )
 
+input_boolean = lambda question: 'yes' if re.match(r"^($|y)", input_text("{} [Y/n]".format(question)), re.I) else ''
+
+input_category = \
+  validates(lambda *args, **kwargs: validate.validate_category(kwargs['result']))(
+  tuxapp.logs(lambda *args, **kwargs: "Categories: {}".format(", ".join(validate.get_categories())))(
+    lambda prefill='': input_text("Category", prefill, validate.get_categories())
+  ))
+
+input_free_license = validates(lambda *args, **kwargs: validate.validate_free_license(kwargs['result']))(
+  lambda: input_boolean("Is license free?")
+)
+
+input_group = \
+  validates(lambda *args, **kwargs: validate.validate_group(kwargs['result'], True))(
+  tuxapp.logs(lambda *args, **kwargs: "Groups: {}".format(", ".join(validate.get_groups())))(
+    lambda prefill='': input_text("Group", prefill, validate.get_groups())
+  ))
+
 input_homepage_url = validates(lambda *args, **kwargs: validate.validate_homepage_url(kwargs['result']))(
   lambda prefill='': input_url("Homepage", prefill)
 )
@@ -145,6 +163,16 @@ main = tuxapp.handles_exceptions(
   lambda: functools.reduce(lambda appfile, update: update(appfile), get_update_functions(), {})
 )
 
+get_update_functions = lambda: \
+  (
+    update_homepage_url,
+    update_name,
+    update_app,
+    update_category,
+    update_group,
+    update_free_license,
+  )
+
 parse_name = lambda url: \
   urlparse(url).path.lstrip('/').split('/', 1)[0] \
     if ".github.io/" in url and urlparse(url).path.lstrip('/') else \
@@ -155,7 +183,7 @@ update_app = lambda appfile: update_appfile(appfile, 'app', input_app(filter_app
 update_appfile = tuxapp.logs_after(
   lambda *args, **kwargs: \
     "> {}:\n{}".format(
-      tuxapp.get_appfile_path(kwargs['result']['app']).replace(os.path.expanduser('~'), '~', 1),
+      tuxapp.get_appfile_path(kwargs['result'].get('app', get_default_app())).replace(os.path.expanduser('~'), '~', 1),
       '\n'.join("> {}".format(line) for line in generate_appfile(kwargs['result']).splitlines()),
     )
 , True)(
@@ -164,15 +192,19 @@ update_appfile = tuxapp.logs_after(
     dict(appfile, **{key: value})
 )
 
-update_homepage_url = lambda appfile: update_appfile(appfile, 'homepage-url', input_homepage_url())
+update_category = lambda appfile: update_appfile(appfile, 'category', input_category(appfile.get('category', '')))
 
-update_name = lambda appfile: update_appfile(appfile, 'name', input_name(appfile['app'], parse_name(appfile['homepage-url']) if 'homepage-url' in appfile else ''))
+update_free_license = lambda appfile: update_appfile(appfile, 'free-license', input_free_license())
+
+update_group = lambda appfile: update_appfile(appfile, 'group', input_group(appfile.get('group', '')))
+
+update_homepage_url = lambda appfile={}: update_appfile(appfile, 'homepage-url', input_homepage_url(appfile.get('homepage-url')))
+
+update_name = lambda appfile={}: update_appfile(appfile, 'name', input_name(appfile.get('app', get_default_app()), appfile.get('name', parse_name(appfile['homepage-url']) if 'homepage-url' in appfile else '')))
 
 write_appfile = lambda appfile: \
   tuxapp.remove_file(tuxapp.get_appfile_path(get_default_app())) and \
-  tuxapp.write_file(tuxapp.get_appfile_path(appfile['app']), "{}\n".format(generate_appfile(dict(dict.fromkeys(validate.get_appfile_keys(), ''), **appfile)))) \
-    if appfile.get('app') else \
-  True
+  tuxapp.write_file(tuxapp.get_appfile_path(appfile.get('app', get_default_app())), "{}\n".format(generate_appfile(dict(dict.fromkeys(validate.get_appfile_keys(), ''), **appfile))))
 
 if __name__ == '__main__':
   main()
