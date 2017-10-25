@@ -38,7 +38,7 @@ def validates(validate_function):
     return wrapper
   return decorator
 
-def input_text(prompt='', prefill='', is_whitespacy=False):
+def input_text(prompt, prefill='', is_whitespacy=False):
   try:
     import readline
     readline.set_startup_hook(lambda: readline.insert_text(getattr(validates, 'prefill', prefill)))
@@ -134,7 +134,7 @@ input_name = validates(lambda app, *args, **kwargs: validate.validate_name(app, 
   lambda app, prefill='': input_text("Name: ", prefill)
 )
 
-input_url = lambda prompt='', prefill='': filter_url_protocol(filter_url_path(input_text(prompt, prefill)))
+input_url = lambda prompt, prefill='': filter_url_protocol(filter_url_path(input_text(prompt, prefill)))
 
 main = tuxapp.handles_exceptions(
   lambda: update_app(update_name(update_homepage_url({'app': get_default_app()})))
