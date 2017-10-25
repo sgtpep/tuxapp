@@ -38,32 +38,6 @@ def validates(validate_function):
     return wrapper
   return decorator
 
-def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
-  try:
-    import readline
-    readline.set_startup_hook(lambda: readline.insert_text(getattr(validates, 'prefill', prefill)))
-    history_path = os.path.expanduser("~/.python_history")
-    if hasattr(sys, 'ps1') and os.path.isfile(history_path):
-      readline.write_history_file(history_path)
-    completer, delimeters = readline.get_completer(), readline.get_completer_delims()
-    readline.set_completer(lambda text, state: tuple(choice for choice in choices if choice.startswith(text))[state])
-    readline.set_completer_delims('')
-    try:
-      import builtins
-    except ImportError:
-      import __builtin__ as builtins
-    result = getattr(builtins, 'raw_input', input)("{}: ".format(prompt)).replace('\t', ' ')
-    if not is_whitespacy:
-      result = re.sub(r"\s+", ' ', result).strip()
-    return result
-  finally:
-    readline.set_startup_hook()
-    if hasattr(sys, 'ps1') and os.path.isfile(history_path):
-      readline.clear_history()
-      readline.read_history_file(history_path)
-    readline.set_completer(completer)
-    readline.set_completer_delims(delimeters)
-
 class NameParser(HTMLParser):
   data = ''
   data_tag = None
@@ -105,6 +79,32 @@ class NameParser(HTMLParser):
 
 class ResultException(Exception):
   pass
+
+def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
+  try:
+    import readline
+    readline.set_startup_hook(lambda: readline.insert_text(getattr(validates, 'prefill', prefill)))
+    history_path = os.path.expanduser("~/.python_history")
+    if hasattr(sys, 'ps1') and os.path.isfile(history_path):
+      readline.write_history_file(history_path)
+    completer, delimeters = readline.get_completer(), readline.get_completer_delims()
+    readline.set_completer(lambda text, state: tuple(choice for choice in choices if choice.startswith(text))[state])
+    readline.set_completer_delims('')
+    try:
+      import builtins
+    except ImportError:
+      import __builtin__ as builtins
+    result = getattr(builtins, 'raw_input', input)("{}: ".format(prompt)).replace('\t', ' ')
+    if not is_whitespacy:
+      result = re.sub(r"\s+", ' ', result).strip()
+    return result
+  finally:
+    readline.set_startup_hook()
+    if hasattr(sys, 'ps1') and os.path.isfile(history_path):
+      readline.clear_history()
+      readline.read_history_file(history_path)
+    readline.set_completer(completer)
+    readline.set_completer_delims(delimeters)
 
 def parse_html(parser, html):
   try:
