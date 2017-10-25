@@ -241,9 +241,9 @@ normalize_url_path = lambda path: re.sub(r"^//", '/', os.path.normpath(path))
 
 parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url(url)) or url, url)
 
-parse_icon_url = tuxapp.does(lambda *args, **kwargs: kwargs['result'] and input_boolean("Open the detected icon in the browser?") and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(quote(kwargs['result']))))(
-  lambda url: filter_url(normalize_url(url, parse_html(IconURLParser, fetch_url(url)) or "/favicon.ico"))
-)
+parse_icon_url = lambda url: filter_url(normalize_url(url, parse_html(IconURLParser, fetch_url(url)) or "/favicon.ico"))
+
+parse_icon_url_interactively = tuxapp.does(lambda *args, **kwargs: kwargs['result'] and input_boolean("Open the detected icon in the browser?") and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(quote(kwargs['result']))))(parse_icon_url)
 
 parse_name = lambda url: \
   urlparse(url).path.lstrip('/').split('/', 1)[0] \
@@ -272,7 +272,7 @@ update_group = lambda appfile: update_appfile(appfile, 'group', input_group(appf
 
 update_homepage_url = lambda appfile={}: update_appfile(appfile, 'homepage-url', input_homepage_url(appfile.get('homepage-url', '')))
 
-update_icon_url = lambda appfile={}: update_appfile(appfile, 'icon-url', input_icon_url(appfile.get('icon-url', parse_icon_url(appfile['homepage-url']) if 'homepage-url' in appfile else '')))
+update_icon_url = lambda appfile={}: update_appfile(appfile, 'icon-url', input_icon_url(appfile.get('icon-url', parse_icon_url_interactively(appfile['homepage-url']) if 'homepage-url' in appfile else '')))
 
 update_name = lambda appfile={}: update_appfile(appfile, 'name', input_name(appfile.get('app', get_default_app()), appfile.get('name', parse_name(appfile['homepage-url']) if 'homepage-url' in appfile else '')))
 
