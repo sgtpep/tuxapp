@@ -37,6 +37,16 @@ def asserts(message):
     return wrapper
   return decorator
 
+def does(do_function):
+  def decorator(function):
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+      result = function(*args, **kwargs)
+      do_function(*args, result=result, **kwargs)
+      return result
+    return wrapper
+  return decorator
+
 def handles_exceptions(function):
   @functools.wraps(function)
   def wrapper(*args, **kwargs):
