@@ -28,7 +28,7 @@ def parse_arguments(arguments):
 def test_apps(apps):
   get_base_path, tuxapp.get_base_path = tuxapp.get_base_path, lambda: os.path.expanduser("~/.tuxapp-test")
   get_cache_path, tuxapp.get_cache_path = tuxapp.get_cache_path, lambda: "{}/tuxapp-test".format(tuxapp.get_xdg_cache_path())
-  result = reduce(lambda result, app: result and test_updated_app(app, get_app_tested_path(app)), apps, True)
+  result = functools.reduce(lambda result, app: result and test_updated_app(app, get_app_tested_path(app)), apps, True)
   tuxapp.get_base_path = get_base_path
   tuxapp.get_cache_path = get_cache_path
   return result

@@ -137,7 +137,7 @@ input_name = validates(lambda app, *args, **kwargs: validate.validate_name(app, 
 input_url = lambda prompt, prefill='': filter_url_protocol(filter_url_path(input_text(prompt, prefill)))
 
 main = tuxapp.handles_exceptions(
-  lambda: update_app(update_name(update_homepage_url({'app': get_default_app()})))
+  lambda: functools.reduce(lambda appfile, update: update(appfile), get_update_functions(), {})
 )
 
 parse_name = lambda url: \
