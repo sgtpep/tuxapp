@@ -52,7 +52,7 @@ def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
       import builtins
     except ImportError:
       import __builtin__ as builtins
-    result = getattr(builtins, 'raw_input', input)(prompt).replace('\t', ' ')
+    result = getattr(builtins, 'raw_input', input)("{}: ".format(prompt)).replace('\t', ' ')
     if not is_whitespacy:
       result = re.sub(r"\s+", ' ', result).strip()
     return result
@@ -128,15 +128,15 @@ input_app = validates(lambda *args, **kwargs: \
   validate.validate_app(kwargs['result']) and \
   tuxapp.asserts("Existing appfile")(lambda app: not os.path.isfile(tuxapp.get_appfile_path(app)))(kwargs['result'])
 )(
-  lambda prefill='': filter_app(input_text("Identifier: ", prefill))
+  lambda prefill='': filter_app(input_text("Identifier", prefill))
 )
 
 input_homepage_url = validates(lambda *args, **kwargs: validate.validate_homepage_url(kwargs['result']))(
-  lambda prefill='': input_url("Homepage: ", prefill)
+  lambda prefill='': input_url("Homepage", prefill)
 )
 
 input_name = validates(lambda app, *args, **kwargs: validate.validate_name(app, kwargs['result']))(
-  lambda app, prefill='': input_text("Name: ", prefill)
+  lambda app, prefill='': input_text("Name", prefill)
 )
 
 input_url = lambda prompt, prefill='': filter_url_protocol(filter_url_path(input_text(prompt, prefill)))
