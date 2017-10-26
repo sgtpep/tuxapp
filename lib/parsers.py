@@ -215,7 +215,10 @@ check_github_releases_url = lambda repository: \
 
 check_name = lambda url, name: name if validate.check_page_contains(url, name, True) else None
 
-check_page_contains_version = lambda url: bool(re.search(r"""[_-]version"|"softwareVersion"|/releases/download/""", fetch_url(url)))
+check_page_contains_version = lambda url: \
+  url \
+    if url and bool(re.search(r"""[_-]version"|"softwareVersion"|/releases/download/""", fetch_url(url))) else \
+  None
 
 extract_github_releases_url = lambda url: \
   check_github_releases_url(
@@ -259,3 +262,9 @@ parse_name = lambda url: \
   parse_html(NameParser, fetch_url(url)) or check_name(url, extract_url_name(url))
 
 parse_title = lambda url: parse_html(TitleParser, fetch_url(url))
+
+parse_version_url = lambda url: \
+  check_page_contains_version(url) or \
+  check_page_contains_version(parse_downloads_url(url)) or \
+  extract_github_releases_url(url) or \
+  url
