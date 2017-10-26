@@ -15,13 +15,14 @@ import sys
 import time
 
 try:
-  from shlex import quote
+  from shlex import quote as quote_argument
 except ImportError:
-  from pipes import quote
+  from pipes import quote as quote_argument
+
 try:
-  from urllib.parse import urlparse
+  from urllib.parse import urlparse as parse_url
 except ImportError:
-  from urlparse import urlparse
+  from urlparse import urlparse as parse_url
 
 __version__ = "1.0.0"
 
@@ -468,7 +469,7 @@ fetch_app_version = \
           ('-Ss', '-D', "/dev/stderr", query_appfile_version_url(app)),
           ('-Sq', '-O', '-', query_appfile_version_url(app)),
         )),
-        quote(pattern or query_appfile(app, 'version-regex')),
+        quote_argument(pattern or query_appfile(app, 'version-regex')),
       )), flags=re.S), 0, 1) or '').replace('/', '-')
   )))
 
@@ -573,7 +574,7 @@ get_debian_url = lambda: "https://cdn-aws.deb.debian.org/"
 
 get_download_cache_path = lambda url: get_download_path(url, get_cache_path())
 
-get_download_path = lambda url, path: "{}/{}".format(path, os.path.basename(urlparse(url).path))
+get_download_path = lambda url, path: "{}/{}".format(path, os.path.basename(parse_url(url).path))
 
 get_file_mtime = lambda path: os.path.getmtime(path) if os.path.isfile(path) else 0
 
@@ -671,7 +672,7 @@ get_temp_download_path = lambda path='', is_url=False: \
   "{}/downloads{}{}".format(
     get_cache_path(),
     '/' if path else '',
-    os.path.basename(urlparse(path).path if is_url else path),
+    os.path.basename(parse_url(path).path if is_url else path),
   )
 
 get_xdg_cache_path = lambda: os.environ.get('XDG_CACHE_HOME', os.path.expanduser("~/.cache"))
@@ -773,17 +774,17 @@ set -eu -o pipefail
 
 declare -r app_path=${0%/*}
 declare -r base_path=${0%/*/*}
-declare -r browser_path=${0%/*}/""" + quote(get_app_relative_path(app, install_app_browser(app))) + r"""
-declare -r cache_path=${XDG_CACHE_HOME-~/.cache}/""" + quote(os.path.relpath(get_cache_path(), get_xdg_cache_path())) + r"""
-declare -r distribution_path=${0%/*}/""" + quote(get_app_relative_path(app, get_app_distribution_path(app))) + r"""
+declare -r browser_path=${0%/*}/""" + quote_argument(get_app_relative_path(app, install_app_browser(app))) + r"""
+declare -r cache_path=${XDG_CACHE_HOME-~/.cache}/""" + quote_argument(os.path.relpath(get_cache_path(), get_xdg_cache_path())) + r"""
+declare -r distribution_path=${0%/*}/""" + quote_argument(get_app_relative_path(app, get_app_distribution_path(app))) + r"""
 declare -r executable_arguments=(""" + sanitize_app_executable(app, detect_app_executable(app)) + r""")
 declare -r firejail_options=(""" + sanitize_command(query_appfile(app, 'firejail')) + r""")
-declare -r firejail_options_path=${0%/*}/""" + quote(get_app_relative_path(app, get_app_firejail_options_path(app))) + r"""
-declare -r root_path=${0%/*}/""" + quote(get_app_relative_path(app, get_app_root_path(app))) + r"""
+declare -r firejail_options_path=${0%/*}/""" + quote_argument(get_app_relative_path(app, get_app_firejail_options_path(app))) + r"""
+declare -r root_path=${0%/*}/""" + quote_argument(get_app_relative_path(app, get_app_root_path(app))) + r"""
 declare -r urls_path=${0%/*}/urls
 
 declare -r blacklisted_paths=(
-""" + '\n'.join("  {}".format(quote(path)) for path in get_blacklisted_paths()) + r"""
+""" + '\n'.join("  {}".format(quote_argument(path)) for path in get_blacklisted_paths()) + r"""
 )
 
 function build_command_arguments {
@@ -918,10 +919,10 @@ function check_firejail {
     declare app_firejail_options
     read_app_firejail_options app_firejail_options
 
-    [[ ${WAYLAND_DISPLAY-} || " ${firejail_options[@]} ${app_firejail_options[@]} " == " --x11[ =]" ]] || echo """ + quote(get_message('firejail-x11')) + r""" >&2
-    [[ ! ${firejail_options-} ]] || echo """ + quote(get_message('firejail-options')).format("'${firejail_options[@]}'") + r""" >&2
+    [[ ${WAYLAND_DISPLAY-} || " ${firejail_options[@]} ${app_firejail_options[@]} " == " --x11[ =]" ]] || echo """ + quote_argument(get_message('firejail-x11')) + r""" >&2
+    [[ ! ${firejail_options-} ]] || echo """ + quote_argument(get_message('firejail-options')).format("'${firejail_options[@]}'") + r""" >&2
   else
-    [[ ${TUXAPP_TEST-} ]] || echo """ + quote(get_message('firejail-missing')) + r""" >&2
+    [[ ${TUXAPP_TEST-} ]] || echo """ + quote_argument(get_message('firejail-missing')) + r""" >&2
   fi
 }
 
@@ -988,7 +989,7 @@ is_tarball_nested = lambda path: is_file_list_nested(read_process(('tar', '-t', 
 
 is_zipfile_nested = lambda path: is_file_list_nested(read_process(('zipinfo', '-1', path)).splitlines())
 
-join_command_arguments = lambda arguments: ' '.join(quote(argument) for argument in arguments)
+join_command_arguments = lambda arguments: ' '.join(quote_argument(argument) for argument in arguments)
 
 list_all_apps = outputs(lambda *args, **kwargs: '\n'.join(kwargs['result']))(
   lambda: tuple(fetch_grep_url("https://api.github.com/repos/{}/contents/apps".format(get_github_repository()), ('-Po', "(?<=\"name\": \")[^\"]+")).splitlines())
@@ -1209,9 +1210,9 @@ update_package_list = lambda url: \
   xzgrep "^\(\(Depends\|Filename\): \|$\)" {} | \
   sed "s/ ([^)]\+)//g; s/ | [^,]\+//g; s/:any//g; s/, / /g; s/^Filename: /\0{}\//" > {}
   """.format(
-    quote(get_package_list_archive_path(url)),
-    quote(urlparse(url).path.split('/', 2)[1]),
-    quote(get_package_list_path(url)),
+    quote_argument(get_package_list_archive_path(url)),
+    quote_argument(parse_url(url).path.split('/', 2)[1]),
+    quote_argument(get_package_list_path(url)),
   )) and \
   get_package_list_path(url) \
     if is_file_newer(update_package_list_archive(url), get_package_list_path(url)) else \

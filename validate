@@ -7,11 +7,6 @@ import os
 import re
 import sys
 
-try:
-  from urllib.parse import urlparse
-except ImportError:
-  from urlparse import urlparse
-
 tuxapp = imp.load_source('tuxapp', "{}/tuxapp".format(os.path.dirname(__file__)))
 
 def reasserts(message):
@@ -131,7 +126,7 @@ is_page_contains = lambda url, string, is_case_sensitive=False: \
     0 if is_case_sensitive else re.I | re.U,
   ))
 
-is_url_valid = lambda url: not re.search(r"\s", url) and urlparse(url).scheme in ('http', 'https') and bool(urlparse(url).netloc)
+is_url_valid = lambda url: not re.search(r"\s", url) and tuxapp.parse_url(url).scheme in ('http', 'https') and bool(tuxapp.parse_url(url).netloc)
 
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): validate_appfiles(tuple(check_appfile_exists(tuxapp.extract_app(argument)) for argument in arguments) or (tuxapp.extract_app(path) for path in glob.iglob(tuxapp.get_appfile_path('*'))))
@@ -286,7 +281,7 @@ validate_title = lambda app, title: \
 validate_url = lambda url: \
   validate_value(url) and \
   tuxapp.asserts("Invalid URL")(is_url_valid)(url) and \
-  tuxapp.asserts("No path")(lambda url: bool(urlparse(url).path))(url) and \
+  tuxapp.asserts("No path")(lambda url: bool(tuxapp.parse_url(url).path))(url) and \
   tuxapp.asserts("Contains a fragment")(lambda url: '#' not in url)(url) and \
   tuxapp.asserts("URL is accessible by HTTPS")(check_url_protocol)(url) and \
   tuxapp.asserts("Inaccessible URL")(check_url)(url)

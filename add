@@ -10,14 +10,6 @@ try:
   from html.parser import HTMLParser
 except ImportError:
   from HTMLParser import HTMLParser
-try:
-  from shlex import quote
-except ImportError:
-  from pipes import quote
-try:
-  from urllib.parse import urlparse
-except ImportError:
-  from urlparse import urlparse
 
 tuxapp = imp.load_source('tuxapp', "{}/tuxapp".format(os.path.dirname(__file__)))
 validate = imp.load_source('validate', "{}/validate".format(os.path.dirname(__file__)))
@@ -242,7 +234,7 @@ def parse_html(parser, html):
     if exception.args and tuxapp.is_string(exception.args[0]):
       return re.sub(r"\s+", ' ', exception.args[0].strip())
 
-extract_url_name = lambda url: re.sub(r"-+", ' ', re.sub(r"^www\.", '', urlparse(url).netloc).split('.', 1)[0]).title()
+extract_url_name = lambda url: re.sub(r"-+", ' ', re.sub(r"^www\.", '', tuxapp.parse_url(url).netloc).split('.', 1)[0]).title()
 
 fetch_url = tuxapp.memoizes()(
   lambda *args, **kwargs: tuxapp.fetch_url(*args, **kwargs)
@@ -263,7 +255,7 @@ filter_title = lambda title: u"{}{}".format(title[0].upper(), title[1:]).rstrip(
 
 filter_url = lambda url: url.split('#', 1)[0] if validate.is_url_valid(url) and validate.check_url(url) else None
 
-filter_url_path = lambda url: "{}/".format(url) if validate.is_url_valid(url) and not urlparse(url).path else url
+filter_url_path = lambda url: "{}/".format(url) if validate.is_url_valid(url) and not tuxapp.parse_url(url).path else url
 
 filter_url_protocol = lambda url: url if not validate.is_url_valid(url) or validate.check_url_protocol(url) else url.replace("http://", "https://", 1)
 
@@ -338,13 +330,13 @@ main = tuxapp.handles_exceptions(
 normalize_url = lambda page_url, url, base_url=None: \
   url \
     if re.match(r"^https?://", url) else \
-  "{}:{}".format(urlparse(page_url).scheme, url) \
+  "{}:{}".format(tuxapp.parse_url(page_url).scheme, url) \
     if url.startswith("//") else \
-  "{0.scheme}://{0.netloc}{1}".format(urlparse(page_url), normalize_url_path(url)) \
+  "{0.scheme}://{0.netloc}{1}".format(tuxapp.parse_url(page_url), normalize_url_path(url)) \
     if url.startswith('/') else \
   "{0.scheme}://{0.netloc}{1}".format(
-    urlparse(base_url or parse_base_url(page_url)),
-    normalize_url_path("/{}/{}".format(urlparse(base_url or parse_base_url(page_url)).path, url)),
+    tuxapp.parse_url(base_url or parse_base_url(page_url)),
+    normalize_url_path("/{}/{}".format(tuxapp.parse_url(base_url or parse_base_url(page_url)).path, url)),
   )
 
 normalize_url_path = lambda path: re.sub(r"^//", '/', os.path.normpath(path))
@@ -355,11 +347,11 @@ parse_description = lambda url: filter_description(parse_html(DescriptionParser,
 
 parse_icon_url = lambda url: filter_url(normalize_url(url, parse_html(IconURLParser, fetch_url(url)) or "/favicon.ico"))
 
-parse_icon_url_interactively = tuxapp.does(lambda *args, **kwargs: kwargs['result'] and input_boolean("Open the detected icon in the browser?") and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(quote(kwargs['result']))))(parse_icon_url)
+parse_icon_url_interactively = tuxapp.does(lambda *args, **kwargs: kwargs['result'] and input_boolean("Open the detected icon in the browser?") and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.quote_argument(kwargs['result']))))(parse_icon_url)
 
 parse_name = lambda url: \
-  filter_name(url, urlparse(url).path.lstrip('/').split('/', 1)[0]) \
-    if ".github.io/" in url and urlparse(url).path.lstrip('/') else \
+  filter_name(url, tuxapp.parse_url(url).path.lstrip('/').split('/', 1)[0]) \
+    if ".github.io/" in url and tuxapp.parse_url(url).path.lstrip('/') else \
   parse_html(NameParser, fetch_url(url)) or filter_name(url, extract_url_name(url))
 
 parse_title = lambda url: filter_title(parse_html(TitleParser, fetch_url(url)))
