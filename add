@@ -33,7 +33,7 @@ def validates(validate_function):
 def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
   try:
     import readline
-    readline.set_startup_hook(lambda: readline.insert_text(getattr(validates, 'prefill', prefill)))
+    readline.set_startup_hook(lambda: readline.insert_text(getattr(validates, 'prefill', filter_text(prefill))))
     history_path = os.path.expanduser("~/.python_history")
     if hasattr(sys, 'ps1') and os.path.isfile(history_path):
       readline.write_history_file(history_path)
@@ -44,10 +44,7 @@ def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
       import builtins
     except ImportError:
       import __builtin__ as builtins
-    result = getattr(builtins, 'raw_input', input)("{}: ".format(prompt)).replace('\t', ' ')
-    if not is_whitespacy:
-      result = re.sub(r"\s+", ' ', result).strip()
-    return result
+    return filter_text(getattr(builtins, 'raw_input', input)("{}: ".format(prompt)))
   finally:
     readline.set_startup_hook()
     if hasattr(sys, 'ps1') and os.path.isfile(history_path):
@@ -63,13 +60,15 @@ filter_description = lambda description: \
     description[0].upper(),
     description[1:],
     '' if description[-1] in validate.get_punctuation() else '.',
-  ) if description else description
+  ) if description else ''
 
-filter_name = lambda url, name: name if validate.is_page_contains(url, name, True) else None
+filter_name = lambda name: name.rstrip(''.join(validate.get_punctuation())) if name else ''
 
-filter_title = lambda title: u"{}{}".format(title[0].upper(), title[1:]).rstrip(''.join(validate.get_punctuation())) if title else title
+filter_text = lambda string, is_whitespacy=False: re.sub(r"\s+", '' if is_whitespacy else ' ', string.replace('\t', ' ')).strip()
 
-filter_url = lambda url: url.split('#', 1)[0] if validate.is_url_valid(url) and validate.check_url(url) else None
+filter_title = lambda title: u"{}{}".format(title[0].upper(), title[1:]).rstrip(''.join(validate.get_punctuation())) if title else ''
+
+filter_url = lambda url: url.split('#', 1)[0] if validate.is_url_valid(url) and validate.check_url(url) else ''
 
 filter_url_path = lambda url: "{}/".format(url) if validate.is_url_valid(url) and not tuxapp.parse_url(url).path else url
 
@@ -108,7 +107,7 @@ input_category = \
   ))
 
 input_description = validates(lambda app, *args, **kwargs: validate.validate_description(app, kwargs['result']))(
-  lambda app, prefill='': input_text("Description", prefill)
+  lambda app, prefill='': filter_description(input_text("Description", prefill))
 )
 
 input_free_license = validates(lambda *args, **kwargs: validate.validate_free_license(kwargs['result']))(
@@ -126,15 +125,15 @@ input_homepage_url = validates(lambda *args, **kwargs: validate.validate_homepag
 )
 
 input_icon_url = validates(lambda *args, **kwargs: validate.validate_icon_url(kwargs['result']))(
-  lambda prefill='': input_url("Icon URL", prefill)
+  lambda prefill='': filter_url(input_url("Icon URL", prefill))
 )
 
 input_name = validates(lambda app, *args, **kwargs: validate.validate_name(app, kwargs['result']))(
-  lambda app, prefill='': input_text("Name", prefill)
+  lambda app, prefill='': filter_name(input_text("Name", prefill))
 )
 
 input_title = validates(lambda app, *args, **kwargs: validate.validate_title(app, kwargs['result']))(
-  lambda app, prefill='': input_text("Title", prefill)
+  lambda app, prefill='': filter_title(input_text("Title", prefill))
 )
 
 input_url = lambda prompt, prefill='': filter_url_protocol(filter_url_path(input_text(prompt, prefill)))
@@ -161,7 +160,7 @@ update_appfile = tuxapp.logs_after(
 
 update_category = lambda appfile: update_appfile(appfile, 'category', input_category(appfile.get('category', '')))
 
-update_description = lambda appfile={}: update_appfile(appfile, 'description', input_description(appfile.get('app', get_default_app()), appfile.get('description', parse_description(appfile['homepage-url']) if 'homepage-url' in appfile else '')))
+update_description = lambda appfile={}: update_appfile(appfile, 'description', input_description(appfile.get('app', get_default_app()), appfile.get('description', filter_description(lib.parsers.parse_description(appfile['homepage-url'])))))
 
 update_free_license = lambda appfile: update_appfile(appfile, 'free-license', input_free_license())
 
@@ -169,11 +168,11 @@ update_group = lambda appfile: update_appfile(appfile, 'group', input_group(appf
 
 update_homepage_url = lambda appfile={}: update_appfile(appfile, 'homepage-url', input_homepage_url(appfile.get('homepage-url', '')))
 
-update_icon_url = lambda appfile={}: update_appfile(appfile, 'icon-url', input_icon_url(appfile.get('icon-url', parse_icon_url_interactively(appfile['homepage-url']) if 'homepage-url' in appfile else '')))
+update_icon_url = lambda appfile={}: update_appfile(appfile, 'icon-url', input_icon_url(appfile.get('icon-url', open_url(filter_url(lib.parsers.parse_icon_url(appfile['homepage-url']))))))
 
-update_name = lambda appfile={}: update_appfile(appfile, 'name', input_name(appfile.get('app', get_default_app()), appfile.get('name', parse_name(appfile['homepage-url']) if 'homepage-url' in appfile else '')))
+update_name = lambda appfile={}: update_appfile(appfile, 'name', input_name(appfile.get('app', get_default_app()), appfile.get('name', filter_name(lib.parsers.parse_name(appfile['homepage-url'])))))
 
-update_title = lambda appfile={}: update_appfile(appfile, 'title', input_title(appfile.get('app', get_default_app()), appfile.get('title', parse_title(appfile['homepage-url']) if 'homepage-url' in appfile else '')))
+update_title = lambda appfile={}: update_appfile(appfile, 'title', input_title(appfile.get('app', get_default_app()), appfile.get('title', filter_title(lib.parsers.parse_title(appfile['homepage-url'])))))
 
 write_appfile = lambda appfile: \
   tuxapp.remove_file(tuxapp.get_appfile_path(get_default_app())) and \
