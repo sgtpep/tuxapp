@@ -58,6 +58,13 @@ check_appfile_exists = tuxapp.asserts("{}: unknown app")(
   lambda app: os.path.isfile(tuxapp.get_appfile_path(app)) and app
 )
 
+check_page_contains = lambda url, string, is_case_sensitive=False: \
+  bool(re.search(
+    r"\b{}\b".format(re.escape(re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', string)))),
+    fetch_url_text(url),
+    0 if is_case_sensitive else re.I | re.U,
+  ))
+
 check_url_protocol = lambda url: url.startswith("https://") or not check_url(url.replace("http://", "https://", 1))
 
 fetch_url_text = tuxapp.memoizes()(
@@ -118,13 +125,6 @@ get_groups = lambda: \
   )
 
 get_punctuation = lambda: ('.', '!', '?')
-
-is_on_page = lambda url, string, is_case_sensitive=False: \
-  bool(re.search(
-    r"\b{}\b".format(re.escape(re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', string)))),
-    fetch_url_text(url),
-    0 if is_case_sensitive else re.I | re.U,
-  ))
 
 is_url_valid = lambda url: not re.search(r"\s", url) and tuxapp.parse_url(url).scheme in ('http', 'https') and bool(tuxapp.parse_url(url).netloc)
 
@@ -241,7 +241,7 @@ validate_group = lambda group, is_permissive=False: \
   (is_permissive or tuxapp.asserts("Unknown group")(lambda group: group in get_groups())(group))
 
 validate_homepage_contains = tuxapp.asserts("Not found on the homepage")(
-  lambda app, string, is_case_sensitive=False: is_on_page(tuxapp.query_appfile(app, 'homepage-url'), string, is_case_sensitive)
+  lambda app, string, is_case_sensitive=False: check_page_contains(tuxapp.query_appfile(app, 'homepage-url'), string, is_case_sensitive)
 )
 
 validate_homepage_url = lambda url: validate_url(url)
