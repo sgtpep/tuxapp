@@ -243,7 +243,7 @@ normalize_url = lambda page_url, url, base_url=None: \
     if url.startswith('/') else \
   "{0.scheme}://{0.netloc}{1}".format(
     tuxapp.parse_url(base_url or parse_base_url(page_url)),
-    normalize_url_path("/{}/{}".format(tuxapp.parse_url(base_url or parse_base_url(page_url)).path, url)),
+    normalize_url_path("/{}/{}".format(os.path.dirname(tuxapp.parse_url(base_url or parse_base_url(page_url)).path), url)),
   )
 
 normalize_url_path = lambda path: "{}{}".format(re.sub(r"^//", '/', os.path.normpath(path)), '/' if path and path[-1] == '/' else '')
