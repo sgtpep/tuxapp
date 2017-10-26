@@ -12,10 +12,11 @@ validate = imp.load_source('validate', os.path.join(os.path.dirname(os.path.dirn
 
 class BaseParser(HTMLParser):
   contents = ''
+  contents_attributes = None
   contents_tag = None
   is_head = False
-  parent_attributes = {}
-  parent_tag = None
+  previous_attributes = {}
+  previous_tag = None
 
   data_types = (
     'Product',
@@ -37,39 +38,41 @@ class BaseParser(HTMLParser):
   def handle_data(self, data):
     if self.contents_tag:
       self.contents += data
-    if self.parent_tag == 'script' and self.parent_attributes.get('type') == 'application/ld+json':
+    if self.previous_tag == 'script' and self.previous_attributes.get('type') == 'application/ld+json' and data.strip():
       import json
-      data = json.loads(data)
-      items = data if isinstance(data, list) else [data]
+      decoded_data = json.loads(data)
+      items = decoded_data if isinstance(decoded_data, list) else [decoded_data]
       for item in items:
         if item.get('@type') in self.data_types:
           getattr(self, 'on_json_ld', lambda *args, **kwargs: None)(item)
+    getattr(self, 'on_data', lambda *args, **kwargs: None)(self.previous_tag, self.previous_attributes, data)
 
   def handle_endtag(self, tag):
     getattr(self, 'on_tag_end', lambda *args, **kwargs: None)(tag)
     if tag == self.contents_tag:
-      getattr(self, 'on_contents', lambda *args, **kwargs: None)(tag, self.contents)
+      getattr(self, 'on_contents', lambda *args, **kwargs: None)(self.contents_tag, self.contents_attributes, self.contents)
+      self.contents = ''
+      self.contents_attributes = {}
       self.contents_tag = None
     if self.is_head and tag == 'head':
       self.raise_result()
-    self.parent_attributes = {}
-    self.parent_tag = None
 
   def handle_starttag(self, tag, attributes):
     attributes = dict(attributes)
     getattr(self, 'on_tag_start', lambda *args, **kwargs: None)(tag, attributes)
-    if tag == 'meta' and attributes.get('content') and self.parent_attributes.get('itemtype', '').startswith("http://schema.org/"):
-      type = self.parent_attributes['itemtype'].rsplit('/', 1)[-1]
+    if tag == 'meta' and attributes.get('content') and self.previous_attributes.get('itemtype', '').startswith("http://schema.org/"):
+      type = self.previous_attributes['itemtype'].rsplit('/', 1)[-1]
       if type in self.data_types:
         getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(type, attributes)
-    self.parent_attributes = attributes
-    self.parent_tag = tag
+    self.previous_attributes = attributes
+    self.previous_tag = tag
 
   def raise_result(self):
     if self.results:
       raise ResultException(sorted(self.results)[-1][-1])
 
-  def read_contents(self, tag):
+  def read_contents(self, tag, attributes):
+    self.contents_attributes = attributes
     self.contents_tag = tag
 
 class BaseURLParser(BaseParser):
@@ -104,6 +107,26 @@ class DescriptionParser(BaseParser):
       elif attributes.get('property') == 'og:description':
         self.add_result((self.priority.index('og-description'), attributes['content']))
 
+class DownloadsURLParser(BaseParser):
+  priority = (
+    'download',
+    'downloads',
+  )
+
+  def filter_href(self, href):
+    return "{}/latest".format(href) if tuxapp.search(r"\bgithub\.com/[\w-]+/[\w-]+/releases$", href) else href
+
+  def on_contents(self, tag, attributes, contents):
+    if tag == 'a':
+      if re.match(r"^\s*(.+[^\s]\s+platforms|desktop\s+apps|downloads?|other\s+downloads)\s*$", contents, re.I | re.S):
+        self.add_result((self.priority.index('downloads'), self.filter_href(attributes['href'])))
+      elif re.match(r"^\s*download\s+[^\s].+\s*$", contents, re.I | re.S) and tuxapp.parse_url(attributes['href']).netloc not in ('itunes.apple.com', 'play.google.com') and os.path.splitext(tuxapp.parse_url(attributes['href']).path)[1] in ('', '.html'):
+        self.add_result((self.priority.index('download'), self.filter_href(attributes['href'])))
+
+  def on_tag_start(self, tag, attributes):
+    if tag == 'a' and attributes.get('href'):
+      self.read_contents(tag, attributes)
+
 class IconURLParser(BaseParser):
   is_head = True
 
@@ -135,7 +158,7 @@ class NameParser(BaseParser):
     'application-name',
   )
 
-  def on_contents(self, tag, contents):
+  def on_contents(self, tag, attributes, contents):
     if tag in ('a', 'h1'):
       self.add_result((self.priority.index('heading-anchor'), contents))
 
@@ -148,8 +171,8 @@ class NameParser(BaseParser):
       self.add_result((self.priority.index('schema-org-{}'.format(type)), attributes['content']))
 
   def on_tag_start(self, tag, attributes):
-    if tag == 'a' and self.parent_tag == 'h1' or tag == 'h1' and self.parent_tag == 'a':
-      self.read_contents(tag)
+    if tag == 'a' and self.previous_tag == 'h1' or tag == 'h1' and self.previous_tag == 'a':
+      self.read_contents(tag, attributes)
     elif tag == 'meta' and attributes.get('content'):
       if attributes.get('name') == 'application-name':
         self.add_result((self.priority.index('application-name'), attributes['content']))
@@ -167,7 +190,7 @@ class TitleParser(BaseParser):
     'og-title',
   )
 
-  def on_contents(self, tag, contents):
+  def on_contents(self, tag, attributes, contents):
     if tag == 'title':
       self.add_result((self.priority.index('title'), contents))
 
@@ -175,7 +198,7 @@ class TitleParser(BaseParser):
     if tag == 'meta' and attributes.get('property') == 'og:title' and attributes.get('content'):
       self.add_result((self.priority.index('og-title'), attributes['content']))
     elif tag == 'title':
-      self.read_contents(tag)
+      self.read_contents(tag, attributes)
 
 def parse_html(parser, html):
   try:
@@ -184,13 +207,28 @@ def parse_html(parser, html):
     if exception.args and tuxapp.is_string(exception.args[0]):
       return re.sub(r"\s+", ' ', exception.args[0].strip())
 
+check_github_releases_url = lambda repository: \
+  "https://github.com/{}/releases/latest".format(repository) \
+    if repository and not re.search(r"/releases$", tuxapp.fetch_headers("https://github.com/{}/releases/latest".format(repository)), re.M) else \
+  None
+
+check_name = lambda url, name: name if validate.check_page_contains(url, name, True) else None
+
+check_page_contains_version = lambda url: bool(re.search(r"""[_-]version"|"softwareVersion"|/releases/download/""", fetch_url(url)))
+
+extract_github_releases_url = lambda url: \
+  check_github_releases_url(
+    tuxapp.search(r"(?://|www\.)github\.com/([\w-]+/[\w-]+)/releases\b", fetch_url(url), 0, 1) or \
+    tuxapp.search(r"(?://|www\.)github\.com/([\w-]+/[\w-]+)\b", fetch_url(url), 0, 1)
+  )
+
 extract_url_name = lambda url: re.sub(r"-+", ' ', re.sub(r"^www\.", '', tuxapp.parse_url(url).netloc).split('.', 1)[0]).title()
 
 fetch_url = tuxapp.memoizes()(
   lambda *args, **kwargs: tuxapp.fetch_url(*args, **kwargs)
 )
 
-filter_name = lambda url, name: name if validate.is_on_page(url, name, True) else None
+normalize_downloads_url = lambda page_url, url: normalize_url(page_url, url) if url and not url.startswith('#') else None
 
 normalize_url = lambda page_url, url, base_url=None: \
   url \
@@ -204,17 +242,19 @@ normalize_url = lambda page_url, url, base_url=None: \
     normalize_url_path("/{}/{}".format(tuxapp.parse_url(base_url or parse_base_url(page_url)).path, url)),
   )
 
-normalize_url_path = lambda path: re.sub(r"^//", '/', os.path.normpath(path))
+normalize_url_path = lambda path: "{}{}".format(re.sub(r"^//", '/', os.path.normpath(path)), '/' if path and path[-1] == '/' else '')
 
 parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url(url)) or url, url)
 
 parse_description = lambda url: parse_html(DescriptionParser, fetch_url(url))
 
+parse_downloads_url = lambda url: normalize_downloads_url(url, parse_html(DownloadsURLParser, fetch_url(url)))
+
 parse_icon_url = lambda url: normalize_url(url, parse_html(IconURLParser, fetch_url(url)) or "/favicon.ico")
 
 parse_name = lambda url: \
-  filter_name(url, tuxapp.parse_url(url).path.lstrip('/').split('/', 1)[0]) \
+  check_name(url, tuxapp.parse_url(url).path.lstrip('/').split('/', 1)[0]) \
     if ".github.io/" in url and tuxapp.parse_url(url).path.lstrip('/') else \
-  parse_html(NameParser, fetch_url(url)) or filter_name(url, extract_url_name(url))
+  parse_html(NameParser, fetch_url(url)) or check_name(url, extract_url_name(url))
 
 parse_title = lambda url: parse_html(TitleParser, fetch_url(url))
