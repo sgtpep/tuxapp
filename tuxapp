@@ -1121,7 +1121,10 @@ sanitize_app_executable = lambda app, command: \
 
 sanitize_command = lambda command: join_command_arguments(split_command(command))
 
-search = lambda pattern, string, flags=0, group=0: getattr(re.search(pattern, string, flags), 'group', lambda *args, **kwargs: None)(group)
+search = lambda pattern, string, flags=0, group=0: \
+  (getattr(re.search(pattern, string, flags), 'groups', lambda *args, **kwargs: ())() + (None,) * group)[group - 1] \
+    if group else \
+  getattr(re.search(pattern, string, flags), 'group', lambda *args, **kwargs: None)()
 
 unpack_app_appimage1_distribution = \
   asserts(lambda app, path, *args, **kwargs: "Failed to unpack {}".format(os.path.basename(path)))(
