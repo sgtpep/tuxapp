@@ -287,6 +287,7 @@ validate_url = lambda url: \
   validate_value(url) and \
   tuxapp.asserts("Invalid URL")(is_url_valid)(url) and \
   tuxapp.asserts("No path")(lambda url: bool(urlparse(url).path))(url) and \
+  tuxapp.asserts("Contains a fragment")(lambda url: '#' not in url)(url) and \
   tuxapp.asserts("URL is accessible by HTTPS")(check_url_protocol)(url) and \
   tuxapp.asserts("Inaccessible URL")(check_url)(url)
 
