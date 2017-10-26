@@ -119,7 +119,7 @@ get_groups = lambda: \
 
 get_punctuation = lambda: ('.', '!', '?')
 
-is_page_contains = lambda url, string, is_case_sensitive=False: \
+is_on_page = lambda url, string, is_case_sensitive=False: \
   bool(re.search(
     r"\b{}\b".format(re.escape(re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', string)))),
     fetch_url_text(url),
@@ -201,7 +201,7 @@ validate_capitalized = tuxapp.asserts("Not capitalized")(
 )
 
 validate_category = lambda category: \
-  validate_value(category) and \
+  validate_text(category) and \
   tuxapp.asserts("Unknown category")(lambda category: category in get_categories())(category)
 
 validate_command = tuxapp.asserts("Failed to parse")(
@@ -210,7 +210,7 @@ validate_command = tuxapp.asserts("Failed to parse")(
 
 validate_description = lambda app, description: \
   not description or \
-  validate_value(description) and \
+  validate_text(description) and \
   validate_capitalized(description) and \
   validate_terminal_punctuation(description) and \
   validate_homepage_contains(app, description)
@@ -222,26 +222,26 @@ validate_download_url = lambda app, url, architecture: \
 
 validate_executable = lambda command: \
   not command or \
-  validate_value(command) and \
+  validate_text(command) and \
   validate_command(command) and \
   tuxapp.asserts("Malformed path")(lambda command: bool(re.match(r"^(/|\./)?[\w/-]+$", command.split(' ', 1)[0])))(command)
 
 validate_firejail = lambda options: \
   not options or \
-  validate_value(options) and \
+  validate_text(options) and \
   validate_command(options)
 
 validate_free_license = lambda value: \
   not value or \
-  validate_value(value) and \
+  validate_text(value) and \
   tuxapp.asserts("Value is not 'yes'")(lambda value: value == 'yes')(value)
 
 validate_group = lambda group, is_permissive=False: \
-  validate_value(group) and \
+  validate_text(group) and \
   (is_permissive or tuxapp.asserts("Unknown group")(lambda group: group in get_groups())(group))
 
 validate_homepage_contains = tuxapp.asserts("Not found on the homepage")(
-  lambda app, string, is_case_sensitive=False: is_page_contains(tuxapp.query_appfile(app, 'homepage-url'), string, is_case_sensitive)
+  lambda app, string, is_case_sensitive=False: is_on_page(tuxapp.query_appfile(app, 'homepage-url'), string, is_case_sensitive)
 )
 
 validate_homepage_url = lambda url: validate_url(url)
@@ -249,18 +249,19 @@ validate_homepage_url = lambda url: validate_url(url)
 validate_icon_url = lambda url: validate_url(url)
 
 validate_name = lambda app, name: \
-  validate_value(name) and \
+  validate_text(name) and \
+  validate_terminal_punctuation(name, True) and \
   (name.startswith('~') or validate_homepage_contains(app, name, True))
 
 validate_note = lambda note: \
   not note or \
-  validate_value(note) and \
+  validate_text(note) and \
   validate_capitalized(note) and \
   validate_terminal_punctuation(note)
 
 validate_packages = lambda packages: \
   not packages or \
-  validate_value(packages) and \
+  validate_text(packages) and \
   tuxapp.asserts("Not sorted")(lambda packages: packages.split() == sorted(packages.split()))(packages) and \
   tuxapp.asserts("Unknown group")(lambda packages: all(package in tuxapp.get_package_groups() for package in packages.split() if package.startswith('group-')))(packages) and \
   tuxapp.asserts("Duplicated items")(lambda packages: sorted(set(packages.split())) == sorted(packages.split()))(packages) and \
@@ -271,29 +272,29 @@ validate_terminal_punctuation = tuxapp.asserts(lambda string, is_inverted=False,
   lambda string, is_inverted=False: (string[-1] in get_punctuation()) ^ is_inverted
 )
 
+validate_text = lambda string, is_whitespacy=False: \
+  tuxapp.asserts("Is required")(lambda string: bool(string))(string) and \
+  tuxapp.asserts("Tab character")(lambda string: '\t' not in string)(string) and \
+  tuxapp.asserts("Edge whitespace")(lambda string, is_whitespacy: is_whitespacy or not re.search(r"^\s", string) and not re.search(r"\s$", string))(string, is_whitespacy) and \
+  tuxapp.asserts("Continuous whitespace")(lambda string, is_whitespacy: is_whitespacy or not re.search(r"\s{2}", string))(string, is_whitespacy)
+
 validate_title = lambda app, title: \
   not title or \
-  validate_value(title) and \
+  validate_text(title) and \
   validate_capitalized(title) and \
   validate_terminal_punctuation(title, True) and \
   validate_homepage_contains(app, title)
 
 validate_url = lambda url: \
-  validate_value(url) and \
+  validate_text(url) and \
   tuxapp.asserts("Invalid URL")(is_url_valid)(url) and \
   tuxapp.asserts("No path")(lambda url: bool(tuxapp.parse_url(url).path))(url) and \
   tuxapp.asserts("Contains a fragment")(lambda url: '#' not in url)(url) and \
   tuxapp.asserts("URL is accessible by HTTPS")(check_url_protocol)(url) and \
   tuxapp.asserts("Inaccessible URL")(check_url)(url)
 
-validate_value = lambda string, is_whitespacy=False: \
-  tuxapp.asserts("Is required")(lambda string: bool(string))(string) and \
-  tuxapp.asserts("Tab character")(lambda string: '\t' not in string)(string) and \
-  tuxapp.asserts("Edge whitespace")(lambda string, is_whitespacy: is_whitespacy or not re.search(r"^\s", string) and not re.search(r"\s$", string))(string, is_whitespacy) and \
-  tuxapp.asserts("Continuous whitespace")(lambda string, is_whitespacy: is_whitespacy or not re.search(r"\s{2}", string))(string, is_whitespacy)
-
 validate_version_regex = lambda app, pattern: \
-  validate_value(pattern, True) and \
+  validate_text(pattern, True) and \
   validate_regex(pattern) and \
   bool(tuxapp.fetch_app_version(app, pattern))
 
