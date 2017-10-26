@@ -13,4 +13,4 @@ note=Popcorn Time streams movies and TV shows from torrents. Downloading copyrig
 packages=group-electron
 title=Watch movies and TV shows instantly
 version-regex=/Popcorn-Time-([^-]+)
-version-url=https://get.popcorntime.sh/
+version-url=

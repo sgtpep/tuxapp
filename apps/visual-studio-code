@@ -13,4 +13,4 @@ note=
 packages=group-electron
 title=Code Editing. Redefined
 version-regex="softwareVersion">([^<]+)
-version-url=https://code.visualstudio.com/download
+version-url=

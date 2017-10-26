@@ -13,4 +13,4 @@ note=
 packages=group-electron libnotify4
 title=Bringing The torrent universe closer to you
 version-regex=/download/v([^/]+)
-version-url=http://powder.media/download
+version-url=
