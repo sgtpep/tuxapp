@@ -261,7 +261,7 @@ filter_name = lambda url, name: name if validate.is_page_contains(url, name, Tru
 
 filter_title = lambda title: u"{}{}".format(title[0].upper(), title[1:]).rstrip(''.join(validate.get_punctuation())) if title else title
 
-filter_url = lambda url: url if validate.is_url_valid(url) and validate.check_url(url) else None
+filter_url = lambda url: url.split('#', 1)[0] if validate.is_url_valid(url) and validate.check_url(url) else None
 
 filter_url_path = lambda url: "{}/".format(url) if validate.is_url_valid(url) and not urlparse(url).path else url
 
