@@ -12,5 +12,5 @@ name=Vivaldi
 note=
 packages=group-chromium
 title=Fast & Flexible Web Browser
-version-regex=-version">([^ <]+)
-version-url=
+version-regex=/vivaldi-stable_([^_]+)
+version-url=https://vivaldi.com/download/
