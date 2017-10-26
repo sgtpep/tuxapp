@@ -7,7 +7,7 @@ import os
 import re
 import sys
 
-tuxapp = imp.load_source('tuxapp', "{}/tuxapp".format(os.path.dirname(__file__)))
+tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
 
 def reasserts(message):
   def decorator(function):
