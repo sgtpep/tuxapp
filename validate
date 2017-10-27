@@ -132,11 +132,9 @@ main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): validate_appfiles(tuple(check_appfile_exists(tuxapp.extract_app(argument)) for argument in arguments) or (tuxapp.extract_app(path) for path in glob.iglob(tuxapp.get_appfile_path('*'))))
 )
 
-parse_appfile = lambda app: tuple(line.split('=', 1) for line in read_appfile(app).splitlines())
+parse_appfile = lambda app: tuple(line.split('=', 1) for line in tuxapp.read_appfile(app).splitlines())
 
 parse_appfile_keys = lambda app: tuple(key for key, _ in parse_appfile(app))
-
-read_appfile = lambda app: tuxapp.read_file(tuxapp.get_appfile_path(app))
 
 validate_app = lambda app: \
   tuxapp.asserts("Invalid characters")(lambda app: bool(re.match("^[a-z0-9-]*$", app)))(app) and \
@@ -188,8 +186,8 @@ validate_appfile_item = tuxapp.asserts("Unknown key")(
 )
 
 validate_appfile_keys = lambda app: \
-  tuxapp.asserts("Extra lines")(lambda app: all('=' in line for line in read_appfile(app).splitlines()))(app) and \
-  tuxapp.asserts("No trailing newline")(lambda app: read_appfile(app).endswith('\n'))(app) and \
+  tuxapp.asserts("Extra lines")(lambda app: all('=' in line for line in tuxapp.read_appfile(app).splitlines()))(app) and \
+  tuxapp.asserts("No trailing newline")(lambda app: tuxapp.read_appfile(app).endswith('\n'))(app) and \
   tuxapp.asserts("Not sorted")(lambda app: parse_appfile_keys(app) == tuple(sorted(parse_appfile_keys(app))))(app) and \
   tuxapp.asserts("Extraneous keys")(lambda app: not set(parse_appfile_keys(app)) - set(get_appfile_keys()))(app) and \
   tuxapp.asserts("Missing keys")(lambda app: not set(get_appfile_keys()) - set(parse_appfile_keys(app)))(app) and \
