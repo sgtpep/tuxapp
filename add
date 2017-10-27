@@ -271,6 +271,8 @@ detect_version_regex = lambda html: \
     if '"softwareVersion">' in html else \
   ''
 
+check_url_protocol = lambda url: url.replace("http://", "https://", 1) if validate.is_url_valid(url) and not validate.check_url_protocol(url) else url
+
 extract_url_name = lambda url: re.sub(r"-+", ' ', re.sub(r"^www\.", '', tuxapp.parse_url(url).netloc).split('.', 1)[0]).title()
 
 fetch_url = tuxapp.memoizes()(
@@ -280,11 +282,15 @@ fetch_url = tuxapp.memoizes()(
 filter_app = lambda app: re.sub(r"[^a-z0-9]+", '-', app.lower()).strip('-')
 
 filter_description = lambda description: \
-  u"{}{}{}".format(
+  description and u"{}{}{}".format(
     description[0].upper(),
     description[1:],
     '' if description[-1] in validate.get_punctuation() else '.',
-  ) if description else ''
+  )
+
+filter_download_url = lambda app, urls: filter_download_url_version(app, ' '.join(filter_url(url) for url in urls.split()))
+
+filter_download_url_version = lambda app, url: url and url.replace(tuxapp.fetch_app_version(app), "{version}")
 
 filter_name = lambda name: name.rstrip(''.join(validate.get_punctuation()))
 
@@ -293,13 +299,11 @@ filter_text = lambda string, is_whitespacy=False: \
     if is_whitespacy else \
   re.sub(r"\s+", ' ', string.replace('\t', ' ')).strip()
 
-filter_title = lambda title: u"{}{}".format(title[0].upper(), title[1:]).rstrip(''.join(validate.get_punctuation())) if title else ''
+filter_title = lambda title: title and u"{}{}".format(title[0].upper(), title[1:]).rstrip(''.join(validate.get_punctuation()))
 
-filter_url = lambda url: url.split('#', 1)[0] if validate.is_url_valid(url) and validate.check_url(url) else ''
+filter_url = lambda url: check_url_protocol(filter_url_path(url.split('#', 1)[0]))
 
 filter_url_path = lambda url: "{}/".format(url) if validate.is_url_valid(url) and not tuxapp.parse_url(url).path else url
-
-filter_url_protocol = lambda url: url.replace("http://", "https://", 1) if validate.is_url_valid(url) and not validate.check_url_protocol(url) else url
 
 filter_version_url = lambda homepage_url, url: \
   '' \
@@ -323,6 +327,8 @@ get_update_functions = lambda: \
     update_description,
     update_version_url,
     update_version_regex,
+    update_download_x86_64_url,
+    update_download_x86_url,
   )
 
 input_app = validates(lambda *args, **kwargs: \
@@ -347,6 +353,10 @@ input_description = validates(lambda app, *args, **kwargs: validate.validate_des
   lambda app, prefill='': filter_description(input_text("Description", prefill))
 )
 
+input_download_url = validates(lambda app, architecture, *args, **kwargs: validate.validate_download_url(app, architecture, kwargs['result']))(
+  lambda app, architecture, prefill='': filter_download_url(app, input_text("Download URL ({})".format(architecture), prefill))
+)
+
 input_free_license = validates(lambda *args, **kwargs: validate.validate_free_license(kwargs['result']))(
   lambda prefill='': input_boolean("Is license free?", not prefill)
 )
@@ -358,11 +368,11 @@ input_group = \
   ))
 
 input_homepage_url = validates(lambda *args, **kwargs: validate.validate_homepage_url(kwargs['result']))(
-  lambda prefill='': filter_url(input_url("Homepage URL", prefill))
+  lambda prefill='': filter_url(input_text("Homepage URL", prefill))
 )
 
 input_icon_url = validates(lambda *args, **kwargs: validate.validate_icon_url(kwargs['result']))(
-  lambda prefill='': filter_url(input_url("Icon URL", prefill))
+  lambda prefill='': filter_url(input_text("Icon URL", prefill))
 )
 
 input_name = validates(lambda app, *args, **kwargs: validate.validate_name(app, kwargs['result']))(
@@ -373,8 +383,6 @@ input_title = validates(lambda app, *args, **kwargs: validate.validate_title(app
   lambda app, prefill='': filter_title(input_text("Title", prefill))
 )
 
-input_url = lambda prompt, prefill='': filter_url_protocol(filter_url_path(input_text(prompt, prefill)))
-
 input_version_regex = \
   tuxapp.outputs(lambda app, *args, **kwargs: "Detected version: {}".format(tuxapp.fetch_app_version(app, kwargs['result'])))(
   validates(lambda app, *args, **kwargs: validate.validate_version_regex(app, kwargs['result']))(
@@ -382,7 +390,7 @@ input_version_regex = \
   ))
 
 input_version_url = validates(lambda *args, **kwargs: validate.validate_version_url(kwargs['result']))(
-  lambda homepage_url, prefill='': filter_version_url(homepage_url, filter_url(input_url("Version URL", prefill)))
+  lambda homepage_url, prefill='': filter_version_url(homepage_url, filter_url(input_text("Version URL", prefill)))
 )
 
 normalize_url = lambda page_url, url, base_url=None: \
@@ -435,6 +443,10 @@ update_appfile = tuxapp.logs_after(
 update_category = lambda appfile: update_appfile(appfile, 'category', input_category(appfile.get('category', '')))
 
 update_description = lambda appfile: update_appfile(appfile, 'description', input_description(appfile['app'], appfile.get('description', filter_description(parse_description(appfile['homepage-url'])))))
+
+update_download_x86_64_url = lambda appfile: update_appfile(appfile, 'download-x86-64-url', input_download_url(appfile['app'], 'x86-64', appfile.get('download-x86-64-url', '')))
+
+update_download_x86_url = lambda appfile: update_appfile(appfile, 'download-x86-url', input_download_url(appfile['app'], 'x86', appfile.get('download-x86-url', '')))
 
 update_free_license = lambda appfile: update_appfile(appfile, 'free-license', input_free_license(appfile.get('free-license', 'yes')))
 
