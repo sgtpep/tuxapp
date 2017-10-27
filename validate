@@ -267,7 +267,7 @@ validate_packages = lambda packages: \
   tuxapp.asserts("Unknown group")(lambda packages: all(package in tuxapp.get_package_groups() for package in packages.split() if package.startswith('group-')))(packages) and \
   tuxapp.asserts("Duplicated items")(lambda packages: sorted(set(packages.split())) == sorted(packages.split()))(packages) and \
   tuxapp.asserts("Group already contains a package")(lambda packages: not set(packages.split()) & set(package for package in packages.split() if package.startswith('group-') for package in tuxapp.expand_package(package)))(packages) and \
-  tuxapp.asserts("Unknown package")(lambda packages: all(tuxapp.unasserts(tuxapp.parse_package_lists)(package) for package in packages.split() if not package.startswith('group-')))(packages)
+  all(tuxapp.parse_package_lists(package) for package in packages.split() if not package.startswith('group-'))
 
 validate_terminal_punctuation = tuxapp.asserts(lambda string, is_inverted=False, *args, **kwargs: "Terminal punctuation" if is_inverted else "No terminal punctuation")(
   lambda string, is_inverted=False: (string[-1] in get_punctuation()) ^ is_inverted
