@@ -169,7 +169,7 @@ def unasserts(function):
     try:
       return function(*args, **kwargs)
     except AssertionError:
-      return False
+      return
   return wrapper
 
 def change_file_mode(path, get_mode):
