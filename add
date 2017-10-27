@@ -428,13 +428,13 @@ parse_title = lambda url: parse_html(TitleParser, fetch_url(url))
 
 update_app = lambda appfile: update_appfile(appfile, 'app', input_app(filter_app(appfile.get('name', ''))))
 
-update_appfile = tuxapp.logs_after(
+update_appfile = tuxapp.logs_result(
   lambda *args, **kwargs: \
     u"> {}:\n{}".format(
       tuxapp.get_appfile_path(kwargs['result']['app']).replace(os.path.expanduser('~'), '~', 1),
       '\n'.join(u"> {}".format(line) for line in generate_appfile(kwargs['result']).splitlines()),
     )
-, True)(
+)(
   lambda appfile, key, value: \
     write_appfile(dict(appfile, **{key: value})) and \
     dict(appfile, **{key: value})

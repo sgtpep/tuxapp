@@ -96,15 +96,24 @@ def logs(message):
     return wrapper
   return decorator
 
-def logs_after(message, is_result=False):
+def logs_after(message):
   def decorator(function):
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
-      if not is_result:
-        formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
+      formatted_message = message(*args, **kwargs) if hasattr(message, '__call__') else message.format(*args, **kwargs)
       result = function(*args, **kwargs)
-      if is_result:
-        formatted_message = message(*args, result=result, **kwargs) if hasattr(message, '__call__') else message.format(*args, result=result, **kwargs)
+      if formatted_message and not is_silenced():
+        print(formatted_message, file=sys.stderr)
+      return result
+    return wrapper
+  return decorator
+
+def logs_result(message):
+  def decorator(function):
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+      result = function(*args, **kwargs)
+      formatted_message = message(*args, result=result, **kwargs) if hasattr(message, '__call__') else message.format(*args, result=result, **kwargs)
       if formatted_message and not is_silenced():
         print(formatted_message, file=sys.stderr)
       return result
@@ -338,12 +347,12 @@ check_app_installed = asserts("{} is not installed")(
 )
 
 check_app_updated = \
-  logs_after(
+  logs_result(
     lambda app, *args, **kwargs: \
       "{} {} is up to date".format(app, read_app_version(app)) \
         if kwargs['result'] else \
       "{} can be updated from {} to {}".format(app, read_app_version(app), fetch_app_version(app))
-  , True)(
+  )(
   logs_after(lambda app, *args, **kwargs: not is_command_exist('firejail') and not are_app_packages_updated(app, query_appfile_packages(app)) and "Warning: packages of {} are outdated".format(app))(
     lambda app: is_app_updated(app)
   ))
