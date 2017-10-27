@@ -225,7 +225,9 @@ validate_executable = lambda command: \
   not command or \
   validate_text(command) and \
   validate_command(command) and \
-  tuxapp.asserts("Malformed path")(lambda command: bool(re.match(r"^(\./)?\w+[\w/-]+$", command.split(' ', 1)[0])))(command)
+  tuxapp.asserts("Leading slash")(lambda command: command[0] != '/')(command) and \
+  tuxapp.asserts("Starts with usr/bin/")(lambda command: not command.startswith("usr/bin/"))(command) and \
+  tuxapp.asserts("Contains . or .. in the path")(lambda command: not re.search(r"(/./|^../|/../)", tuxapp.split_command(command)[0]))(command)
 
 validate_firejail = lambda options: \
   not options or \
