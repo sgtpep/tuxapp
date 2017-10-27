@@ -284,6 +284,8 @@ filter_url_path = lambda url: "{}/".format(url) if validate.is_url_valid(url) an
 
 filter_url_protocol = lambda url: url.replace("http://", "https://", 1) if validate.is_url_valid(url) and not validate.check_url_protocol(url) else url
 
+filter_version_url = lambda homepage_url, url: '' if filter_url(url) == homepage_url else filter_url(url)
+
 generate_appfile = lambda appfile: '\n'.join(u"{}={}".format(key, appfile[key]) for key in sorted(appfile) if key != 'app')
 
 get_default_app = lambda: 'temp'
@@ -299,6 +301,8 @@ get_update_functions = lambda: \
     update_icon_url,
     update_title,
     update_description,
+    update_version_url,
+    update_version_regex,
   )
 
 input_app = validates(lambda *args, **kwargs: \
@@ -348,8 +352,14 @@ input_title = validates(lambda app, *args, **kwargs: validate.validate_title(app
 
 input_url = lambda prompt, prefill='': filter_url_protocol(filter_url_path(input_text(prompt, prefill)))
 
-main = tuxapp.handles_exceptions(
-  lambda: functools.reduce(lambda appfile, update: update(appfile), get_update_functions(), {'app': get_default_app()})
+input_version_regex = \
+  tuxapp.outputs(lambda app, *args, **kwargs: "Version: {}".format(tuxapp.fetch_app_version(app, kwargs['result'])))(
+  validates(lambda app, *args, **kwargs: validate.validate_version_regex(app, kwargs['result']))(
+    lambda app, prefill='': input_text("Version regex", prefill, (), True)
+  ))
+
+input_version_url = validates(lambda *args, **kwargs: validate.validate_version_url(kwargs['result']))(
+  lambda homepage_url, prefill='': filter_version_url(homepage_url, input_url("Version URL", prefill))
 )
 
 normalize_url = lambda page_url, url, base_url=None: \
@@ -414,6 +424,10 @@ update_icon_url = lambda appfile: update_appfile(appfile, 'icon-url', input_icon
 update_name = lambda appfile: update_appfile(appfile, 'name', input_name(appfile['app'], appfile.get('name', filter_name(parse_name(appfile['homepage-url'])))))
 
 update_title = lambda appfile: update_appfile(appfile, 'title', input_title(appfile['app'], appfile.get('title', filter_title(parse_title(appfile['homepage-url'])))))
+
+update_version_url = lambda appfile: update_appfile(appfile, 'version-url', input_version_url(appfile['homepage-url'], appfile.get('version-url', '')))
+
+update_version_regex = lambda appfile: update_appfile(appfile, 'version-regex', input_version_regex(appfile['app'], appfile.get('version-regex', '')))
 
 write_appfile = lambda appfile: \
   tuxapp.remove_file(tuxapp.get_appfile_path(get_default_app())) and \
