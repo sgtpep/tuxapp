@@ -60,8 +60,7 @@ def reload(*args, **kwargs):
         function.non_reloadable = function
         @functools.wraps(function)
         def wrapper(*args, **kwargs):
-          if len(inspect.stack()) <= 3 and any(os.path.getmtime(path) != reload.mtimes.get(os.path.basename(path)) for path in "$@".split()):
-            reload()
+          reload()
           try:
             return variables[variable](*args, **kwargs)
           except SystemExit as exception:
@@ -69,14 +68,16 @@ def reload(*args, **kwargs):
         return wrapper
       return decorator
 
-    for path in "$@".split():
-      module = os.path.basename(path)
-      setattr(reload, 'mtimes', getattr(reload, 'mtimes', {}))
-      reload.mtimes[module] = os.path.getmtime(path)
-      variables = vars(imp.load_source(module, path))
-      for name, value in variables.items():
-        if not name.startswith('__'):
-          globals()[name] = reloads(variables, name)(value) if inspect.isfunction(value) else value
+    if len(inspect.stack()) <= 3:
+      for path in "$@".split():
+        module = os.path.basename(path)
+        setattr(reload, 'mtimes', getattr(reload, 'mtimes', {}))
+        if len(inspect.stack()) <= 2 or os.path.getmtime(path) != reload.mtimes.get(module):
+          reload.mtimes[module] = os.path.getmtime(path)
+          variables = vars(imp.load_source(module, path))
+          for variable, value in variables.items():
+            if not variable.startswith('__'):
+              globals()[variable] = reloads(variables, variable)(value) if hasattr(value, '__call__') else value
 
 main()
 EOF
