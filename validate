@@ -54,7 +54,7 @@ def validate_regex(pattern):
   except re.error:
     return False
 
-check_appfile_exists = tuxapp.asserts("{}: unknown app")(
+check_appfile_exists = tuxapp.asserts("Unknown app: {}")(
   lambda app: os.path.isfile(tuxapp.get_appfile_path(app)) and app
 )
 
