@@ -24,13 +24,12 @@ def validates(validate_function):
           if result is not None:
             validates.prefill = result
           result = function(*args, **kwargs)
+          if hasattr(validates, 'prefill'):
+            del validates.prefill
           validate_function(*args, result=result, **kwargs)
           return result
         except AssertionError as exception:
           print(exception.args[0] if exception.args else "Unknown error", file=sys.stderr)
-        finally:
-          if hasattr(validates, 'prefill'):
-            del validates.prefill
     return wrapper
   return decorator
 
@@ -244,6 +243,8 @@ def main():
       step -= 1
       if step < 0:
         raise KeyboardInterrupt
+      if hasattr(validates, 'prefill'):
+        del validates.prefill
       print()
   return True
 
