@@ -213,10 +213,12 @@ validate_description = lambda app, description: \
   validate_terminal_punctuation(description) and \
   validate_homepage_contains(app, description)
 
-validate_download_url = lambda app, url, architecture: \
-  architecture != 'x86-64' and not url or \
-  tuxapp.asserts("Contains the version number")(lambda app: tuxapp.fetch_app_version(app) not in url)(app) and \
-  validate_url(tuxapp.filter_app_download_url(app, url))
+validate_download_url = lambda app, architecture, urls: \
+  architecture != 'x86-64' and not urls or \
+  validate_text(urls) and \
+  tuxapp.asserts("Duplicated items")(lambda urls: sorted(set(urls.split())) == sorted(urls.split()))(urls) and \
+  tuxapp.asserts("Contains the version number")(lambda app: tuxapp.fetch_app_version(app) not in urls)(app) and \
+  all(validate_url(tuxapp.filter_app_download_url(app, url)) for url in urls.split())
 
 validate_executable = lambda command: \
   not command or \
