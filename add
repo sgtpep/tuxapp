@@ -238,7 +238,9 @@ def main():
       step += 1
       if step == len(get_update_functions()):
         break
-    except (EOFError, KeyboardInterrupt):
+    except EOFError:
+      raise KeyboardInterrupt
+    except KeyboardInterrupt:
       step -= 1
       if step < 0:
         raise KeyboardInterrupt
