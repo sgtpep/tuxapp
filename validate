@@ -296,6 +296,7 @@ validate_url = lambda url: \
 validate_version_regex = lambda app, pattern: \
   validate_text(pattern, True) and \
   validate_regex(pattern) and \
+  tuxapp.asserts("No grouping parentheses")(lambda pattern: bool(re.search(r"\((?!\?)", pattern)) and ')' in pattern)(pattern) and \
   bool(tuxapp.fetch_app_version(app, pattern))
 
 validate_version_url = lambda url: not url or validate_url(url)
