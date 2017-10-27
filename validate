@@ -204,7 +204,7 @@ validate_category = lambda category: \
   tuxapp.asserts("Unknown category")(lambda category: category in get_categories())(category)
 
 validate_command = tuxapp.asserts("Failed to parse")(
-  lambda command: bool(tuxapp.unasserts(tuxapp.split_command)(command))
+  lambda command: bool(tuxapp.unasserts()(tuxapp.split_command)(command))
 )
 
 validate_description = lambda app, description: \
