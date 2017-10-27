@@ -260,6 +260,8 @@ def parse_html(parser, html):
 
 check_name = lambda url, name: name if validate.check_page_contains(url, name, True) else ''
 
+check_url_protocol = lambda url: url.replace("http://", "https://", 1) if validate.is_url_valid(url) and not validate.check_url_protocol(url) else url
+
 detect_version_regex = lambda html: \
   "/download/v([^/]+)" \
     if re.search(r"\bgithub\.com/[\w-]+/[\w-]+/releases/download/\w", html) else \
@@ -270,8 +272,6 @@ detect_version_regex = lambda html: \
   '"softwareVersion">([^<]+)' \
     if '"softwareVersion">' in html else \
   ''
-
-check_url_protocol = lambda url: url.replace("http://", "https://", 1) if validate.is_url_valid(url) and not validate.check_url_protocol(url) else url
 
 extract_url_name = lambda url: re.sub(r"-+", ' ', re.sub(r"^www\.", '', tuxapp.parse_url(url).netloc).split('.', 1)[0]).title()
 
