@@ -156,8 +156,8 @@ validate_appfile_item = tuxapp.asserts("Unknown key")(
       if key == 'category' else \
     validate_description(app, value) \
       if key == 'description' else \
-    all(validate_download_url(app, url, re.sub(r"^download-(.+)-url", r'\1', key)) for url in value.split()) \
-      if key.startswith('download-') and key.endswith('-url') else \
+    validate_download_url(app, re.sub(r"^download-(.+)-url$", r'\1', key), value) \
+      if re.match(r"^download-(x86-64|x86)-url$", key) else \
     validate_executable(value) \
       if key == 'executable' else \
     validate_firejail(value) \
