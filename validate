@@ -225,7 +225,7 @@ validate_executable = lambda command: \
   not command or \
   validate_text(command) and \
   validate_command(command) and \
-  tuxapp.asserts("Malformed path")(lambda command: bool(re.match(r"^(/|\./)?[\w/-]+$", command.split(' ', 1)[0])))(command)
+  tuxapp.asserts("Malformed path")(lambda command: bool(re.match(r"^(\./)?\w+[\w/-]+$", command.split(' ', 1)[0])))(command)
 
 validate_firejail = lambda options: \
   not options or \
