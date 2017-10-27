@@ -63,6 +63,9 @@ class BaseParser(HTMLParser):
     getattr(self, 'on_data', lambda *args, **kwargs: None)(self.previous_tag, self.previous_attributes, data)
     if self.contents_tag:
       self.contents += data
+    if attributes.get('itemprop')
+      type = self.previous_attributes['itemtype'].rsplit('/', 1)[-1] if 'itemtype' in self.previous_attributes else None
+      getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(type, attributes['itemprop'], data)
     if self.previous_tag == 'script' and self.previous_attributes.get('type') == 'application/ld+json' and data.strip():
       import json
       decoded_data = json.loads(data)
@@ -83,10 +86,9 @@ class BaseParser(HTMLParser):
   def handle_starttag(self, tag, attributes):
     attributes = dict(attributes)
     getattr(self, 'on_tag', lambda *args, **kwargs: None)(tag, attributes)
-    if tag == 'meta' and attributes.get('content') and self.previous_attributes.get('itemtype', '').startswith("http://schema.org/"):
-      type = self.previous_attributes['itemtype'].rsplit('/', 1)[-1]
-      if type in self.data_types:
-        getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(type, attributes)
+    if tag == 'meta' and attributes.get('content') and attributes.get('itemprop')
+      type = self.previous_attributes['itemtype'].rsplit('/', 1)[-1] if 'itemtype' in self.previous_attributes else None
+      getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(type, attributes['itemprop'], attributes['content'])
     self.previous_attributes = attributes
     self.previous_tag = tag
 
@@ -119,9 +121,9 @@ class DescriptionParser(BaseParser):
     if item.get('description'):
       self.add_result((self.priority.index('json-ld-{}'.format(item['@type'])), item['description']))
 
-  def on_schema_org(self, type, attributes):
-    if attributes.get('itemprop') == 'description':
-      self.add_result((self.priority.index('schema-org-{}'.format(type)), attributes['content']))
+  def on_schema_org(self, type, property, content):
+    if type in self.data_types and property == 'description':
+      self.add_result((self.priority.index('schema-org-{}'.format(type)), content))
 
   def on_tag(self, tag, attributes):
     if tag == 'meta' and attributes.get('content'):
@@ -169,9 +171,9 @@ class NameParser(BaseParser):
     if item.get('name'):
       self.add_result((self.priority.index('json-ld-{}'.format(item['@type'])), item['name']))
 
-  def on_schema_org(self, type, attributes):
-    if attributes.get('itemprop') == 'name':
-      self.add_result((self.priority.index('schema-org-{}'.format(type)), attributes['content']))
+  def on_schema_org(self, type, property, content):
+    if type in self.data_types and property == 'name':
+      self.add_result((self.priority.index('schema-org-{}'.format(type)), content))
 
   def on_tag(self, tag, attributes):
     if tag == 'a' and self.previous_tag == 'h1' or tag == 'h1' and self.previous_tag == 'a':
