@@ -63,7 +63,7 @@ class BaseParser(HTMLParser):
     getattr(self, 'on_data', lambda *args, **kwargs: None)(self.previous_tag, self.previous_attributes, data)
     if self.contents_tag:
       self.contents += data
-    if attributes.get('itemprop')
+    if attributes.get('itemprop'):
       type = self.previous_attributes['itemtype'].rsplit('/', 1)[-1] if 'itemtype' in self.previous_attributes else None
       getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(type, attributes['itemprop'], data)
     if self.previous_tag == 'script' and self.previous_attributes.get('type') == 'application/ld+json' and data.strip():
@@ -86,7 +86,7 @@ class BaseParser(HTMLParser):
   def handle_starttag(self, tag, attributes):
     attributes = dict(attributes)
     getattr(self, 'on_tag', lambda *args, **kwargs: None)(tag, attributes)
-    if tag == 'meta' and attributes.get('content') and attributes.get('itemprop')
+    if tag == 'meta' and attributes.get('content') and attributes.get('itemprop'):
       type = self.previous_attributes['itemtype'].rsplit('/', 1)[-1] if 'itemtype' in self.previous_attributes else None
       getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(type, attributes['itemprop'], attributes['content'])
     self.previous_attributes = attributes
