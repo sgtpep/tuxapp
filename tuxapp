@@ -163,14 +163,16 @@ def silences(function):
           sys.stdout = sys.__stdout__
   return wrapper
 
-def unasserts(function):
-  @functools.wraps(function)
-  def wrapper(*args, **kwargs):
-    try:
-      return function(*args, **kwargs)
-    except AssertionError:
-      return
-  return wrapper
+def unasserts(default=None):
+  def decorator(function):
+    @functools.wraps(function)
+    def wrapper(*args, **kwargs):
+      try:
+        return function(*args, **kwargs)
+      except AssertionError:
+        return default
+    return wrapper
+  return decorator
 
 def change_file_mode(path, get_mode):
   os.chmod(path, get_mode(os.stat(path).st_mode))
@@ -488,7 +490,7 @@ fetch_app_version = \
 fetch_appfile = \
   memoizes()(
   asserts("{} was not found")(
-    lambda app: unasserts(fetch_url)("https://raw.githubusercontent.com/{}/master/apps/{}".format(get_github_repository(), app))
+    lambda app: unasserts()(fetch_url)("https://raw.githubusercontent.com/{}/master/apps/{}".format(get_github_repository(), app))
   ))
 
 fetch_grep_url = \
@@ -768,7 +770,7 @@ install_app_distribution = lambda app: \
   get_app_distribution_path(app) \
 
 install_app_icon = lambda app: \
-  unasserts(download_file)(query_appfile(app, 'icon-url'), get_app_icon_path(app)) and \
+  unasserts()(download_file)(query_appfile(app, 'icon-url'), get_app_icon_path(app)) and \
   touch_file(get_app_icon_path(app)) \
     if is_file_newer(get_app_version_path(app), get_app_icon_path(app)) else \
   get_app_icon_path(app)

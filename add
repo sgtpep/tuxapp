@@ -264,7 +264,7 @@ check_url_protocol = lambda url: url.replace("http://", "https://", 1) if valida
 
 detect_app_executable = lambda app: \
   tuxapp.install_app_distribution(app) and \
-  re.sub(r"usr/bin/", '', (tuxapp.unasserts(tuxapp.detect_app_executable)(app) or ''))
+  re.sub(r"usr/bin/", '', tuxapp.unasserts('')(tuxapp.detect_app_executable)(app))
 
 detect_version_regex = lambda html: \
   "/download/v([^/]+)" \
