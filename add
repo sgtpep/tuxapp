@@ -390,7 +390,7 @@ input_version_regex = \
   ))
 
 input_version_url = validates(lambda *args, **kwargs: validate.validate_version_url(kwargs['result']))(
-  lambda homepage_url, prefill='': filter_version_url(homepage_url, filter_url(input_text("Version URL (optional)", prefill)))
+  lambda homepage_url, prefill='': filter_version_url(homepage_url, filter_url(input_text("Version URL (default: {})".format(homepage_url), prefill)))
 )
 
 normalize_url = lambda page_url, url, base_url=None: \
