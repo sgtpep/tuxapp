@@ -486,6 +486,7 @@ fetch_grep_url = \
       read_process(r"""
       {} | \
       gzip -df 2> /dev/null | \
+      head -c 1000000 2> /dev/null | \
       grep {}
       """.format(
         join_command_arguments(build_request_arguments(
@@ -512,7 +513,11 @@ fetch_url = \
   asserts("Failed to fetch {}")(
   logs("Fetching {}")(
     lambda url: \
-      read_process("{} | gzip -df 2> /dev/null".format(join_command_arguments(build_request_arguments(
+      read_process(r"""
+      {} | \
+      gzip -df 2> /dev/null | \
+      head -c 1000000 2> /dev/null
+      """.format(join_command_arguments(build_request_arguments(
         ('-Ss', url),
         ('-q', '-O', '-', url),
       ))))
