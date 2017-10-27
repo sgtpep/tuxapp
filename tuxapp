@@ -546,7 +546,7 @@ filter_app_executable = lambda app, path='': \
     if len(filter_app_executables(app, path, True)) == 1 else \
   None
 
-filter_app_executables = lambda app, path='', is_all=False: tuple(path.replace("{}/".format(get_app_distribution_path(app)), '') for path in glob.iglob("{}{}/*".format(get_app_distribution_path(app), path)) if is_file_executable(path) and not path.endswith(".so") and (is_all or os.path.basename(path).lower() == app.lower()))
+filter_app_executables = lambda app, path='', is_all=False: tuple(path.replace("{}/".format(get_app_distribution_path(app)), '') for path in glob.iglob("{}{}/*".format(get_app_distribution_path(app), path)) if is_file_executable(path) and (is_all or os.path.basename(path).lower() == app.lower()))
 
 generate_desktop_entry_category = lambda category: \
   "{}{};".format(
@@ -994,7 +994,7 @@ is_app_updated = lambda app: read_app_version(app) == fetch_app_version(app)
 
 is_command_exist = lambda command: bool(distutils.spawn.find_executable(command))
 
-is_file_executable = lambda path: os.path.isfile(path) and os.access(path, os.X_OK)
+is_file_executable = lambda path: os.path.isfile(path) and os.access(path, os.X_OK) and not path.endswith(".so")
 
 is_file_list_nested = lambda paths: all(path.lstrip("./").split('/', 1)[0] == paths[0].lstrip("./").split('/', 1)[0] for path in paths)
 
