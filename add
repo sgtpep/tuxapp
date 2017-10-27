@@ -296,7 +296,7 @@ filter_download_url = lambda app, urls: filter_download_url_version(app, ' '.joi
 
 filter_download_url_version = lambda app, url: url and url.replace(tuxapp.fetch_app_version(app), "{version}")
 
-filter_executable = lambda app, command: '' if re.sub(r"usr/bin/", '', command) == detect_app_executable(app) else command
+filter_executable = lambda app, command: '' if re.sub(r"usr/bin/", '', command.lstrip('/')) == detect_app_executable(app) else command
 
 filter_name = lambda name: name.rstrip(''.join(validate.get_punctuation()))
 
