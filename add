@@ -6,7 +6,11 @@ import os
 import re
 import sys
 
-import lib.parsers
+try:
+  from html.parser import HTMLParser
+except ImportError:
+  from HTMLParser import HTMLParser
+
 tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
 validate = imp.load_source('validate', os.path.join(os.path.dirname(__file__), 'validate'))
 
@@ -30,10 +34,179 @@ def validates(validate_function):
     return wrapper
   return decorator
 
+class BaseParser(HTMLParser):
+  contents = ''
+  contents_attributes = {}
+  contents_tag = None
+  is_head = False
+  previous_attributes = {}
+  previous_tag = None
+
+  data_types = (
+    'Product',
+    'SoftwareApplication',
+    'WebSite',
+  )
+
+  def __init__(self, *args, **kwargs):
+    HTMLParser.__init__(self, *args, **kwargs)
+    self.results = []
+
+  def add_result(self, result):
+    self.results.append(result)
+
+  def feed(self, *args, **kwargs):
+    HTMLParser.feed(self, *args, **kwargs)
+    self.raise_result()
+
+  def handle_data(self, data):
+    getattr(self, 'on_data', lambda *args, **kwargs: None)(self.previous_tag, self.previous_attributes, data)
+    if self.contents_tag:
+      self.contents += data
+    if self.previous_tag == 'script' and self.previous_attributes.get('type') == 'application/ld+json' and data.strip():
+      import json
+      decoded_data = json.loads(data)
+      items = decoded_data if isinstance(decoded_data, list) else [decoded_data]
+      for item in items:
+        if item.get('@type') in self.data_types:
+          getattr(self, 'on_json_ld', lambda *args, **kwargs: None)(item)
+
+  def handle_endtag(self, tag):
+    if tag == self.contents_tag:
+      getattr(self, 'on_contents', lambda *args, **kwargs: None)(self.contents_tag, self.contents_attributes, self.contents)
+      self.contents = ''
+      self.contents_attributes = {}
+      self.contents_tag = None
+    if self.is_head and tag == 'head':
+      self.raise_result()
+
+  def handle_starttag(self, tag, attributes):
+    attributes = dict(attributes)
+    getattr(self, 'on_tag', lambda *args, **kwargs: None)(tag, attributes)
+    if tag == 'meta' and attributes.get('content') and self.previous_attributes.get('itemtype', '').startswith("http://schema.org/"):
+      type = self.previous_attributes['itemtype'].rsplit('/', 1)[-1]
+      if type in self.data_types:
+        getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(type, attributes)
+    self.previous_attributes = attributes
+    self.previous_tag = tag
+
+  def raise_result(self):
+    if self.results:
+      raise ResultException(sorted(self.results)[-1][-1])
+
+  def read_contents(self, tag, attributes):
+    self.contents_attributes = attributes
+    self.contents_tag = tag
+
+class BaseURLParser(BaseParser):
+  def on_tag(self, tag, attributes):
+    if tag == 'base' and attributes.get('href'):
+      raise ResultException(attributes['href'])
+
+class DescriptionParser(BaseParser):
+  priority = (
+    'description',
+    'og-description',
+    'schema-org-WebSite',
+    'json-ld-WebSite',
+    'schema-org-Product',
+    'json-ld-Product',
+    'schema-org-SoftwareApplication',
+    'json-ld-SoftwareApplication',
+  )
+
+  def on_json_ld(self, item):
+    if item.get('description'):
+      self.add_result((self.priority.index('json-ld-{}'.format(item['@type'])), item['description']))
+
+  def on_schema_org(self, type, attributes):
+    if attributes.get('itemprop') == 'description':
+      self.add_result((self.priority.index('schema-org-{}'.format(type)), attributes['content']))
+
+  def on_tag(self, tag, attributes):
+    if tag == 'meta' and attributes.get('content'):
+      if attributes.get('name') == 'description':
+        self.add_result((self.priority.index('description'), attributes['content']))
+      elif attributes.get('property') == 'og:description':
+        self.add_result((self.priority.index('og-description'), attributes['content']))
+
+class IconURLParser(BaseParser):
+  is_head = True
+
+  rels = (
+    "shortcut icon",
+    'apple-touch-icon',
+    'apple-touch-icon-precomposed',
+    'icon',
+  )
+
+  def on_tag(self, tag, attributes):
+    if tag == 'link' and attributes.get('href') and attributes.get('rel') in self.rels:
+      self.add_result((
+        int(attributes.get('sizes', "0x0").split('x', 1)[0]),
+        self.rels.index(attributes['rel']),
+        attributes['href'],
+      ))
+
+class NameParser(BaseParser):
+  priority = (
+    'heading-anchor',
+    'og-site-name',
+    'schema-org-WebSite',
+    'json-ld-WebSite',
+    'schema-org-Product',
+    'json-ld-Product',
+    'schema-org-SoftwareApplication',
+    'json-ld-SoftwareApplication',
+    'application-name',
+  )
+
+  def on_contents(self, tag, attributes, contents):
+    if tag in ('a', 'h1'):
+      self.add_result((self.priority.index('heading-anchor'), contents))
+
+  def on_json_ld(self, item):
+    if item.get('name'):
+      self.add_result((self.priority.index('json-ld-{}'.format(item['@type'])), item['name']))
+
+  def on_schema_org(self, type, attributes):
+    if attributes.get('itemprop') == 'name':
+      self.add_result((self.priority.index('schema-org-{}'.format(type)), attributes['content']))
+
+  def on_tag(self, tag, attributes):
+    if tag == 'a' and self.previous_tag == 'h1' or tag == 'h1' and self.previous_tag == 'a':
+      self.read_contents(tag, attributes)
+    elif tag == 'meta' and attributes.get('content'):
+      if attributes.get('name') == 'application-name':
+        self.add_result((self.priority.index('application-name'), attributes['content']))
+      elif attributes.get('property') == 'og:site_name':
+        self.add_result((self.priority.index('og-site-name'), attributes['content']))
+
+class ResultException(Exception):
+  pass
+
+class TitleParser(BaseParser):
+  is_head = True
+
+  priority = (
+    'title',
+    'og-title',
+  )
+
+  def on_contents(self, tag, attributes, contents):
+    if tag == 'title':
+      self.add_result((self.priority.index('title'), contents))
+
+  def on_tag(self, tag, attributes):
+    if tag == 'meta' and attributes.get('property') == 'og:title' and attributes.get('content'):
+      self.add_result((self.priority.index('og-title'), attributes['content']))
+    elif tag == 'title':
+      self.read_contents(tag, attributes)
+
 def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
   try:
     import readline
-    readline.set_startup_hook(lambda: readline.insert_text(getattr(validates, 'prefill', filter_text(prefill))))
+    readline.set_startup_hook(lambda: readline.insert_text(getattr(validates, 'prefill', filter_text(prefill, is_whitespacy)).encode('utf-8')))
     history_path = os.path.expanduser("~/.python_history")
     if hasattr(sys, 'ps1') and os.path.isfile(history_path):
       readline.write_history_file(history_path)
@@ -44,7 +217,7 @@ def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
       import builtins
     except ImportError:
       import __builtin__ as builtins
-    return filter_text(getattr(builtins, 'raw_input', input)("{}: ".format(prompt)))
+    return filter_text(getattr(builtins, 'raw_input', input)("{}: ".format(prompt)).decode('utf-8'), is_whitespacy)
   finally:
     readline.set_startup_hook()
     if hasattr(sys, 'ps1') and os.path.isfile(history_path):
@@ -52,6 +225,21 @@ def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
       readline.read_history_file(history_path)
     readline.set_completer(completer)
     readline.set_completer_delims(delimeters)
+
+def parse_html(parser, html):
+  try:
+    parser().feed(html)
+    return ''
+  except ResultException as exception:
+    return filter_text(exception.args[0]) if exception.args and tuxapp.is_string(exception.args[0]) else ''
+
+check_name = lambda url, name: name if validate.check_page_contains(url, name, True) else ''
+
+extract_url_name = lambda url: re.sub(r"-+", ' ', re.sub(r"^www\.", '', tuxapp.parse_url(url).netloc).split('.', 1)[0]).title()
+
+fetch_url = tuxapp.memoizes()(
+  lambda *args, **kwargs: tuxapp.fetch_url(*args, **kwargs)
+)
 
 filter_app = lambda app: re.sub(r"[^a-z0-9]+", '-', app.lower()).strip('-')
 
@@ -62,9 +250,12 @@ filter_description = lambda description: \
     '' if description[-1] in validate.get_punctuation() else '.',
   ) if description else ''
 
-filter_name = lambda name: name.rstrip(''.join(validate.get_punctuation())) if name else ''
+filter_name = lambda name: name.rstrip(''.join(validate.get_punctuation()))
 
-filter_text = lambda string, is_whitespacy=False: re.sub(r"\s+", '' if is_whitespacy else ' ', string.replace('\t', ' ')).strip()
+filter_text = lambda string, is_whitespacy=False: \
+  string.strip() \
+    if is_whitespacy else \
+  re.sub(r"\s+", ' ', string.replace('\t', ' ')).strip()
 
 filter_title = lambda title: u"{}{}".format(title[0].upper(), title[1:]).rstrip(''.join(validate.get_punctuation())) if title else ''
 
@@ -72,9 +263,9 @@ filter_url = lambda url: url.split('#', 1)[0] if validate.is_url_valid(url) and 
 
 filter_url_path = lambda url: "{}/".format(url) if validate.is_url_valid(url) and not tuxapp.parse_url(url).path else url
 
-filter_url_protocol = lambda url: url if not validate.is_url_valid(url) or validate.check_url_protocol(url) else url.replace("http://", "https://", 1)
+filter_url_protocol = lambda url: url.replace("http://", "https://", 1) if validate.is_url_valid(url) and not validate.check_url_protocol(url) else url
 
-generate_appfile = lambda appfile: '\n'.join("{}={}".format(key, appfile[key]) for key in sorted(appfile) if key != 'app')
+generate_appfile = lambda appfile: '\n'.join(u"{}={}".format(key, appfile[key]) for key in sorted(appfile) if key != 'app')
 
 get_default_app = lambda: 'temp'
 
@@ -121,7 +312,7 @@ input_group = \
   ))
 
 input_homepage_url = validates(lambda *args, **kwargs: validate.validate_homepage_url(kwargs['result']))(
-  lambda prefill='': input_url("Homepage URL", prefill)
+  lambda prefill='': filter_url(input_url("Homepage URL", prefill))
 )
 
 input_icon_url = validates(lambda *args, **kwargs: validate.validate_icon_url(kwargs['result']))(
@@ -139,18 +330,49 @@ input_title = validates(lambda app, *args, **kwargs: validate.validate_title(app
 input_url = lambda prompt, prefill='': filter_url_protocol(filter_url_path(input_text(prompt, prefill)))
 
 main = tuxapp.handles_exceptions(
-  lambda: functools.reduce(lambda appfile, update: update(appfile), get_update_functions(), {})
+  lambda: functools.reduce(lambda appfile, update: update(appfile), get_update_functions(), {'app': get_default_app()})
 )
 
+normalize_url = lambda page_url, url, base_url=None: \
+  url \
+    if re.match(r"^https?://", url) else \
+  "{}:{}".format(tuxapp.parse_url(page_url).scheme, url) \
+    if url.startswith("//") else \
+  "{0.scheme}://{0.netloc}{1}".format(tuxapp.parse_url(page_url), normalize_url_path(url)) \
+    if url.startswith('/') else \
+  "{0.scheme}://{0.netloc}{1}".format(
+    tuxapp.parse_url(base_url or parse_base_url(page_url)),
+    normalize_url_path("/{}/{}".format(os.path.dirname(tuxapp.parse_url(base_url or parse_base_url(page_url)).path), url)),
+  )
+
+normalize_url_path = lambda path: \
+  "{}{}".format(
+    re.sub(r"^//", '/', os.path.normpath(path)),
+    '/' if path and path[-1] == '/' else '',
+  )
+
 open_url = tuxapp.does(lambda url, *args, **kwargs: url and input_boolean("Open {} in the browser?".format(url)) and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.quote_argument(url))))(lambda url: url)
+
+parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url(url)) or url, url)
+
+parse_description = lambda url: parse_html(DescriptionParser, fetch_url(url))
+
+parse_icon_url = lambda url: normalize_url(url, parse_html(IconURLParser, fetch_url(url)) or "/favicon.ico")
+
+parse_name = lambda url: \
+  check_name(url, tuxapp.parse_url(url).path.lstrip('/').split('/', 1)[0]) \
+    if ".github.io/" in url and tuxapp.parse_url(url).path.lstrip('/') else \
+  parse_html(NameParser, fetch_url(url)) or check_name(url, extract_url_name(url))
+
+parse_title = lambda url: parse_html(TitleParser, fetch_url(url))
 
 update_app = lambda appfile: update_appfile(appfile, 'app', input_app(filter_app(appfile.get('name', ''))))
 
 update_appfile = tuxapp.logs_after(
   lambda *args, **kwargs: \
-    "> {}:\n{}".format(
-      tuxapp.get_appfile_path(kwargs['result'].get('app', get_default_app())).replace(os.path.expanduser('~'), '~', 1),
-      '\n'.join("> {}".format(line) for line in generate_appfile(kwargs['result']).splitlines()),
+    u"> {}:\n{}".format(
+      tuxapp.get_appfile_path(kwargs['result']['app']).replace(os.path.expanduser('~'), '~', 1),
+      '\n'.join(u"> {}".format(line) for line in generate_appfile(kwargs['result']).splitlines()),
     )
 , True)(
   lambda appfile, key, value: \
@@ -160,23 +382,23 @@ update_appfile = tuxapp.logs_after(
 
 update_category = lambda appfile: update_appfile(appfile, 'category', input_category(appfile.get('category', '')))
 
-update_description = lambda appfile={}: update_appfile(appfile, 'description', input_description(appfile.get('app', get_default_app()), appfile.get('description', filter_description(lib.parsers.parse_description(appfile['homepage-url'])))))
+update_description = lambda appfile: update_appfile(appfile, 'description', input_description(appfile['app'], appfile.get('description', filter_description(parse_description(appfile['homepage-url'])))))
 
 update_free_license = lambda appfile: update_appfile(appfile, 'free-license', input_free_license())
 
 update_group = lambda appfile: update_appfile(appfile, 'group', input_group(appfile.get('group', '')))
 
-update_homepage_url = lambda appfile={}: update_appfile(appfile, 'homepage-url', input_homepage_url(appfile.get('homepage-url', '')))
+update_homepage_url = lambda appfile: update_appfile(appfile, 'homepage-url', input_homepage_url(appfile.get('homepage-url', '')))
 
-update_icon_url = lambda appfile={}: update_appfile(appfile, 'icon-url', input_icon_url(appfile.get('icon-url', open_url(filter_url(lib.parsers.parse_icon_url(appfile['homepage-url']))))))
+update_icon_url = lambda appfile: update_appfile(appfile, 'icon-url', input_icon_url(appfile.get('icon-url', open_url(filter_url(parse_icon_url(appfile['homepage-url']))))))
 
-update_name = lambda appfile={}: update_appfile(appfile, 'name', input_name(appfile.get('app', get_default_app()), appfile.get('name', filter_name(lib.parsers.parse_name(appfile['homepage-url'])))))
+update_name = lambda appfile: update_appfile(appfile, 'name', input_name(appfile['app'], appfile.get('name', filter_name(parse_name(appfile['homepage-url'])))))
 
-update_title = lambda appfile={}: update_appfile(appfile, 'title', input_title(appfile.get('app', get_default_app()), appfile.get('title', filter_title(lib.parsers.parse_title(appfile['homepage-url'])))))
+update_title = lambda appfile: update_appfile(appfile, 'title', input_title(appfile['app'], appfile.get('title', filter_title(parse_title(appfile['homepage-url'])))))
 
 write_appfile = lambda appfile: \
   tuxapp.remove_file(tuxapp.get_appfile_path(get_default_app())) and \
-  tuxapp.write_file(tuxapp.get_appfile_path(appfile.get('app', get_default_app())), "{}\n".format(generate_appfile(dict(dict.fromkeys(validate.get_appfile_keys(), ''), **appfile))))
+  tuxapp.write_file(tuxapp.get_appfile_path(appfile['app']), u"{}\n".format(generate_appfile(dict(dict.fromkeys(validate.get_appfile_keys(), ''), **appfile))))
 
 if __name__ == '__main__':
   main()
