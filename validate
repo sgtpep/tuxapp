@@ -290,7 +290,7 @@ validate_url = lambda url: \
   tuxapp.asserts("Invalid URL")(is_url_valid)(url) and \
   tuxapp.asserts("No path")(lambda url: bool(tuxapp.parse_url(url).path))(url) and \
   tuxapp.asserts("Contains a fragment")(lambda url: '#' not in url)(url) and \
-  tuxapp.asserts("Not ends with /latest")(lambda url: not re.search(r"\bgithub\.com/[\w-]+/[\w-]+/releases$", url))(url) and \
+  tuxapp.asserts("Not ends with /latest")(lambda url: not re.search(r"\bgithub\.com/[\w-]+/[\w-]+/releases(?!/latest$)", url))(url) and \
   tuxapp.asserts("Accessible by HTTPS")(check_url_protocol)(url) and \
   tuxapp.asserts("Inaccessible URL")(check_url)(url)
 
