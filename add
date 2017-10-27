@@ -256,6 +256,17 @@ def parse_html(parser, html):
 
 check_name = lambda url, name: name if validate.check_page_contains(url, name, True) else ''
 
+detect_version_regex = lambda html: \
+  "/download/v([^/]+)" \
+    if re.search(r"\bgithub\.com/[\w-]+/[\w-]+/releases/download/\w", html) else \
+  '"softwareVersion"\s*:\s*"([^"]+)' \
+    if re.search(r'"softwareVersion"\s*:\s*"', html) else \
+  '"softwareVersion" content="([^"]+)' \
+    if '"softwareVersion" content="' in html else \
+  '"softwareVersion">([^<]+)' \
+    if '"softwareVersion">' in html else \
+  ''
+
 extract_url_name = lambda url: re.sub(r"-+", ' ', re.sub(r"^www\.", '', tuxapp.parse_url(url).netloc).split('.', 1)[0]).title()
 
 fetch_url = tuxapp.memoizes()(
@@ -432,7 +443,7 @@ update_title = lambda appfile: update_appfile(appfile, 'title', input_title(appf
 
 update_version_url = lambda appfile: update_appfile(appfile, 'version-url', input_version_url(appfile['homepage-url'], appfile.get('version-url', '')))
 
-update_version_regex = lambda appfile: update_appfile(appfile, 'version-regex', input_version_regex(appfile['app'], appfile.get('version-regex', '')))
+update_version_regex = lambda appfile: update_appfile(appfile, 'version-regex', input_version_regex(appfile['app'], appfile.get('version-regex', detect_version_regex(fetch_url(appfile.get('version-url') or appfile['homepage-url'])))))
 
 write_appfile = lambda appfile: \
   tuxapp.remove_file(tuxapp.get_appfile_path(get_default_app())) and \
