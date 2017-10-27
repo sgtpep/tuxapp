@@ -137,6 +137,7 @@ parse_appfile = lambda app: tuple(line.split('=', 1) for line in tuxapp.read_app
 parse_appfile_keys = lambda app: tuple(key for key, _ in parse_appfile(app))
 
 validate_app = lambda app: \
+  validate_text(app) and \
   tuxapp.asserts("Invalid characters")(lambda app: bool(re.match("^[a-z0-9-]*$", app)))(app) and \
   tuxapp.asserts("Edge dash")(lambda app: not app.startswith('-') and not app.endswith('-'))(app) and \
   tuxapp.asserts("Continuous dashes")(lambda app: not re.search(r"-{2}", app))(app)
