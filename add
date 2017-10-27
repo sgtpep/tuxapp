@@ -264,7 +264,7 @@ check_url_protocol = lambda url: url.replace("http://", "https://", 1) if valida
 
 detect_app_executable = lambda app: \
   tuxapp.install_app_distribution(app) and \
-  re.sub(r"usr/bin/", '', tuxapp.unasserts('')(tuxapp.detect_app_executable)(app))
+  strip_bin_path(tuxapp.unasserts('')(tuxapp.detect_app_executable)(app))
 
 detect_version_regex = lambda html: \
   "/download/v([^/]+)" \
@@ -296,7 +296,7 @@ filter_download_url = lambda app, urls: filter_download_url_version(app, ' '.joi
 
 filter_download_url_version = lambda app, url: url and url.replace(tuxapp.fetch_app_version(app), "{version}")
 
-filter_executable = lambda app, command: '' if re.sub(r"usr/bin/", '', command.lstrip('/')) == detect_app_executable(app) else command
+filter_executable = lambda app, command: '' if strip_bin_path(command.lstrip('/')) == detect_app_executable(app) else command
 
 filter_name = lambda name: name.rstrip(''.join(validate.get_punctuation()))
 
@@ -440,6 +440,8 @@ parse_name = lambda url: \
   parse_html(NameParser, fetch_url(url)) or check_name(url, extract_url_name(url))
 
 parse_title = lambda url: parse_html(TitleParser, fetch_url(url))
+
+strip_bin_path = lambda command: re.sub(r"^usr/bin/", '', command)
 
 update_app = lambda appfile: update_appfile(appfile, 'app', input_app(filter_app(appfile.get('name', ''))))
 
