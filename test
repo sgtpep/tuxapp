@@ -183,7 +183,10 @@ install_arch_container_package = lambda package: \
 install_bubblewrap = \
   tuxapp.asserts("bubblewrap is not installed")(
   tuxapp.logs("Installing bubblewrap")(
-    lambda: tuxapp.is_command_exist('apt') and call_process_verbose("sudo apt update && sudo apt install -y bubblewrap")
+    lambda: \
+      not tuxapp.is_silenced() and \
+      tuxapp.is_command_exist('apt') and \
+      call_process_verbose("sudo apt update && sudo apt install -y bubblewrap")
   ))
 
 install_container = tuxapp.asserts("Failed to install {}")(
