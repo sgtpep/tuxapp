@@ -378,7 +378,7 @@ check_apps_updated = outputs(
 detect_app_executable = asserts("Failed to detect the executable file of {}")(
   lambda app: \
     'AppRun' \
-      if os.access("{}/AppRun".format(get_app_distribution_path(app)), os.X_OK) else \
+      if is_file_executable("{}/AppRun".format(get_app_distribution_path(app))) else \
     filter_app_executable(app, "/usr/bin") \
       if os.path.isdir("{}/usr/bin".format(get_app_distribution_path(app))) else \
     filter_app_executable(app)
@@ -546,7 +546,7 @@ filter_app_executable = lambda app, path='': \
     if len(filter_app_executables(app, path, True)) == 1 else \
   None
 
-filter_app_executables = lambda app, path='', is_all=False: tuple(path.replace("{}/".format(get_app_distribution_path(app)), '') for path in glob.iglob("{}{}/*".format(get_app_distribution_path(app), path)) if os.path.isfile(path) and os.access(path, os.X_OK) and not path.endswith(".so") and (is_all or os.path.basename(path).lower() == app.lower()))
+filter_app_executables = lambda app, path='', is_all=False: tuple(path.replace("{}/".format(get_app_distribution_path(app)), '') for path in glob.iglob("{}{}/*".format(get_app_distribution_path(app), path)) if is_file_executable(path) and not path.endswith(".so") and (is_all or os.path.basename(path).lower() == app.lower()))
 
 generate_desktop_entry_category = lambda category: \
   "{}{};".format(
@@ -759,7 +759,7 @@ Type=Application
 install_app_distribution = lambda app: \
   get_app_distribution_path(app) \
     if is_app_updated(app) else \
-  all(remove_file(path) for pattern in ("/*", "/usr/bin/*") for path in glob.iglob("{}{}".format(get_app_distribution_path(app), pattern)) if os.access(path, os.X_OK)) and \
+  all(remove_file(path) for pattern in ("/*", "/usr/bin/*") for path in glob.iglob("{}{}".format(get_app_distribution_path(app), pattern)) if is_file_executable(path)) and \
   all(unpack_app_distribution(app, path) for path in (download_missing_file(url, "{}/{}-{}-{}".format(
     get_cache_path(),
     app,
@@ -994,6 +994,8 @@ is_app_updated = lambda app: read_app_version(app) == fetch_app_version(app)
 
 is_command_exist = lambda command: bool(distutils.spawn.find_executable(command))
 
+is_file_executable = lambda path: os.path.isfile(path) and os.access(path, os.X_OK)
+
 is_file_list_nested = lambda paths: all(path.lstrip("./").split('/', 1)[0] == paths[0].lstrip("./").split('/', 1)[0] for path in paths)
 
 is_file_newer = lambda path, reference_path: get_file_mtime(path) > get_file_mtime(reference_path)
@@ -1108,9 +1110,9 @@ resolve_app_executable = lambda app, command: join_command_arguments((resolve_ap
 resolve_app_executable_path = asserts("Failed to find the executable file: {1}")(
   lambda app, path: \
     "usr/bin/{}".format(path) \
-      if os.access("{}/usr/bin/{}".format(get_app_distribution_path(app), path), os.X_OK) else \
+      if is_file_executable("{}/usr/bin/{}".format(get_app_distribution_path(app), path)) else \
     path
-      if os.access("{}/{}".format(get_app_distribution_path(app), path), os.X_OK) else \
+      if is_file_executable("{}/{}".format(get_app_distribution_path(app), path)) else \
     None
 )
 
