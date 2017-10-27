@@ -228,8 +228,11 @@ def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
     readline.set_completer_delims(delimeters)
 
 @tuxapp.handles_exceptions
-def main():
-  appfile = {'app': get_default_app()}
+def main(arguments=tuple(sys.argv[1:])):
+  appfile = \
+    dict(validate.parse_appfile(validate.check_appfile_exists(tuxapp.extract_app(arguments[0]))), app=tuxapp.extract_app(arguments[0])) \
+      if arguments else \
+    {'app': get_default_app()}
   step = 0
   while True:
     try:
@@ -324,12 +327,15 @@ get_update_functions = lambda: \
 
 input_app = validates(lambda *args, **kwargs: \
   validate.validate_app(kwargs['result']) and \
-  tuxapp.asserts("Existing appfile")(lambda app: not os.path.isfile(tuxapp.get_appfile_path(app)))(kwargs['result'])
+  tuxapp.asserts(lambda *args, **kwargs: not input_boolean("Overwrite an existing file?") and "Provide another identifier")(lambda app: not os.path.isfile(tuxapp.get_appfile_path(app)))(kwargs['result'])
 )(
   lambda prefill='': filter_app(input_text("Identifier", prefill))
 )
 
-input_boolean = lambda question: 'yes' if re.match(r"^($|y)", input_text("{} [Y/n]".format(question)), re.I) else ''
+input_boolean = lambda question, is_no=False: \
+  ('' if re.match(r"^($|n)", input_text("{} [y/N]".format(question)), re.I) else 'yes') \
+    if is_no else \
+  ('yes' if re.match(r"^($|y)", input_text("{} [Y/n]".format(question)), re.I) else '')
 
 input_category = \
   validates(lambda *args, **kwargs: validate.validate_category(kwargs['result']))(
@@ -342,7 +348,7 @@ input_description = validates(lambda app, *args, **kwargs: validate.validate_des
 )
 
 input_free_license = validates(lambda *args, **kwargs: validate.validate_free_license(kwargs['result']))(
-  lambda: input_boolean("Is license free?")
+  lambda prefill='': input_boolean("Is license free?", not prefill)
 )
 
 input_group = \
@@ -430,13 +436,13 @@ update_category = lambda appfile: update_appfile(appfile, 'category', input_cate
 
 update_description = lambda appfile: update_appfile(appfile, 'description', input_description(appfile['app'], appfile.get('description', filter_description(parse_description(appfile['homepage-url'])))))
 
-update_free_license = lambda appfile: update_appfile(appfile, 'free-license', input_free_license())
+update_free_license = lambda appfile: update_appfile(appfile, 'free-license', input_free_license(appfile.get('free-license', 'yes')))
 
 update_group = lambda appfile: update_appfile(appfile, 'group', input_group(appfile.get('group', '')))
 
 update_homepage_url = lambda appfile: update_appfile(appfile, 'homepage-url', input_homepage_url(appfile.get('homepage-url', '')))
 
-update_icon_url = lambda appfile: update_appfile(appfile, 'icon-url', input_icon_url(appfile.get('icon-url', open_url(filter_url(parse_icon_url(appfile['homepage-url']))))))
+update_icon_url = lambda appfile: update_appfile(appfile, 'icon-url', input_icon_url(appfile.get('icon-url') or open_url(filter_url(parse_icon_url(appfile['homepage-url'])))))
 
 update_name = lambda appfile: update_appfile(appfile, 'name', input_name(appfile['app'], appfile.get('name', filter_name(parse_name(appfile['homepage-url'])))))
 
