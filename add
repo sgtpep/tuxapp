@@ -226,6 +226,23 @@ def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
     readline.set_completer(completer)
     readline.set_completer_delims(delimeters)
 
+@tuxapp.handles_exceptions
+def main():
+  appfile = {'app': get_default_app()}
+  step = 0
+  while True:
+    try:
+      appfile = get_update_functions()[step](appfile)
+      step += 1
+      if step == len(get_update_functions()):
+        break
+    except (EOFError, KeyboardInterrupt):
+      step -= 1
+      if step < 0:
+        raise KeyboardInterrupt
+      print()
+  return True
+
 def parse_html(parser, html):
   try:
     parser().feed(html)
