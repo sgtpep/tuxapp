@@ -370,7 +370,7 @@ check_apps_updated = outputs(
 
 detect_app_executable = asserts("Failed to detect the executable file of {}")(
   lambda app: \
-    resolve_app_executable(app, query_appfile(app, 'executable').lstrip('/')) \
+    resolve_app_executable(app, query_appfile(app, 'executable')) \
       if query_appfile(app, 'executable') else \
     'AppRun' \
       if os.access("{}/AppRun".format(get_app_distribution_path(app)), os.X_OK) else \
