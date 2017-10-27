@@ -262,6 +262,10 @@ check_name = lambda url, name: name if validate.check_page_contains(url, name, T
 
 check_url_protocol = lambda url: url.replace("http://", "https://", 1) if validate.is_url_valid(url) and not validate.check_url_protocol(url) else url
 
+detect_app_executable = lambda app: \
+  tuxapp.install_app_distribution(app) and \
+  re.sub(r"usr/bin/", '', (tuxapp.unasserts(tuxapp.detect_app_executable)(app) or ''))
+
 detect_version_regex = lambda html: \
   "/download/v([^/]+)" \
     if re.search(r"\bgithub\.com/[\w-]+/[\w-]+/releases/download/\w", html) else \
@@ -291,6 +295,8 @@ filter_description = lambda description: \
 filter_download_url = lambda app, urls: filter_download_url_version(app, ' '.join(filter_url(url) for url in urls.split()))
 
 filter_download_url_version = lambda app, url: url and url.replace(tuxapp.fetch_app_version(app), "{version}")
+
+filter_executable = lambda app, command: '' if re.sub(r"usr/bin/", '', command) == detect_app_executable(app) else command
 
 filter_name = lambda name: name.rstrip(''.join(validate.get_punctuation()))
 
@@ -355,6 +361,15 @@ input_description = validates(lambda app, *args, **kwargs: validate.validate_des
 
 input_download_url = validates(lambda app, architecture, *args, **kwargs: validate.validate_download_url(app, architecture, kwargs['result']))(
   lambda app, architecture, prefill='': filter_download_url(app, input_text("Download URL ({}){}".format(architecture, '' if architecture == 'x86-64' else " (optional)"), prefill))
+)
+
+input_executable = validates(
+  lambda app, *args, **kwargs: \
+    (detect_app_executable(app) or validate.validate_text(kwargs['result'])) and \
+    validate.validate_executable(kwargs['result']) and \
+    (not kwargs['result'] or tuxapp.resolve_app_executable(app, kwargs['result']))
+)(
+  lambda app, prefill='': filter_executable(app, input_text("Executable{}".format(" (default: {})".format(detect_app_executable(app)) if detect_app_executable(app) else ''), prefill))
 )
 
 input_free_license = validates(lambda *args, **kwargs: validate.validate_free_license(kwargs['result']))(
@@ -447,6 +462,8 @@ update_description = lambda appfile: update_appfile(appfile, 'description', inpu
 update_download_x86_64_url = lambda appfile: update_appfile(appfile, 'download-x86-64-url', input_download_url(appfile['app'], 'x86-64', appfile.get('download-x86-64-url', '')))
 
 update_download_x86_url = lambda appfile: update_appfile(appfile, 'download-x86-url', input_download_url(appfile['app'], 'x86', appfile.get('download-x86-url', '')))
+
+update_executable = lambda appfile: update_appfile(appfile, 'executable', input_executable(appfile['app'], appfile.get('executable', '')))
 
 update_free_license = lambda appfile: update_appfile(appfile, 'free-license', input_free_license(appfile.get('free-license', 'yes')))
 

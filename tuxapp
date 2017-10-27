@@ -329,6 +329,11 @@ build_app_bsdtar_arguments = lambda app: \
     ('env', "LD_LIBRARY_PATH={}".format(get_app_library_path(app)))
   ) + ("{}/usr/bin/bsdtar".format(get_app_root_path(app)),)
 
+build_app_executable = lambda app: \
+  resolve_app_executable(app, query_appfile(app, 'executable')) \
+    if query_appfile(app, 'executable') else \
+  detect_app_executable(app)
+
 build_request_arguments = lambda curl_options=(), wget_options=(): \
   ('curl', '-#Lf',
     '-H', "Accept-Encoding: gzip",
@@ -370,8 +375,6 @@ check_apps_updated = outputs(
 
 detect_app_executable = asserts("Failed to detect the executable file of {}")(
   lambda app: \
-    resolve_app_executable(app, query_appfile(app, 'executable')) \
-      if query_appfile(app, 'executable') else \
     'AppRun' \
       if os.access("{}/AppRun".format(get_app_distribution_path(app)), os.X_OK) else \
     filter_app_executable(app, "/usr/bin") \
@@ -791,7 +794,7 @@ declare -r base_path=${0%/*/*}
 declare -r browser_path=${0%/*}/""" + quote_argument(get_app_relative_path(app, install_app_browser(app))) + r"""
 declare -r cache_path=${XDG_CACHE_HOME-~/.cache}/""" + quote_argument(os.path.relpath(get_cache_path(), get_xdg_cache_path())) + r"""
 declare -r distribution_path=${0%/*}/""" + quote_argument(get_app_relative_path(app, get_app_distribution_path(app))) + r"""
-declare -r executable_arguments=(""" + sanitize_app_executable(app, detect_app_executable(app)) + r""")
+declare -r executable_arguments=(""" + sanitize_app_executable(app, build_app_executable(app)) + r""")
 declare -r firejail_options=(""" + sanitize_command(query_appfile(app, 'firejail')) + r""")
 declare -r firejail_options_path=${0%/*}/""" + quote_argument(get_app_relative_path(app, get_app_firejail_options_path(app))) + r"""
 declare -r root_path=${0%/*}/""" + quote_argument(get_app_relative_path(app, get_app_root_path(app))) + r"""
