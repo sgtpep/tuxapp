@@ -63,9 +63,9 @@ class BaseParser(HTMLParser):
     getattr(self, 'on_data', lambda *args, **kwargs: None)(self.previous_tag, self.previous_attributes, data)
     if self.contents_tag:
       self.contents += data
-    if attributes.get('itemprop'):
+    if self.previous_attributes.get('itemprop'):
       type = self.previous_attributes['itemtype'].rsplit('/', 1)[-1] if 'itemtype' in self.previous_attributes else None
-      getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(type, attributes['itemprop'], data)
+      getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(type, self.previous_attributes['itemprop'], data)
     if self.previous_tag == 'script' and self.previous_attributes.get('type') == 'application/ld+json' and data.strip():
       import json
       decoded_data = json.loads(data)
