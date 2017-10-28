@@ -201,6 +201,7 @@ validate_capitalized = tuxapp.asserts("Not capitalized")(
 
 validate_category = lambda category: \
   validate_text(category) and \
+  tuxapp.asserts("Only one is allowed")(lambda category: ' ' not in category)(category) and \
   tuxapp.asserts("Unknown category")(lambda category: category in get_categories())(category)
 
 validate_command = tuxapp.asserts("Failed to parse")(
@@ -241,6 +242,7 @@ validate_free_license = lambda value: \
 
 validate_group = lambda group, is_permissive=False: \
   validate_text(group) and \
+  tuxapp.asserts("Only one is allowed")(lambda group: ' ' not in group)(group) and \
   (is_permissive or tuxapp.asserts("Unknown group")(lambda group: group in get_groups())(group))
 
 validate_homepage_contains = tuxapp.asserts("Not found on the homepage")(
