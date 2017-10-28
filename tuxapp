@@ -457,7 +457,7 @@ execute_process = lambda arguments, environment=None: \
     if environment else \
   os.execvp(arguments[0], arguments)
 
-expand_package = lambda package: get_package_groups().get(package, (package,))
+expand_packages = lambda packages: tuple(package for package in packages for package in get_package_groups().get(package, (package,)))
 
 extract_app = lambda string: os.path.basename(string)
 
@@ -1076,7 +1076,7 @@ query_appfile_download_urls = asserts("No download URL of {} for your architectu
 
 query_appfile_name = lambda app: query_appfile(app, 'name') or app
 
-query_appfile_packages = lambda app: tuple(package for package in query_appfile(app, 'packages').split() for package in expand_package(package))
+query_appfile_packages = lambda app: expand_packages(query_appfile(app, 'packages').split())
 
 query_appfile_version_url = lambda app: query_appfile(app, 'version-url') or query_appfile(app, 'homepage-url')
 
