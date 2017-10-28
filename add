@@ -465,7 +465,7 @@ update_appfile = tuxapp.logs_result(
 
 update_category = lambda appfile: update_appfile(appfile, 'category', input_category(appfile.get('category', '')))
 
-update_description = lambda appfile: update_appfile(appfile, 'description', input_description(appfile['app'], appfile.get('description', filter_description(parse_description(appfile['homepage-url'])))))
+update_description = lambda appfile: update_appfile(appfile, 'description', input_description(appfile['app'], appfile['description'] if 'description' in appfile else filter_description(parse_description(appfile['homepage-url']))))
 
 update_download_x86_64_url = lambda appfile: update_appfile(appfile, 'download-x86-64-url', input_download_url(appfile['app'], 'x86-64', appfile.get('download-x86-64-url', '')))
 
@@ -479,15 +479,15 @@ update_group = lambda appfile: update_appfile(appfile, 'group', input_group(appf
 
 update_homepage_url = lambda appfile: update_appfile(appfile, 'homepage-url', input_homepage_url(appfile.get('homepage-url', '')))
 
-update_icon_url = lambda appfile: update_appfile(appfile, 'icon-url', input_icon_url(appfile.get('icon-url') or open_url(filter_url(parse_icon_url(appfile['homepage-url'])))))
+update_icon_url = lambda appfile: update_appfile(appfile, 'icon-url', input_icon_url(appfile['icon-url'] if 'icon-url' in appfile else open_url(filter_url(parse_icon_url(appfile['homepage-url'])))))
 
-update_name = lambda appfile: update_appfile(appfile, 'name', input_name(appfile['app'], appfile.get('name', filter_name(parse_name(appfile['homepage-url'])))))
+update_name = lambda appfile: update_appfile(appfile, 'name', input_name(appfile['app'], appfile['name'] if 'name' in appfile else filter_name(parse_name(appfile['homepage-url']))))
 
-update_title = lambda appfile: update_appfile(appfile, 'title', input_title(appfile['app'], appfile.get('title', filter_title(parse_title(appfile['homepage-url'])))))
+update_title = lambda appfile: update_appfile(appfile, 'title', input_title(appfile['app'], appfile['title'] if 'title' in appfile else filter_title(parse_title(appfile['homepage-url']))))
 
 update_version_url = lambda appfile: update_appfile(appfile, 'version-url', input_version_url(appfile['homepage-url'], appfile.get('version-url', '')))
 
-update_version_regex = lambda appfile: update_appfile(appfile, 'version-regex', input_version_regex(appfile['app'], appfile.get('version-regex', detect_version_regex(fetch_url(appfile.get('version-url') or appfile['homepage-url'])))))
+update_version_regex = lambda appfile: update_appfile(appfile, 'version-regex', input_version_regex(appfile['app'], appfile['version-regex'] if 'version-regex' in appfile else detect_version_regex(fetch_url(appfile.get('version-url') or appfile['homepage-url']))))
 
 write_appfile = lambda appfile: \
   tuxapp.remove_file(tuxapp.get_appfile_path(get_default_app())) and \
