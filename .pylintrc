@@ -7,7 +7,7 @@ init-hook="import sys; sys.path.append('.')"
 load-plugins=lib.order_checker
 
 [MESSAGES CONTROL]
-disable=bad-continuation, invalid-name, line-too-long, locally-disabled, missing-docstring, no-self-use, redefined-builtin, too-many-lines, ungrouped-imports, unnecessary-lambda, used-before-assignment
+disable=bad-continuation, invalid-name, line-too-long, locally-disabled, missing-docstring, no-self-use, redefined-builtin, too-many-lines, ungrouped-imports, unnecessary-lambda, unused-argument, used-before-assignment
 
 [REPORTS]
 reports=no
