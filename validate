@@ -190,8 +190,8 @@ validate_appfile_keys = lambda app: \
   tuxapp.asserts("Extra lines")(lambda app: all('=' in line for line in tuxapp.read_appfile(app).splitlines()))(app) and \
   tuxapp.asserts("No trailing newline")(lambda app: tuxapp.read_appfile(app).endswith('\n'))(app) and \
   tuxapp.asserts("Not sorted")(lambda app: parse_appfile_keys(app) == tuple(sorted(parse_appfile_keys(app))))(app) and \
-  tuxapp.asserts("Extraneous keys")(lambda app: not set(parse_appfile_keys(app)) - set(get_appfile_keys()))(app) and \
-  tuxapp.asserts("Missing keys")(lambda app: not set(get_appfile_keys()) - set(parse_appfile_keys(app)))(app) and \
+  tuxapp.asserts("Extraneous keys")(lambda app: set(parse_appfile_keys(app)) <= set(get_appfile_keys()))(app) and \
+  tuxapp.asserts("Missing keys")(lambda app: set(parse_appfile_keys(app)) >= set(get_appfile_keys()))(app) and \
   tuxapp.asserts("Duplicated keys")(lambda app: sorted(set(parse_appfile_keys(app))) == sorted(parse_appfile_keys(app)))(app) and \
   tuxapp.asserts("Unknown error")(lambda app: parse_appfile_keys(app) == get_appfile_keys())(app)
 
