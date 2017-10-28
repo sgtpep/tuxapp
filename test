@@ -213,7 +213,10 @@ install_missing_container = lambda distribution: \
   tuxapp.write_file(get_container_installed_path(distribution)) and \
   distribution
 
-is_library_text = lambda string: re.search(r"\.so\b", string) and "/nacl_helper:" not in string and not re.search(r"\blibasound_module_conf_pulse\.so\b", string)
+is_library_text = lambda string: \
+  re.search(r"\.so\b| could not find or load the Qt platform plugin \"xcb\"", string) and \
+  "/nacl_helper:" not in string and \
+  not re.search(r"\blibasound_module_conf_pulse\.so\b", string)
 
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): \
