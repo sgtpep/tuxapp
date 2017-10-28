@@ -265,7 +265,7 @@ check_url_protocol = lambda url: url.replace("http://", "https://", 1) if valida
 complete_packages = lambda text, state: \
   (
     [item for item in tuxapp.get_package_groups().keys() if item.startswith(text)] + \
-    tuxapp.read_process(('grep', '-Pho', '-m', '10', "(?<=/){}[^/_]*(?=_)".format(tuxapp.quote_argument(text))) + tuxapp.silences(tuxapp.update_package_lists)()).splitlines()
+    tuxapp.read_process(('grep', '-Pho', '-m', '10', "(?<=/){}[^/_]*(?=_)".format(tuxapp.quote_argument(text))) + tuxapp.update_package_lists()).splitlines()
   )[state]
 
 detect_app_executable = lambda app: \
