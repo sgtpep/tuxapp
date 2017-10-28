@@ -503,9 +503,9 @@ update_packages = lambda appfile: update_appfile(appfile, 'packages', input_pack
 
 update_title = lambda appfile: update_appfile(appfile, 'title', input_title(appfile['app'], appfile['title'] if 'title' in appfile else filter_title(parse_title(appfile['homepage-url']))))
 
-update_version_url = lambda appfile: update_appfile(appfile, 'version-url', input_version_url(appfile['homepage-url'], appfile.get('version-url', '')))
-
 update_version_regex = lambda appfile: update_appfile(appfile, 'version-regex', input_version_regex(appfile['app'], appfile['version-regex'] if 'version-regex' in appfile else detect_version_regex(fetch_url(appfile.get('version-url') or appfile['homepage-url']))))
+
+update_version_url = lambda appfile: update_appfile(appfile, 'version-url', input_version_url(appfile['homepage-url'], appfile.get('version-url', '')))
 
 write_appfile = lambda appfile: \
   tuxapp.remove_file(tuxapp.get_appfile_path(get_default_app())) and \
