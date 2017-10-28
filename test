@@ -111,8 +111,8 @@ deb http://security.debian.org/ {0}/updates main
   """) and \
   all(tuxapp.remove_file(path) for filename in ("libSM.so", "libXt.so") for path in glob.iglob("{}/usr/lib/*-linux-gnu/{}*".format(get_container_path('debian'), filename)))
 
-detect_missing_libraries = tuxapp.does(lambda distribution, app, *args, **kwargs: \
-  kwargs['result'] and print("{} on {}: missing {}".format(
+detect_missing_app_libraries = tuxapp.does(lambda distribution, app, *args, **kwargs: \
+  kwargs['result'] and print("Missing libraries for {} on {}: {}".format(
     app,
     distribution,
     ", ".join(kwargs['result']),
@@ -170,6 +170,8 @@ get_debian_package_url = lambda package: \
     package,
   )
 
+get_test_distributions = lambda: ('debian', 'arch')
+
 install_arch_container = lambda: \
   tuxapp.unpack_tarball(tuxapp.download_missing_cache_file(fetch_arch_container_url()), get_container_path('arch'), ("--strip-components=1",)) and \
   tuxapp.change_file_mode("{}/etc/ca-certificates/extracted/cadir".format(get_container_path('arch')), lambda mode: mode | stat.S_IWUSR) and \
@@ -226,11 +228,13 @@ main = tuxapp.handles_exceptions(
 
 parse_distribution_arguments = lambda arguments: 'arch' if parse_arguments(arguments).arch else 'debian'
 
-read_app_process = lambda distribution, app: tuxapp.read_process(('timeout', '-s', '9', '3') + build_bwrap_arguments(install_missing_container(distribution), tuxapp.check_app_installed(app)), stderr=subprocess.STDOUT)
+read_app_process = tuxapp.logs("Trying {1} on {0}")(
+  lambda distribution, app: tuxapp.read_process(('timeout', '-s', '9', '3') + build_bwrap_arguments(install_missing_container(distribution), tuxapp.check_app_installed(app)), stderr=subprocess.STDOUT)
+)
 
 test_app = lambda app: \
   tuxapp.install_app(app) and \
-  all(not detect_missing_libraries(distribution, app) for distribution in ('debian', 'arch')) and \
+  all(not detect_missing_app_libraries(distribution, app) for distribution in get_test_distributions()) and \
   tuxapp.remove_app(app) and \
   all(tuxapp.remove_file(path) for path in glob.iglob("{}/{}-*".format(tuxapp.get_cache_path(), app)))
 
