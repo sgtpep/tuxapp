@@ -266,10 +266,6 @@ detect_app_executable = lambda app: \
   tuxapp.install_app_distribution(app) and \
   strip_bin_path(tuxapp.unasserts('')(tuxapp.detect_app_executable)(app))
 
-detect_app_executables = lambda app: \
-  tuxapp.install_app_distribution(app) and \
-  tuple(sorted(set(strip_bin_path("{}/{}".format(path, filename).replace("{}/".format(tuxapp.get_app_distribution_path(app)), '', 1)) for path, _, filenames in os.walk(tuxapp.get_app_distribution_path(app)) if "/node_modules/" not in path for filename in filenames if tuxapp.is_file_executable("{}/{}".format(path, filename)))))
-
 detect_version_regex = lambda html: \
   "/download/v([^/]+)" \
     if re.search(r"\bgithub\.com/[\w-]+/[\w-]+/releases/download/\w", html) else \
@@ -374,8 +370,8 @@ input_executable = \
       validate.validate_executable(kwargs['result']) and \
       (not kwargs['result'] or tuxapp.resolve_app_executable(app, kwargs['result']))
   )(
-  tuxapp.logs(lambda app, *args, **kwargs: "Executables: {}".format(", ".join(detect_app_executables(app))))(
-    lambda app, prefill='': filter_executable(app, input_text("Executable{}".format(" (default: {})".format(detect_app_executable(app)) if detect_app_executable(app) else ''), prefill, detect_app_executables(app)))
+  tuxapp.logs(lambda app, *args, **kwargs: "Executables: {}".format(", ".join(list_app_executables(app))))(
+    lambda app, prefill='': filter_executable(app, input_text("Executable{}".format(" (default: {})".format(detect_app_executable(app)) if detect_app_executable(app) else ''), prefill, list_app_executables(app)))
   ))
 
 input_free_license = validates(lambda *args, **kwargs: validate.validate_free_license(kwargs['result']))(
@@ -413,6 +409,10 @@ input_version_regex = \
 input_version_url = validates(lambda *args, **kwargs: validate.validate_version_url(kwargs['result']))(
   lambda homepage_url, prefill='': filter_version_url(homepage_url, filter_url(input_text("Version URL (default: {})".format(homepage_url), prefill)))
 )
+
+list_app_executables = lambda app: \
+  tuxapp.install_app_distribution(app) and \
+  tuple(sorted(set(strip_bin_path(path.replace("{}/".format(tuxapp.get_app_distribution_path(app)), '', 1)) for path in tuxapp.list_app_distribution(app) if tuxapp.is_file_executable(path))))
 
 normalize_url = lambda page_url, url, base_url=None: \
   url \
