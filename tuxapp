@@ -721,8 +721,8 @@ install_app = \
       get_app_path(app)
   )))
 
-install_app_appfile_packages = lambda app: \
-  all(install_app_packages(app, query_appfile_packages(app), (
+install_app_appfile_packages = lambda app, packages=None: \
+  all(install_app_packages(app, query_appfile_packages(app) if packages is None else packages, (
     "/bin",
     "/etc",
     "/sbin",
