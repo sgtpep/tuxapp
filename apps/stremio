@@ -1,8 +1,8 @@
 category=video
 description=Stremio is a one-stop hub for video content aggregation. Discover, organize and watch video from all kind of sources on any device that you own. Movies, TV shows, series, live television or web channels like YouTube and Twitch.tv - you can find all this on Stremio.
-download-x86-64-url=https://www.strem.io/download?platform=linux&four=true
+download-x86-64-url=https://www.strem.io/download?platform=linux
 download-x86-url=
-executable=
+executable=Stremio.sh
 firejail=
 free-license=
 group=video-streaming
@@ -10,7 +10,7 @@ homepage-url=https://www.strem.io/
 icon-url=https://www.strem.io/favicon-96x96.png
 name=Stremio
 note=
-packages=libasound2 libgtk2.0-0 libnss3 libusb-1.0-0
+packages=group-electron
 title=Watch videos, movies, TV series and TV channels instantly
-version-regex= data-version="([^"]+)
-version-url=
+version-regex="Stremio ([^ "]+)(?! beta)"
+version-url=https://www.strem.io/downloads
