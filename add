@@ -262,6 +262,12 @@ check_name = lambda url, name: name if validate.check_page_contains(url, name, T
 
 check_url_protocol = lambda url: url.replace("http://", "https://", 1) if validate.is_url_valid(url) and not validate.check_url_protocol(url) else url
 
+complete_packages = lambda text, state: \
+  (
+    [item for item in tuxapp.get_package_groups().keys() if item.startswith(text)] + \
+    tuxapp.read_process(('grep', '-Pho', '-m', '10', "(?<=/){}[^/_]*(?=_)".format(tuxapp.quote_argument(text))) + tuxapp.silences(tuxapp.update_package_lists)()).splitlines()
+  )[state]
+
 detect_app_executable = lambda app: \
   tuxapp.install_app_distribution(app) and \
   strip_bin_path(tuxapp.unasserts('')(tuxapp.detect_app_executable)(app))
@@ -403,7 +409,7 @@ input_name = validates(lambda app, *args, **kwargs: validate.validate_name(app, 
 )
 
 input_packages = validates(lambda *args, **kwargs: validate.validate_packages(kwargs['result']))(
-  lambda prefill='': filter_packages(input_text("Packages", prefill))
+  lambda prefill='': filter_packages(input_text("Packages", prefill, complete_packages))
 )
 
 input_title = validates(lambda app, *args, **kwargs: validate.validate_title(app, kwargs['result']))(
