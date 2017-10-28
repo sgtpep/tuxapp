@@ -266,6 +266,8 @@ detect_app_executable = lambda app: \
   tuxapp.install_app_distribution(app) and \
   strip_bin_path(tuxapp.unasserts('')(tuxapp.detect_app_executable)(app))
 
+detect_app_packages = lambda app: 'group-electron' if any(os.path.basename(path) == "libnode.so" for path in tuxapp.list_app_distribution(app)) else ''
+
 detect_version_regex = lambda html: \
   "/download/v([^/]+)" \
     if re.search(r"\bgithub\.com/[\w-]+/[\w-]+/releases/download/\w", html) else \
@@ -299,6 +301,8 @@ filter_download_url_version = lambda app, url: url and url.replace(tuxapp.fetch_
 filter_executable = lambda app, command: '' if strip_bin_path(command.lstrip('/')) == detect_app_executable(app) else command
 
 filter_name = lambda name: name.rstrip(''.join(validate.get_punctuation()))
+
+filter_packages = lambda packages: ' '.join(sorted(set(packages.split())))
 
 filter_text = lambda string, is_whitespacy=False: \
   string.strip() \
@@ -335,6 +339,8 @@ get_update_functions = lambda: \
     update_version_regex,
     update_download_x86_64_url,
     update_download_x86_url,
+    update_executable,
+    update_packages,
   )
 
 input_app = validates(lambda *args, **kwargs: \
@@ -394,6 +400,10 @@ input_icon_url = validates(lambda *args, **kwargs: validate.validate_icon_url(kw
 
 input_name = validates(lambda app, *args, **kwargs: validate.validate_name(app, kwargs['result']))(
   lambda app, prefill='': filter_name(input_text("Name", prefill))
+)
+
+input_packages = validates(lambda *args, **kwargs: validate.validate_packages(kwargs['result']))(
+  lambda prefill='': filter_packages(input_text("Packages", prefill))
 )
 
 input_title = validates(lambda app, *args, **kwargs: validate.validate_title(app, kwargs['result']))(
@@ -482,6 +492,8 @@ update_homepage_url = lambda appfile: update_appfile(appfile, 'homepage-url', in
 update_icon_url = lambda appfile: update_appfile(appfile, 'icon-url', input_icon_url(appfile['icon-url'] if 'icon-url' in appfile else open_url(filter_url(parse_icon_url(appfile['homepage-url'])))))
 
 update_name = lambda appfile: update_appfile(appfile, 'name', input_name(appfile['app'], appfile['name'] if 'name' in appfile else filter_name(parse_name(appfile['homepage-url']))))
+
+update_packages = lambda appfile: update_appfile(appfile, 'packages', input_packages(appfile['packages'] if 'packages' in appfile else detect_app_packages(appfile['app'])))
 
 update_title = lambda appfile: update_appfile(appfile, 'title', input_title(appfile['app'], appfile['title'] if 'title' in appfile else filter_title(parse_title(appfile['homepage-url']))))
 
