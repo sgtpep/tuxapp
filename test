@@ -118,7 +118,7 @@ detect_missing_app_libraries = tuxapp.does(lambda distribution, app, *args, **kw
     ", ".join(kwargs['result']),
   ), file=sys.stderr)
 )(
-  lambda distribution, app: tuple(sorted(set(re.search(r"[\w.-]+\.so[\w.-]*", line).group() for line in read_app_process(distribution, app).splitlines() if is_library_text(line))))
+  lambda distribution, app: tuple(sorted(set(extract_library(line) for line in read_app_process(distribution, app).splitlines() if is_library_text(line))))
 )
 
 execute_app = lambda distribution, app=None, arguments=(), is_trace=False: \
@@ -128,6 +128,11 @@ execute_app = lambda distribution, app=None, arguments=(), is_trace=False: \
 execute_bwrap = lambda distribution, app=None, arguments=(), is_trace=False: tuxapp.execute_process(build_bwrap_arguments(install_missing_container(distribution), app, arguments, is_trace))
 
 execute_root_bwrap = lambda distribution: tuxapp.execute_process(build_root_bwrap_arguments(install_missing_container(distribution)))
+
+extract_library = lambda string: \
+  "libqxcb.so" \
+    if " could not find or load the Qt platform plugin \"xcb\"" in string else \
+  tuxapp.search(r"[\w.-]+\.so[\w.-]*", string)
 
 fetch_arch_container_url = lambda: get_arch_url("iso/latest/") + tuxapp.fetch_grep_url(get_arch_url("iso/latest/"), ('-Po', '-m', '1', "(?<=\")archlinux-bootstrap-[^\"]+"))
 
