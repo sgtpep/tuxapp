@@ -211,9 +211,10 @@ def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
     history_path = os.path.expanduser("~/.python_history")
     if hasattr(sys, 'ps1') and os.path.isfile(history_path):
       readline.write_history_file(history_path)
-    completer, delimeters = readline.get_completer(), readline.get_completer_delims()
+    completer = readline.get_completer()
     readline.set_completer(choices if hasattr(choices, '__call__') else lambda text, state: tuple(choice for choice in choices if choice.startswith(text))[state])
-    readline.set_completer_delims('')
+    delimeters = readline.get_completer_delims()
+    readline.set_completer_delims(' ')
     try:
       import builtins
     except ImportError:
@@ -262,7 +263,7 @@ check_url_protocol = lambda url: url.replace("http://", "https://", 1) if valida
 
 complete_packages = lambda text, state: \
   (
-    [item for item in tuxapp.get_package_groups().keys() if item.startswith(text)] + \
+    [item for item in tuxapp.get_package_groups().keys() if text and item.startswith(text)] + \
     tuxapp.read_process(('grep', '-Pho', '-m', '10', "(?<=/){}[^/_]*(?=_)".format(tuxapp.quote_argument(text))) + tuxapp.update_package_lists()).splitlines()
   )[state]
 
