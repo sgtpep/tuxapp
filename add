@@ -11,6 +11,7 @@ try:
 except ImportError:
   from HTMLParser import HTMLParser
 
+test = imp.load_source('test', os.path.join(os.path.dirname(__file__), 'test'))
 tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
 validate = imp.load_source('validate', os.path.join(os.path.dirname(__file__), 'validate'))
 
@@ -204,6 +205,31 @@ class TitleParser(BaseParser):
     elif tag == 'title':
       self.read_contents(tag, attributes)
 
+def detect_app_library_packages(app, packages=()):
+  tuxapp.install_app_appfile_packages(app, tuxapp.expand_packages(packages))
+  for distribution in test.get_test_distributions():
+    filenames = test.detect_missing_app_libraries(distribution, app)
+    package = next((get_library_package(filename) for filename in filenames if get_library_package(filename)), None)
+    if package:
+      return detect_app_library_packages(app, packages + (package,))
+    else:
+      for filename in filenames:
+        package = tuxapp.fetch_grep_url("https://packages.debian.org/search?suite={}&arch={}&searchon=contents&keywords=/{}".format(
+          tuxapp.get_debian_release(),
+          tuxapp.detect_debian_architecture(),
+          filename,
+        ), ('-Po', '-m', '1', "(?<=\"/{}/)[^\"]+".format(tuxapp.get_debian_release())))
+        if package and package not in packages:
+          return detect_app_library_packages(app, packages + (package,))
+  return packages
+
+def execute_app(appfile):
+  for distribution in test.get_test_distributions():
+    print("Executing {} on {}".format(appfile['app'], distribution), file=sys.stderr)
+    tuxapp.call_process(test.build_bwrap_arguments(distribution, appfile['app']))
+    if input_boolean("Edit packages?", True):
+      raise KeyboardInterrupt
+
 def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
   try:
     import readline
@@ -271,7 +297,18 @@ detect_app_executable = lambda app: \
   tuxapp.install_app_distribution(app) and \
   strip_bin_path(tuxapp.unasserts('')(tuxapp.detect_app_executable)(app))
 
-detect_app_packages = lambda app: 'group-electron' if any(os.path.basename(path) == "libnode.so" for path in tuxapp.list_app_distribution(app)) else ''
+detect_app_package_groups = lambda filenames: \
+  ('group-chromium',) \
+    if "nw_100_percent.pak" in filenames else \
+  ('group-electron',) \
+    if "atom.asar" in filenames or "cef.pak" in filenames or "electron.asar" in filenames else \
+  ()
+
+detect_app_packages = lambda app, packages='', installed_packages='': \
+  packages \
+    if packages and packages == installed_packages else \
+  (packages and set(packages.split()) >= set(installed_packages.split()) or tuxapp.remove_directory(tuxapp.get_app_root_path(app))) and \
+  ' '.join(detect_app_library_packages(app, tuple(packages.split()) or detect_app_package_groups(set(os.path.basename(path) for path in tuxapp.list_app_distribution(app)))))
 
 detect_version_regex = lambda html: \
   r"/download/v([^/]+)" \
@@ -329,6 +366,12 @@ generate_appfile = lambda appfile: '\n'.join(u"{}={}".format(key, appfile[key]) 
 
 get_default_app = lambda: 'temp'
 
+get_library_package = lambda filename: \
+  {
+    "libatomic.so.1": 'libatomic1',
+    "libgobject-2.0.so.0": 'libgtk2.0-0',
+  }.get(filename)
+
 get_update_functions = lambda: \
   (
     update_homepage_url,
@@ -346,6 +389,7 @@ get_update_functions = lambda: \
     update_download_x86_url,
     update_executable,
     update_packages,
+    execute_app,
   )
 
 input_app = validates(lambda *args, **kwargs: \
@@ -407,9 +451,14 @@ input_name = validates(lambda app, *args, **kwargs: validate.validate_name(app, 
   lambda app, prefill='': filter_name(input_text("Name", prefill))
 )
 
-input_packages = validates(lambda *args, **kwargs: validate.validate_packages(kwargs['result']))(
-  lambda prefill='': filter_packages(input_text("Packages", prefill, complete_packages))
-)
+input_packages = \
+  validates(
+    lambda app, prefill='', *args, **kwargs: \
+      validate.validate_packages(kwargs['result']) and \
+      tuxapp.asserts("Checked for missing packages")(lambda packages, installed_packages: packages == installed_packages)(kwargs['result'], prefill)
+  )(
+    lambda app, prefill='': filter_packages(detect_app_packages(app, filter_packages(input_text("Packages", prefill, complete_packages)), prefill))
+  )
 
 input_title = validates(lambda app, *args, **kwargs: validate.validate_title(app, kwargs['result']))(
   lambda app, prefill='': filter_title(input_text("Title", prefill))
@@ -498,7 +547,7 @@ update_icon_url = lambda appfile: update_appfile(appfile, 'icon-url', input_icon
 
 update_name = lambda appfile: update_appfile(appfile, 'name', input_name(appfile['app'], appfile['name'] if 'name' in appfile else filter_name(parse_name(appfile['homepage-url']))))
 
-update_packages = lambda appfile: update_appfile(appfile, 'packages', input_packages(appfile['packages'] if 'packages' in appfile else detect_app_packages(appfile['app'])))
+update_packages = lambda appfile: update_appfile(appfile, 'packages', input_packages(appfile['app'], appfile['packages'] if 'packages' in appfile else filter_packages(detect_app_packages(appfile['app']))))
 
 update_title = lambda appfile: update_appfile(appfile, 'title', input_title(appfile['app'], appfile['title'] if 'title' in appfile else filter_title(parse_title(appfile['homepage-url']))))
 
