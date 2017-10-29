@@ -274,13 +274,13 @@ detect_app_executable = lambda app: \
 detect_app_packages = lambda app: 'group-electron' if any(os.path.basename(path) == "libnode.so" for path in tuxapp.list_app_distribution(app)) else ''
 
 detect_version_regex = lambda html: \
-  "/download/v([^/]+)" \
+  r"/download/v([^/]+)" \
     if re.search(r"\bgithub\.com/[\w-]+/[\w-]+/releases/download/\w", html) else \
-  '"softwareVersion"\s*:\s*"([^"]+)' \
+  r'"softwareVersion"\s*:\s*"([^"]+)' \
     if re.search(r'"softwareVersion"\s*:\s*"', html) else \
-  '"softwareVersion" content="([^"]+)' \
+  r'"softwareVersion" content="([^"]+)' \
     if '"softwareVersion" content="' in html else \
-  '"softwareVersion">([^<]+)' \
+  r'"softwareVersion">([^<]+)' \
     if '"softwareVersion">' in html else \
   ''
 
