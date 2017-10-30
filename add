@@ -336,9 +336,7 @@ filter_description = lambda description: \
     '' if description[-1] in validate.get_punctuation() else '.',
   )
 
-filter_download_url = lambda app, urls: filter_download_url_version(app, ' '.join(filter_url(url) for url in urls.split()))
-
-filter_download_url_version = lambda app, url: url and url.replace(tuxapp.fetch_app_version(app), "{version}")
+filter_download_url = lambda app, urls: ' '.join(filter_url(url) for url in urls.split()).replace(tuxapp.fetch_app_version(app), "{version}")
 
 filter_executable = lambda app, command: '' if strip_bin_path(command.lstrip('/')) == detect_app_executable(app) else command
 
