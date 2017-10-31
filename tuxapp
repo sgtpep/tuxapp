@@ -478,7 +478,7 @@ fetch_app_version = \
       head -c 1000000 2> /dev/null | \
       grep -Pao -m 1 -- {}
       """.format(
-        join_command_arguments(build_request_arguments(
+        join_arguments(build_request_arguments(
           ('-Ss', '-D', "/dev/stderr", query_appfile_version_url(app)),
           ('-Sq', '-O', '-', query_appfile_version_url(app)),
         )),
@@ -502,11 +502,11 @@ fetch_grep_url = \
       head -c 1000000 2> /dev/null | \
       grep {}
       """.format(
-        join_command_arguments(build_request_arguments(
+        join_arguments(build_request_arguments(
           ('-Ss', url),
           ('-q', '-O', '-', url),
         )),
-        join_command_arguments(arguments),
+        join_arguments(arguments),
       )).rstrip('\n')
   ))
 
@@ -530,7 +530,7 @@ fetch_url = \
       {} | \
       gzip -df 2> /dev/null | \
       head -c 1000000 2> /dev/null
-      """.format(join_command_arguments(build_request_arguments(
+      """.format(join_arguments(build_request_arguments(
         ('-Ss', url),
         ('-q', '-O', '-', url),
       ))))
@@ -1009,7 +1009,7 @@ is_tarball_nested = lambda path: is_file_list_nested(read_process(('tar', '-t', 
 
 is_zipfile_nested = lambda path: is_file_list_nested(read_process(('zipinfo', '-1', path)).splitlines())
 
-join_command_arguments = lambda arguments: ' '.join(quote_argument(argument) for argument in arguments)
+join_arguments = lambda arguments: ' '.join(quote_argument(argument) for argument in arguments)
 
 list_all_apps = outputs(lambda *args, **kwargs: '\n'.join(kwargs['result']))(
   lambda: tuple(fetch_grep_url("https://api.github.com/repos/{}/contents/apps".format(get_github_repository()), ('-Po', "(?<=\"name\": \")[^\"]+")).splitlines())
@@ -1106,7 +1106,7 @@ remove_app = \
     lambda app: remove_directory(get_app_path(app)) and remove_file(get_app_desktop_entry_path(app))
   ))
 
-resolve_app_executable = lambda app, command: join_command_arguments((resolve_app_executable_path(app, split_command(command)[0]),) + split_command(command)[1:])
+resolve_app_executable = lambda app, command: join_arguments((resolve_app_executable_path(app, split_command(command)[0]),) + split_command(command)[1:])
 
 resolve_app_executable_path = asserts("Failed to find the executable file: {1}")(
   lambda app, path: \
@@ -1137,12 +1137,12 @@ resolve_packages = lambda packages, resolved_packages=set(): functools.reduce(la
 packages, set())
 
 sanitize_app_executable = lambda app, command: \
-  join_command_arguments(("{}{}".format(
+  join_arguments(("{}{}".format(
     "./" if command.startswith("./") else '',
     patch_app_executable(os.path.realpath("{}/{}".format(get_app_distribution_path(app), split_command(command)[0]))).replace("{}/".format(get_app_distribution_path(app)), '', 1),
   ),) + split_command(command)[1:])
 
-sanitize_command = lambda command: join_command_arguments(split_command(command))
+sanitize_command = lambda command: join_arguments(split_command(command))
 
 search = lambda pattern, string, flags=0, group=0: \
   (getattr(re.search(pattern, string, flags), 'groups', lambda *args, **kwargs: ())() + (None,) * group)[group - 1] \
@@ -1163,7 +1163,7 @@ unpack_app_appimage2_distribution = \
     lambda app, path: \
       call_process("cd {} && {} 2> /dev/null".format(
         make_directories(get_app_path(app)),
-        join_command_arguments((('firejail', '--quiet') if is_command_exist('firejail') else ()) + (change_file_mode(path, lambda mode: mode | stat.S_IXUSR), '--appimage-extract')),
+        join_arguments((('firejail', '--quiet') if is_command_exist('firejail') else ()) + (change_file_mode(path, lambda mode: mode | stat.S_IXUSR), '--appimage-extract')),
       )) and \
       move_directory("{}/squashfs-root".format(get_app_path(app)), get_app_distribution_path(app))
   ))
