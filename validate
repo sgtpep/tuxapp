@@ -54,10 +54,6 @@ def validate_regex(pattern):
   except re.error:
     return False
 
-check_appfile_exists = tuxapp.asserts("Unknown app: {}")(
-  lambda app: os.path.isfile(tuxapp.get_appfile_path(app)) and app
-)
-
 check_page_contains = lambda url, string, is_case_sensitive=False: \
   bool(re.search(
     r"\b{}\b".format(re.escape(re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', string)))),
@@ -129,7 +125,7 @@ get_punctuation = lambda: ('.', '!', '?')
 is_url_valid = lambda url: not re.search(r"\s", url) and tuxapp.parse_url(url).scheme in ('http', 'https') and bool(tuxapp.parse_url(url).netloc)
 
 main = tuxapp.handles_exceptions(
-  lambda arguments=tuple(sys.argv[1:]): validate_appfiles(tuple(check_appfile_exists(tuxapp.extract_app(argument)) for argument in arguments) or (tuxapp.extract_app(path) for path in glob.iglob(tuxapp.get_appfile_path('*'))))
+  lambda arguments=tuple(sys.argv[1:]): validate_appfiles(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
 )
 
 parse_appfile = lambda app: tuple(line.split('=', 1) for line in tuxapp.read_appfile(app).splitlines())

@@ -257,7 +257,7 @@ def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
 @tuxapp.handles_exceptions
 def main(arguments=tuple(sys.argv[1:])):
   appfile = \
-    dict(validate.parse_appfile(validate.check_appfile_exists(tuxapp.extract_app(arguments[0]))), app=tuxapp.extract_app(arguments[0])) \
+    dict(validate.parse_appfile(tuxapp.extract_app(arguments[0])), app=tuxapp.extract_app(arguments[0])) \
       if arguments else \
     {'app': get_default_app()}
   step = 0
