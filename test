@@ -48,7 +48,6 @@ build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_trace=Fa
     '--ro-bind', "/sys", "/sys",
     '--setenv', 'TUXAPP_TEST', '1',
     '--tmpfs', "/tmp",
-    '--unshare-pid',
   ) + \
   tuple(option for path in get_bwrap_bind_paths() if os.path.isdir(path) for option in ('--ro-bind', path, path)) + \
   (('--setenv', 'TUXAPP_TRACE', '1') if is_trace else ()) + \
@@ -68,7 +67,6 @@ build_root_bwrap_arguments = lambda distribution: \
     '--proc', "/proc",
     '--ro-bind', "/etc/resolv.conf", "/etc/resolv.conf",
     '--tmpfs', "/tmp",
-    '--unshare-pid',
   ) + \
   ('env', '-u', 'LANG') + \
   (('fakechroot', 'fakeroot') if distribution == 'arch' else ('fakeroot-sysv',)) + \
@@ -237,7 +235,12 @@ main = tuxapp.handles_exceptions(
 parse_distribution_arguments = lambda arguments: 'arch' if parse_arguments(arguments).arch else 'debian'
 
 read_app_process = tuxapp.logs("Trying {1} on {0}")(
-  lambda distribution, app: tuxapp.read_process(('timeout', '-s', '9', '3') + build_bwrap_arguments(install_missing_container(distribution), tuxapp.check_app_installed(app)), stderr=subprocess.STDOUT)
+  lambda distribution, app: \
+    tuxapp.read_process(('timeout', '-s', '9', '3', 'bash', '-c', r"""
+    path=/tmp/tuxapp-test
+    ( flock 9; "$@" ) 9> "$path"
+    flock 0 < "$path"
+    """, '--') + build_bwrap_arguments(install_missing_container(distribution), tuxapp.check_app_installed(app)), stderr=subprocess.STDOUT)
 )
 
 test_app = lambda app: \
