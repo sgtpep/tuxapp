@@ -139,7 +139,7 @@ fetch_arch_package_url = lambda package: get_arch_package_url(package) + tuxapp.
 fetch_debian_package_url = lambda package: "{}{}".format(tuxapp.get_debian_url(), tuxapp.fetch_grep_url(get_debian_package_url(package), ('-o', '-m', '1', "[^/]*/pool/[^\"]*")))
 
 get_app_tested_path = lambda app: \
-  "{}/test-{}-{}-{}".format(
+  "{}/test/{}-{}-{}".format(
     tuxapp.get_cache_path(),
     app,
     tuxapp.fetch_app_version(app),
