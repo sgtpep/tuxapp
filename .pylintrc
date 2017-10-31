@@ -4,7 +4,7 @@ indent-string="  "
 
 [MASTER]
 init-hook="import sys; sys.path.append('.')"
-load-plugins=pylint.order_checker
+load-plugins=linting.order_checker
 
 [MESSAGES CONTROL]
 disable=bad-continuation, invalid-name, line-too-long, locally-disabled, missing-docstring, no-self-use, redefined-builtin, too-many-lines, ungrouped-imports, unnecessary-lambda, unused-argument, used-before-assignment
