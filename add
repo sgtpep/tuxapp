@@ -463,7 +463,7 @@ input_title = validates(lambda app, *args, **kwargs: validate.validate_title(app
 )
 
 input_version_regex = \
-  tuxapp.logs_result(lambda app, *args, **kwargs: "Detected version: {}".format(tuxapp.fetch_app_version.unmemoize() or tuxapp.fetch_app_version(app, kwargs['result'])))(
+  tuxapp.logs_result(lambda app, *args, **kwargs: "Detected version: {}".format(tuxapp.unmemoizes(tuxapp.fetch_app_version)(app, kwargs['result'])))(
   validates(lambda app, *args, **kwargs: validate.validate_version_regex(app, kwargs['result']))(
     lambda app, prefill='': input_text("Version regex", prefill, (), True)
   ))
