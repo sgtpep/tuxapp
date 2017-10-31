@@ -116,7 +116,7 @@ detect_missing_app_libraries = tuxapp.does(lambda distribution, app, *args, **kw
     ", ".join(kwargs['result']),
   ), file=sys.stderr)
 )(
-  lambda distribution, app: tuple(sorted(set(extract_library(line) for line in read_app_process(distribution, app).splitlines() if is_library_text(line))))
+  lambda distribution, app: tuple(sorted(set(extract_library(line) for line in try_app_process(distribution, app).splitlines() if is_library_text(line))))
 )
 
 execute_app = lambda distribution, app=None, arguments=(), is_trace=False: \
@@ -234,15 +234,6 @@ main = tuxapp.handles_exceptions(
 
 parse_distribution_arguments = lambda arguments: 'arch' if parse_arguments(arguments).arch else 'debian'
 
-read_app_process = tuxapp.logs("Trying {1} on {0}")(
-  lambda distribution, app: \
-    tuxapp.read_process(('timeout', '-s', '9', '3', 'bash', '-c', r"""
-    path=/tmp/tuxapp-test
-    ( flock 9; "$@" ) 9> "$path"
-    flock 0 < "$path"
-    """, '--') + build_bwrap_arguments(install_missing_container(distribution), tuxapp.check_app_installed(app)), stderr=subprocess.STDOUT)
-)
-
 test_app = lambda app: \
   tuxapp.install_app(app) and \
   all(not detect_missing_app_libraries(distribution, app) for distribution in get_test_distributions()) and \
@@ -254,6 +245,15 @@ test_updated_app = lambda app, path: \
     if os.path.isfile(path) else \
   test_app(app) and \
   tuxapp.write_file(path)
+
+try_app_process = tuxapp.logs("Trying {1} on {0}")(
+  lambda distribution, app: \
+    tuxapp.read_process(r"""
+    output=$(timeout -k 3 3 {} 2>&1)
+    kill $(echo "$output" | grep -Po "(?<= Process )\d+") 2> /dev/null
+    echo "$output"
+    """.format(tuxapp.join_arguments(build_bwrap_arguments(install_missing_container(distribution), tuxapp.check_app_installed(app))).replace(" bash ", " strace -f -e none bash ", 1)), stderr=subprocess.STDOUT)
+)
 
 if __name__ == '__main__':
   main()
