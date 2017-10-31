@@ -1,6 +1,6 @@
 *.pyc
-/__pycache__
 /addc
 /testc
 /tuxappc
 /validatec
+__pycache__
