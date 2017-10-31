@@ -811,7 +811,7 @@ function build_command_arguments {
 
   result_command_arguments=()
 
-  [[ ! ${TUXAPP_TRACE-} ]] || result_command_arguments+=(strace -e open,openat)
+  [[ ! ${TUXAPP_TRACE-} ]] || result_command_arguments+=(strace -f -e open,openat)
 
   if [[ ${executable_arguments[0]} == ./* ]]; then
     cd "$distribution_path"
