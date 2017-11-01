@@ -33,7 +33,7 @@ def check_url(url):
     from httplib import BadStatusLine
     from urllib2 import Request, URLError, urlopen
   try:
-    return urlopen(Request(url, headers={'User-Agent': "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0"})).getcode() == 200
+    return urlopen(Request(url, headers={'User-Agent': tuxapp.get_user_agent()})).getcode() == 200
   except (BadStatusLine, URLError, ssl.CertificateError):
     return False
 

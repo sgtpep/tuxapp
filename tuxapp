@@ -344,12 +344,12 @@ build_app_executable = lambda app: \
   detect_app_executable(app)
 
 build_request_arguments = lambda curl_options=(), wget_options=(): \
-  ('curl', '-#Lf',
+  ('curl', '-#Lf', '-A', get_user_agent(),
     '-H', "Accept-Encoding: gzip",
     '-H', "Accept-Language: en",
   '-m', '10', '--retry', '2') + curl_options \
     if get_request_command() == 'curl' else \
-  ('wget', '-T', '10', '-t', '3', '-nv',
+  ('wget', '-T', '10', '-t', '3', '-nv', '-U', get_user_agent(),
     '--header', "Accept-Encoding: gzip",
     '--header', "Accept-Language: en",
   ) + wget_options
@@ -700,6 +700,8 @@ get_temp_download_path = lambda path='', is_url=False: \
     '/' if path else '',
     os.path.basename(parse_url(path).path if is_url else path),
   )
+
+get_user_agent = lambda: "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0"
 
 get_xdg_cache_path = lambda: os.environ.get('XDG_CACHE_HOME', os.path.expanduser("~/.cache"))
 
