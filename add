@@ -275,9 +275,9 @@ def main(arguments=tuple(sys.argv[1:])):
   step = 0
   while True:
     try:
-      appfile = get_update_functions()[step](appfile)
+      appfile = get_update_appfile_functions()[step](appfile)
       step += 1
-      if step == len(get_update_functions()):
+      if step == len(get_update_appfile_functions()):
         break
     except EOFError:
       raise KeyboardInterrupt
@@ -382,23 +382,23 @@ get_library_package = lambda filename: \
     "libgobject-2.0.so.0": 'libgtk2.0-0',
   }.get(filename)
 
-get_update_functions = lambda: \
+get_update_appfile_functions = lambda: \
   (
-    update_homepage_url,
-    update_name,
-    update_app,
-    update_category,
-    update_group,
-    update_free_license,
-    update_icon_url,
-    update_title,
-    update_description,
-    update_version_url,
-    update_version_regex,
-    update_download_x86_64_url,
-    update_download_x86_url,
-    update_executable,
-    update_packages,
+    update_appfile_homepage_url,
+    update_appfile_name,
+    update_appfile_app,
+    update_appfile_category,
+    update_appfile_group,
+    update_appfile_free_license,
+    update_appfile_icon_url,
+    update_appfile_title,
+    update_appfile_description,
+    update_appfile_version_url,
+    update_appfile_version_regex,
+    update_appfile_download_x86_64_url,
+    update_appfile_download_x86_url,
+    update_appfile_executable,
+    update_appfile_packages,
     execute_app,
   )
 
@@ -523,8 +523,6 @@ parse_title = lambda url: parse_html(TitleParser, fetch_url(url))
 
 strip_bin_path = lambda command: re.sub(r"^usr/bin/", '', command)
 
-update_app = lambda appfile: update_appfile(appfile, 'app', input_app(filter_app(appfile.get('name', ''))))
-
 update_appfile = tuxapp.logs_result(
   lambda *args, **kwargs: \
     u"> {}:\n{}".format(
@@ -537,33 +535,35 @@ update_appfile = tuxapp.logs_result(
     dict(appfile, **{key: value})
 )
 
-update_category = lambda appfile: update_appfile(appfile, 'category', input_category(appfile.get('category', '')))
+update_appfile_app = lambda appfile: update_appfile(appfile, 'app', input_app(filter_app(appfile.get('name', ''))))
 
-update_description = lambda appfile: update_appfile(appfile, 'description', input_description(appfile['app'], appfile['description'] if 'description' in appfile else filter_description(parse_description(appfile['homepage-url']))))
+update_appfile_category = lambda appfile: update_appfile(appfile, 'category', input_category(appfile.get('category', '')))
 
-update_download_x86_64_url = lambda appfile: update_appfile(appfile, 'download-x86-64-url', input_download_url(appfile['app'], 'x86-64', appfile.get('download-x86-64-url', '')))
+update_appfile_description = lambda appfile: update_appfile(appfile, 'description', input_description(appfile['app'], appfile['description'] if 'description' in appfile else filter_description(parse_description(appfile['homepage-url']))))
 
-update_download_x86_url = lambda appfile: update_appfile(appfile, 'download-x86-url', input_download_url(appfile['app'], 'x86', appfile.get('download-x86-url', '')))
+update_appfile_download_x86_64_url = lambda appfile: update_appfile(appfile, 'download-x86-64-url', input_download_url(appfile['app'], 'x86-64', appfile.get('download-x86-64-url', '')))
 
-update_executable = lambda appfile: update_appfile(appfile, 'executable', input_executable(appfile['app'], appfile.get('executable', '')))
+update_appfile_download_x86_url = lambda appfile: update_appfile(appfile, 'download-x86-url', input_download_url(appfile['app'], 'x86', appfile.get('download-x86-url', '')))
 
-update_free_license = lambda appfile: update_appfile(appfile, 'free-license', input_free_license(appfile.get('free-license', 'yes')))
+update_appfile_executable = lambda appfile: update_appfile(appfile, 'executable', input_executable(appfile['app'], appfile.get('executable', '')))
 
-update_group = lambda appfile: update_appfile(appfile, 'group', input_group(appfile.get('group', '')))
+update_appfile_free_license = lambda appfile: update_appfile(appfile, 'free-license', input_free_license(appfile.get('free-license', 'yes')))
 
-update_homepage_url = lambda appfile: update_appfile(appfile, 'homepage-url', input_homepage_url(appfile.get('homepage-url', '')))
+update_appfile_group = lambda appfile: update_appfile(appfile, 'group', input_group(appfile.get('group', '')))
 
-update_icon_url = lambda appfile: update_appfile(appfile, 'icon-url', input_icon_url(appfile['icon-url'] if 'icon-url' in appfile else open_url(filter_url(parse_icon_url(appfile['homepage-url'])))))
+update_appfile_homepage_url = lambda appfile: update_appfile(appfile, 'homepage-url', input_homepage_url(appfile.get('homepage-url', '')))
 
-update_name = lambda appfile: update_appfile(appfile, 'name', input_name(appfile['app'], appfile['name'] if 'name' in appfile else filter_name(parse_name(appfile['homepage-url']))))
+update_appfile_icon_url = lambda appfile: update_appfile(appfile, 'icon-url', input_icon_url(appfile['icon-url'] if 'icon-url' in appfile else open_url(filter_url(parse_icon_url(appfile['homepage-url'])))))
 
-update_packages = lambda appfile: update_appfile(appfile, 'packages', input_packages(appfile['app'], appfile['packages'] if 'packages' in appfile else filter_packages(detect_app_packages(appfile['app']))))
+update_appfile_name = lambda appfile: update_appfile(appfile, 'name', input_name(appfile['app'], appfile['name'] if 'name' in appfile else filter_name(parse_name(appfile['homepage-url']))))
 
-update_title = lambda appfile: update_appfile(appfile, 'title', input_title(appfile['app'], appfile['title'] if 'title' in appfile else filter_title(parse_title(appfile['homepage-url']))))
+update_appfile_packages = lambda appfile: update_appfile(appfile, 'packages', input_packages(appfile['app'], appfile['packages'] if 'packages' in appfile else filter_packages(detect_app_packages(appfile['app']))))
 
-update_version_regex = lambda appfile: update_appfile(appfile, 'version-regex', input_version_regex(appfile['app'], appfile['version-regex'] if 'version-regex' in appfile else detect_version_regex(fetch_url(appfile.get('version-url') or appfile['homepage-url']))))
+update_appfile_title = lambda appfile: update_appfile(appfile, 'title', input_title(appfile['app'], appfile['title'] if 'title' in appfile else filter_title(parse_title(appfile['homepage-url']))))
 
-update_version_url = lambda appfile: update_appfile(appfile, 'version-url', input_version_url(appfile['homepage-url'], appfile.get('version-url', '')))
+update_appfile_version_regex = lambda appfile: update_appfile(appfile, 'version-regex', input_version_regex(appfile['app'], appfile['version-regex'] if 'version-regex' in appfile else detect_version_regex(media.fetch_url_cached(appfile.get('version-url') or appfile['homepage-url']))))
+
+update_appfile_version_url = lambda appfile: update_appfile(appfile, 'version-url', input_version_url(appfile['homepage-url'], appfile.get('version-url', '')))
 
 write_appfile = lambda appfile: \
   tuxapp.remove_file(tuxapp.get_appfile_path(get_default_app())) and \
