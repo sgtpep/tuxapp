@@ -1,0 +1,219 @@
+#!/usr/bin/env python
+from __future__ import print_function
+import functools
+import glob
+import imp
+import os
+import re
+import sys
+
+try:
+  from html.parser import HTMLParser
+except ImportError:
+  from HTMLParser import HTMLParser
+
+tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
+
+class BaseParser(HTMLParser):
+  contents = ''
+  contents_attributes = {}
+  contents_tag = None
+  is_head = False
+  previous_attributes = {}
+  previous_tag = None
+  schema_org_type = None
+
+  def __init__(self, *args, **kwargs):
+    HTMLParser.__init__(self, *args, **kwargs)
+    self.results = []
+
+  def add_result(self, result):
+    self.results.append(result)
+
+  def feed(self, *args, **kwargs):
+    HTMLParser.feed(self, *args, **kwargs)
+    self.raise_result()
+
+  def handle_data(self, data):
+    getattr(self, 'on_data', lambda *args, **kwargs: None)(self.previous_tag, self.previous_attributes, data.strip())
+    if self.contents_tag:
+      self.contents += data
+    if self.previous_attributes.get('itemprop'):
+      getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(self.schema_org_type, self.previous_attributes['itemprop'], data)
+    if self.previous_tag == 'script' and self.previous_attributes.get('type') == 'application/ld+json' and data.strip():
+      import json
+      decoded_data = json.loads(data)
+      items = decoded_data if isinstance(decoded_data, list) else [decoded_data]
+      for item in items:
+        getattr(self, 'on_json_ld', lambda *args, **kwargs: None)(item['@type'], item)
+
+  def handle_endtag(self, tag):
+    if tag == self.contents_tag:
+      getattr(self, 'on_contents', lambda *args, **kwargs: None)(self.contents_tag, self.contents_attributes, self.contents.strip())
+      self.contents = ''
+      self.contents_attributes = {}
+      self.contents_tag = None
+    if self.is_head and tag == 'head':
+      self.raise_result()
+
+  def handle_starttag(self, tag, attributes):
+    attributes = dict(attributes)
+    getattr(self, 'on_tag', lambda *args, **kwargs: None)(tag, attributes)
+    if attributes.get('itemtype'):
+      self.schema_org_type = attributes['itemtype'].rsplit('/', 1)[-1]
+    if tag == 'meta' and attributes.get('content') and attributes.get('itemprop'):
+      getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(self.schema_org_type, attributes['itemprop'], attributes['content'])
+    self.previous_attributes = attributes
+    self.previous_tag = tag
+
+  def raise_result(self):
+    if self.results:
+      raise ResultException(sorted(self.results, key=lambda item: item[:-1], reverse=True)[0][-1])
+
+  def read_contents(self, tag, attributes):
+    self.contents_attributes = attributes
+    self.contents_tag = tag
+
+class BaseURLParser(BaseParser):
+  def on_tag(self, tag, attributes):
+    if tag == 'base' and attributes.get('href'):
+      raise ResultException(attributes['href'])
+
+class ChangelogURLParser(BaseParser):
+  priority = (
+    'anchor',
+    'schema-org',
+    'json-ld',
+  )
+
+  def on_contents(self, tag, attributes, contents):
+    if tag == 'a' and re.match(r"^(changelog|release\s+notes|what[^\s]+s\s+new)\b", contents, re.I | re.S):
+      self.add_result((self.priority.index('anchor'), attributes['href']))
+
+  def on_json_ld(self, type, item):
+    if item.get('releaseNotes'):
+      self.add_result((self.priority.index('json-ld'), item['releaseNotes']))
+
+  def on_schema_org(self, type, property, content):
+    if property == 'releaseNotes':
+      self.add_result((self.priority.index('schema-org'), content))
+
+  def on_tag(self, tag, attributes):
+    if tag == 'a' and attributes.get('href'):
+      self.read_contents(tag, attributes)
+
+class DownloadsURLParser(BaseParser):
+  priority = (
+    'download',
+    'downloads',
+  )
+
+  def filter_url(self, url):
+    return re.sub(r"^.+\b(github\.com/[\w-]+/[\w-]+/releases)\b.*$", r"https://\1", url, 1)
+
+  def on_contents(self, tag, attributes, contents):
+    if tag == 'a':
+      if re.match(r"^(desktop\s+apps|downloads?)$", contents, re.I | re.S) or re.search(r"\s+(downloads|platforms)$", contents, re.I | re.S):
+        self.add_result((self.priority.index('downloads'), self.filter_url(attributes['href'])))
+      elif re.match(r"^[Dd]ownload\s+[A-Z]", contents, re.S):
+        self.add_result((self.priority.index('download'), self.filter_url(attributes['href'])))
+
+  def on_tag(self, tag, attributes):
+    if tag == 'a' and attributes.get('href'):
+      self.read_contents(tag, attributes)
+
+class ResultException(Exception):
+  pass
+
+def parse_html(parser, html):
+  try:
+    parser().feed(html)
+    return ''
+  except ResultException as exception:
+    return re.sub(r"\s+", ' ', exception.args[0].replace('\t', ' ')).strip() if exception.args else ''
+
+def update_app_media_worker(app):
+  return update_app_media(app)
+
+@tuxapp.silences
+def update_apps_media(apps):
+  import contextlib
+  import multiprocessing
+  with contextlib.closing(multiprocessing.Pool(10)) as pool:
+    return functools.reduce(lambda result, app_result: result and app_result, pool.imap_unordered(update_app_media_worker, apps), True)
+
+check_github_releases_url = lambda repository: \
+  "https://github.com/{}/releases".format(repository) \
+    if repository and not re.search(r"/releases$", fetch_headers_cached("https://github.com/{}/releases/latest".format(repository)), re.M) else \
+  ''
+
+extract_github_releases_url = lambda url: \
+  check_github_releases_url(
+    tuxapp.search(r"\bgithub\.com/([\w-]+/[\w-]+)/releases\b", fetch_url_cached(url), 0, 1) or \
+    tuxapp.search(r"\bgithub\.com/([\w-]+/[\w-]+)\b", fetch_url_cached(url), 0, 1)
+  )
+
+fetch_headers_cached = tuxapp.memoizes()(
+  lambda url: tuxapp.fetch_headers(url)
+)
+
+fetch_url_cached = tuxapp.memoizes()(
+  lambda url: tuxapp.fetch_url(url)
+)
+
+filter_app_changelog_url = lambda app, url: \
+  '' if re.search({
+    'firefox-developer-edition': r"/firefox/",
+  }.get(app, r"^$"), url) else url
+
+filter_app_download_url = lambda app, url: \
+  '' if re.search({
+    'firefox-developer-edition': r"/firefox/",
+    'google-chrome-beta': r"/chrome/browser/$",
+    'thunderbird': r"/firefox/",
+  }.get(app, r"^$"), url) else url
+
+main = tuxapp.handles_exceptions(
+  lambda arguments=tuple(sys.argv[1:]): update_apps_media(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
+)
+
+normalize_url = lambda page_url, url, base_url=None: \
+  url \
+    if re.match(r"^https?://", url) else \
+  "{}:{}".format(tuxapp.parse_url(page_url).scheme, url) \
+    if url.startswith("//") else \
+  "{0.scheme}://{0.netloc}{1}".format(tuxapp.parse_url(page_url), url) \
+    if url.startswith('/') else \
+  "{0.scheme}://{0.netloc}{1}{2}".format(
+    tuxapp.parse_url(base_url or parse_base_url(page_url)),
+    os.path.normpath(os.path.join(os.path.dirname(tuxapp.parse_url(base_url or parse_base_url(page_url)).path or '/'), url)),
+    '/' if url and url[-1] == '/' else '',
+  ) \
+    if url and url != '#' and not re.match(r"^\w+:", url) else \
+  ''
+
+parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url_cached(url)) or url, url)
+
+parse_changelog_url = lambda url: \
+  normalize_url(url,
+    parse_html(ChangelogURLParser, fetch_url_cached(url)) or \
+    parse_html(ChangelogURLParser, fetch_url_cached(normalize_url(url, parse_html(DownloadsURLParser, fetch_url_cached(url))) or url)) or \
+    extract_github_releases_url(url)
+  )
+
+parse_downloads_url = lambda url: \
+  normalize_url(url,
+    parse_html(DownloadsURLParser, fetch_url_cached(url)) or \
+    extract_github_releases_url(url)
+  )
+
+update_app_changelog_url = lambda app: filter_app_changelog_url(app, parse_changelog_url(app['homepage-url']))
+
+update_app_download_url = lambda app: filterapp_download_url(app, parse_download_url(app['homepage-url']))
+
+update_app_media = lambda app: \
+  update_app_changelog_url(app) and \
+  update_app_download_url(app)
+
+if __name__ == '__main__':
+  main()

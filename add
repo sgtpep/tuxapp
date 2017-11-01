@@ -6,11 +6,7 @@ import os
 import re
 import sys
 
-try:
-  from html.parser import HTMLParser
-except ImportError:
-  from HTMLParser import HTMLParser
-
+media = imp.load_source('media', os.path.join(os.path.dirname(__file__), 'media'))
 test = imp.load_source('test', os.path.join(os.path.dirname(__file__), 'test'))
 tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
 validate = imp.load_source('validate', os.path.join(os.path.dirname(__file__), 'validate'))
@@ -34,78 +30,7 @@ def validates(validate_function):
     return wrapper
   return decorator
 
-class BaseParser(HTMLParser):
-  contents = ''
-  contents_attributes = {}
-  contents_tag = None
-  is_head = False
-  previous_attributes = {}
-  previous_tag = None
-
-  data_types = (
-    'Product',
-    'SoftwareApplication',
-    'WebSite',
-  )
-
-  def __init__(self, *args, **kwargs):
-    HTMLParser.__init__(self, *args, **kwargs)
-    self.results = []
-
-  def add_result(self, result):
-    self.results.append(result)
-
-  def feed(self, *args, **kwargs):
-    HTMLParser.feed(self, *args, **kwargs)
-    self.raise_result()
-
-  def handle_data(self, data):
-    getattr(self, 'on_data', lambda *args, **kwargs: None)(self.previous_tag, self.previous_attributes, data)
-    if self.contents_tag:
-      self.contents += data
-    if self.previous_attributes.get('itemprop'):
-      type = self.previous_attributes['itemtype'].rsplit('/', 1)[-1] if 'itemtype' in self.previous_attributes else None
-      getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(type, self.previous_attributes['itemprop'], data)
-    if self.previous_tag == 'script' and self.previous_attributes.get('type') == 'application/ld+json' and data.strip():
-      import json
-      decoded_data = json.loads(data)
-      items = decoded_data if isinstance(decoded_data, list) else [decoded_data]
-      for item in items:
-        if item.get('@type') in self.data_types:
-          getattr(self, 'on_json_ld', lambda *args, **kwargs: None)(item)
-
-  def handle_endtag(self, tag):
-    if tag == self.contents_tag:
-      getattr(self, 'on_contents', lambda *args, **kwargs: None)(self.contents_tag, self.contents_attributes, self.contents)
-      self.contents = ''
-      self.contents_attributes = {}
-      self.contents_tag = None
-    if self.is_head and tag == 'head':
-      self.raise_result()
-
-  def handle_starttag(self, tag, attributes):
-    attributes = dict(attributes)
-    getattr(self, 'on_tag', lambda *args, **kwargs: None)(tag, attributes)
-    if tag == 'meta' and attributes.get('content') and attributes.get('itemprop'):
-      type = self.previous_attributes['itemtype'].rsplit('/', 1)[-1] if 'itemtype' in self.previous_attributes else None
-      getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(type, attributes['itemprop'], attributes['content'])
-    self.previous_attributes = attributes
-    self.previous_tag = tag
-
-  def raise_result(self):
-    if self.results:
-      raise ResultException(sorted(self.results)[-1][-1])
-
-  def read_contents(self, tag, attributes):
-    self.contents_attributes = attributes
-    self.contents_tag = tag
-
-class BaseURLParser(BaseParser):
-  def on_tag(self, tag, attributes):
-    if tag == 'base' and attributes.get('href'):
-      raise ResultException(attributes['href'])
-
-class DescriptionParser(BaseParser):
+class DescriptionParser(media.BaseParser):
   priority = (
     'description',
     'og-description',
@@ -138,7 +63,7 @@ class DescriptionParser(BaseParser):
       elif attributes.get('property') == 'og:description':
         self.add_result((self.priority.index('og-description'), attributes['content']))
 
-class IconURLParser(BaseParser):
+class IconURLParser(media.BaseParser):
   is_head = True
 
   rels = (
@@ -156,7 +81,7 @@ class IconURLParser(BaseParser):
         attributes['href'],
       ))
 
-class NameParser(BaseParser):
+class NameParser(media.BaseParser):
   priority = (
     'heading-anchor',
     'og-site-name',
@@ -196,10 +121,7 @@ class NameParser(BaseParser):
       elif attributes.get('property') == 'og:site_name':
         self.add_result((self.priority.index('og-site-name'), attributes['content']))
 
-class ResultException(Exception):
-  pass
-
-class TitleParser(BaseParser):
+class TitleParser(media.BaseParser):
   is_head = True
 
   priority = (
@@ -288,13 +210,6 @@ def main(arguments=tuple(sys.argv[1:])):
       print()
   return True
 
-def parse_html(parser, html):
-  try:
-    parser().feed(html)
-    return ''
-  except ResultException as exception:
-    return filter_text(exception.args[0]) if exception.args and tuxapp.is_string(exception.args[0]) else ''
-
 check_name = lambda url, name: name if validate.check_page_contains(url, name, True) else ''
 
 check_url_protocol = lambda url: url.replace("http://", "https://", 1) if validate.is_url_valid(url) and not validate.check_url_protocol(url) else url
@@ -334,10 +249,6 @@ detect_version_regex = lambda html: \
   ''
 
 extract_url_name = lambda url: re.sub(r"-+", ' ', re.sub(r"^www\.", '', tuxapp.parse_url(url).netloc).split('.', 1)[0]).title()
-
-fetch_url = tuxapp.memoizes()(
-  lambda *args, **kwargs: tuxapp.fetch_url(*args, **kwargs)
-)
 
 filter_app = lambda app: re.sub(r"[^a-z0-9]+", '-', app.lower()).strip('-')
 
@@ -488,38 +399,18 @@ list_app_executables = lambda app: \
   tuxapp.install_app_distribution(app) and \
   tuple(sorted(set(strip_bin_path(path.replace("{}/".format(tuxapp.get_app_distribution_path(app)), '', 1)) for path in tuxapp.list_app_distribution(app) if tuxapp.is_file_executable(path))))
 
-normalize_url = lambda page_url, url, base_url=None: \
-  url \
-    if re.match(r"^https?://", url) else \
-  "{}:{}".format(tuxapp.parse_url(page_url).scheme, url) \
-    if url.startswith("//") else \
-  "{0.scheme}://{0.netloc}{1}".format(tuxapp.parse_url(page_url), normalize_url_path(url)) \
-    if url.startswith('/') else \
-  "{0.scheme}://{0.netloc}{1}".format(
-    tuxapp.parse_url(base_url or parse_base_url(page_url)),
-    normalize_url_path("/{}/{}".format(os.path.dirname(tuxapp.parse_url(base_url or parse_base_url(page_url)).path), url)),
-  )
-
-normalize_url_path = lambda path: \
-  "{}{}".format(
-    re.sub(r"^//", '/', os.path.normpath(path)),
-    '/' if path and path[-1] == '/' else '',
-  )
-
 open_url = tuxapp.does(lambda url, *args, **kwargs: url and input_boolean("Open {} in the browser?".format(url)) and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.quote_argument(url))))(lambda url: url)
 
-parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url(url)) or url, url)
+parse_description = lambda url: media.parse_html(DescriptionParser, media.fetch_url_cached(url))
 
-parse_description = lambda url: parse_html(DescriptionParser, fetch_url(url))
-
-parse_icon_url = lambda url: normalize_url(url, parse_html(IconURLParser, fetch_url(url)) or "/favicon.ico")
+parse_icon_url = lambda url: media.normalize_url(url, media.parse_html(IconURLParser, media.fetch_url_cached(url)) or "/favicon.ico")
 
 parse_name = lambda url: \
   check_name(url, tuxapp.parse_url(url).path.lstrip('/').split('/', 1)[0]) \
     if ".github.io/" in url and tuxapp.parse_url(url).path.lstrip('/') else \
-  parse_html(NameParser, fetch_url(url)) or check_name(url, extract_url_name(url))
+  media.parse_html(NameParser, media.fetch_url_cached(url)) or check_name(url, extract_url_name(url))
 
-parse_title = lambda url: parse_html(TitleParser, fetch_url(url))
+parse_title = lambda url: media.parse_html(TitleParser, media.fetch_url_cached(url))
 
 strip_bin_path = lambda command: re.sub(r"^usr/bin/", '', command)
 
