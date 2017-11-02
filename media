@@ -209,8 +209,10 @@ parse_changelog_url = lambda url: \
 parse_downloads_url = lambda url: \
   normalize_url(url,
     parse_html(DownloadsURLParser, fetch_url_cached(url)) or \
-    parse_github_releases_url(url)
+    parse_github_latest_release_url(url)
   )
+
+parse_github_latest_release_url = lambda url: check_github_repository(extract_github_repository(url), "https://github.com/{}/releases/latest")
 
 parse_github_releases_url = lambda url: check_github_repository(extract_github_repository(url), "https://github.com/{}/releases")
 
