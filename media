@@ -36,13 +36,13 @@ class BaseParser(HTMLParser):
     self.results = []
 
   def add_result(self, result):
-    self.results.append(self.filter_text(result) if self.is_multiple else (result[:-1], self.filter_text(result[-1])))
+    self.results.append(self.filter_result(result) if self.is_multiple else (result[:-1], self.filter_result(result[-1])))
 
   def feed(self, *args, **kwargs):
     HTMLParser.feed(self, *args, **kwargs)
     self.raise_result()
 
-  def filter_text(self, string):
+  def filter_result(self, string):
     return re.sub(r"\s+", ' ', string.replace('\t', ' ')).strip()
 
   def handle_data(self, data):
