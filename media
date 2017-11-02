@@ -136,7 +136,7 @@ class DownloadsURLParser(BaseParser):
     if tag == 'a' and attributes.get('href'):
       self.read_contents(tag, attributes)
 
-class ImageParser(BaseParser):
+class ImageURLParser(BaseParser):
   priority = (
     'og-image',
     'schema-org',
@@ -157,6 +157,20 @@ class ImageParser(BaseParser):
 
 class ResultException(Exception):
   pass
+
+class VideoPosterURLsParser(BaseParser):
+  is_multiple = True
+
+  def on_tag(self, tag, attributes):
+    if (tag == 'source' and self.previous_tag == 'video' or tag == 'video') and attributes.get('src') and tuxapp.parse_url(attributes['src']).path.endswith(".mp4"):
+      self.add_result((attributes if tag == 'video' else self.previous_attributes).get('poster', ''))
+
+class VideoURLsParser(BaseParser):
+  is_multiple = True
+
+  def on_tag(self, tag, attributes):
+    if (tag == 'source' and self.previous_tag == 'video' or tag == 'video') and attributes.get('src') and tuxapp.parse_url(attributes['src']).path.endswith(".mp4"):
+      self.add_result(attributes['src'])
 
 def parse_html(parser, html):
   try:
@@ -210,6 +224,8 @@ get_app_info_path = lambda app: "{}/info".format(get_app_media_path(app))
 
 get_app_media_path = lambda app: "{}/tuxapp-media/{}".format(tuxapp.get_xdg_cache_path(), app)
 
+get_app_video_thumbnail_path = lambda app, hash: "{}/video-{}".format(get_app_media_path(app), hash)
+
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): update_apps_media(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
 )
@@ -257,22 +273,41 @@ parse_github_releases_url = lambda url: check_github_repository(extract_github_r
 
 parse_github_repository = lambda url: check_github_repository(extract_github_repository(url))
 
-parse_image = lambda url: normalize_url(url, parse_html(ImageParser, fetch_url_cached(url)))
+parse_image_url = lambda url: normalize_url(url, parse_html(ImageURLParser, fetch_url_cached(url)))
 
-update_app_image = lambda app, url: \
-  get_app_image_path(app, tuxapp.hash_md5(url)) \
-    if os.path.isfile(get_app_image_path(app, tuxapp.hash_md5(url))) else \
-  all(tuxapp.remove_file(path) for path in glob.iglob(get_app_image_path(app, '*'))) and \
-  tuxapp.download_file(url, get_app_image_path(app, tuxapp.hash_md5(url)))
+parse_video_poster_urls = lambda url: tuple(set((normalize_url(url, video_url), normalize_url(url, poster_url)) for poster_url, video_url in zip(parse_html(VideoPosterURLsParser, fetch_url_cached(url)), parse_html(VideoURLsParser, fetch_url_cached(url))) if poster_url))
+
+parse_video_src_urls = lambda url: tuple(set(normalize_url(url, video_url) for video_url in parse_html(VideoURLsParser, fetch_url_cached(url))))
+
+parse_video_thumbnail_urls = lambda url: parse_youtube_thumbnail_urls(url) + parse_video_poster_urls(url)
+
+parse_video_urls = lambda url: parse_youtube_urls(url) + parse_video_src_urls(url)
+
+parse_youtube_ids = lambda url: tuple(set(re.findall(r"\b(?:youtu\.be/|youtube\.com/(?:(?:embed|v)/|watch\?v=))(\w+)", fetch_url_cached(url))))
+
+parse_youtube_thumbnail_urls = lambda url: tuple("https://img.youtube.com/vi/{}/hqdefault.jpg".format(id) for id in parse_youtube_ids(url))
+
+parse_youtube_urls = lambda url: tuple("https://www.youtube.com/watch?v={}".format(id) for id in parse_youtube_ids(url))
+
+update_app_file = lambda app, get_path, url: \
+  get_path(app, tuxapp.hash_md5(url)) \
+    if not url or os.path.isfile(get_path(app, tuxapp.hash_md5(url))) else \
+  tuxapp.download_file(url, get_path(app, tuxapp.hash_md5(url)))
+
+update_app_files = lambda app, get_path, urls: \
+  all(tuxapp.remove_file(path) for path in glob.iglob(get_path(app, '*'))) and \
+  all(update_app_file(app, get_path, url) for url in urls)
 
 update_app_media = lambda app: \
   write_app_info(app, {
     'changelog-url': parse_changelog_url(tuxapp.query_appfile(app, 'homepage-url')),
     'download-formats': parse_download_formats(tuxapp.query_appfile(app, 'homepage-url')),
-    'download-url': parse_downloads_url(tuxapp.query_appfile(app, 'homepage-url')),
+    'downloads-url': parse_downloads_url(tuxapp.query_appfile(app, 'homepage-url')),
     'github-repository': parse_github_repository(tuxapp.query_appfile(app, 'homepage-url')),
+    'video-urls': ' '.join(parse_video_urls(tuxapp.query_appfile(app, 'homepage-url'))),
   }) and \
-  update_app_image(app, parse_image(tuxapp.query_appfile(app, 'homepage-url')))
+  update_app_files(app, get_app_image_path, tuple(url for url in (parse_image_url(tuxapp.query_appfile(app, 'homepage-url')),) if url)) and \
+  update_app_files(app, get_app_video_thumbnail_path, parse_video_thumbnail_urls(tuxapp.query_appfile(app, 'homepage-url')))
 
 write_app_info = lambda app, info: tuxapp.write_file(get_app_info_path(app), ''.join("{}={}\n".format(key, info[key]) for key in sorted(info)))
 

@@ -117,15 +117,13 @@ class TitleParser(media.BaseParser):
     'og-title',
   )
 
-  def on_contents(self, tag, attributes, contents):
+  def on_data(self, tag, attributes, data):
     if tag == 'title':
-      self.add_result((self.priority.index('title'), contents))
+      self.add_result((self.priority.index('title'), data))
 
   def on_tag(self, tag, attributes):
     if tag == 'meta' and attributes.get('property') == 'og:title' and attributes.get('content'):
       self.add_result((self.priority.index('og-title'), attributes['content']))
-    elif tag == 'title':
-      self.read_contents(tag, attributes)
 
 def detect_app_library_packages(app, packages=()):
   tuxapp.install_app_appfile_packages(app, tuxapp.expand_packages(packages))
