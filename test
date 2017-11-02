@@ -39,7 +39,7 @@ call_process_verbose = tuxapp.logs("Running the command: {}")(
 )
 
 build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_trace=False: \
-  install_missing_bubblewrap() and \
+  install_missing_package('bubblewrap', 'bwrap') and \
   ('bwrap', '--bind', get_container_path(distribution), '/',
     '--bind', "/run", "/run",
     '--dev-bind', "/dev", "/dev",
@@ -60,7 +60,7 @@ build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_trace=Fa
   ((tuxapp.get_app_runner_path(app),) + arguments if app else ())
 
 build_root_bwrap_arguments = lambda distribution: \
-  install_missing_bubblewrap() and \
+  install_missing_package('bubblewrap', 'bwrap') and \
   ('bwrap', '--bind', get_container_path(distribution), "/",
     '--bind', tuxapp.make_directories(get_container_cache_path(distribution)), "/var/cache/pacman/pkg" if distribution == 'arch' else "/var/cache/apt/archives",
     '--dev', "/dev",
@@ -185,15 +185,6 @@ install_arch_container_package = lambda package: \
   tuxapp.silences(tuxapp.unpack_tarball)(tuxapp.download_missing_cache_file(fetch_arch_package_url(package)), get_container_path('arch'), ("--exclude=.*", "--warning=no-unknown-keyword")) and \
   package
 
-install_bubblewrap = \
-  tuxapp.asserts("bubblewrap is not installed")(
-  tuxapp.logs("Installing bubblewrap")(
-    lambda: \
-      not tuxapp.is_silenced() and \
-      tuxapp.is_command_exist('apt') and \
-      call_process_verbose("sudo apt update && sudo apt install -y bubblewrap")
-  ))
-
 install_container = tuxapp.asserts("Failed to install {}")(
   lambda distribution: install_arch_container() if distribution == 'arch' else install_debian_container()
 )
@@ -207,14 +198,23 @@ install_debian_container_package = lambda package: \
   tuxapp.silences(tuxapp.unpack_package)(tuxapp.download_missing_cache_file(fetch_debian_package_url(package)), get_container_path('debian')) and \
   package
 
-install_missing_bubblewrap = lambda: tuxapp.is_command_exist('bwrap') or install_bubblewrap()
-
 install_missing_container = lambda distribution: \
   distribution \
     if os.path.isfile(get_container_installed_path(distribution)) else \
   install_container(distribution) and \
   tuxapp.write_file(get_container_installed_path(distribution)) and \
   distribution
+
+install_missing_package = lambda package, command=None: tuxapp.is_command_exist(command or package) or install_package(package)
+
+install_package = \
+  tuxapp.asserts("{} is not installed")(
+  tuxapp.logs("Installing {}")(
+    lambda package: \
+      not tuxapp.is_silenced() and \
+      tuxapp.is_command_exist('apt') and \
+      call_process_verbose("sudo apt update && sudo apt install -y {}".format(tuxapp.quote_argument(package)))
+  ))
 
 is_library_text = lambda string: \
   re.search(r"\.so\b| could not find or load the Qt platform plugin \"xcb\"", string) and \
