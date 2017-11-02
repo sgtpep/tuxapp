@@ -23,6 +23,12 @@ class BaseParser(HTMLParser):
   previous_tag = None
   schema_org_type = None
 
+  data_types = (
+    'Product',
+    'SoftwareApplication',
+    'WebSite',
+  )
+
   def __init__(self, *args, **kwargs):
     HTMLParser.__init__(self, *args, **kwargs)
     self.results = []
@@ -39,13 +45,14 @@ class BaseParser(HTMLParser):
     if self.contents_tag:
       self.contents += data
     if self.previous_attributes.get('itemprop'):
-      getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(self.schema_org_type, self.previous_attributes['itemprop'], data)
+      getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(self.schema_org_type, data, self.previous_tag, self.previous_attributes)
     if self.previous_tag == 'script' and self.previous_attributes.get('type') == 'application/ld+json' and data.strip():
       import json
       decoded_data = json.loads(data)
       items = decoded_data if isinstance(decoded_data, list) else [decoded_data]
       for item in items:
-        getattr(self, 'on_json_ld', lambda *args, **kwargs: None)(item['@type'], item)
+        if '@type' in item:
+          getattr(self, 'on_json_ld', lambda *args, **kwargs: None)(item)
 
   def handle_endtag(self, tag):
     if tag == self.contents_tag:
@@ -62,7 +69,7 @@ class BaseParser(HTMLParser):
     if attributes.get('itemtype'):
       self.schema_org_type = attributes['itemtype'].rsplit('/', 1)[-1]
     if tag == 'meta' and attributes.get('content') and attributes.get('itemprop'):
-      getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(self.schema_org_type, attributes['itemprop'], attributes['content'])
+      getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(self.schema_org_type, attributes['content'], tag, attributes)
     self.previous_attributes = attributes
     self.previous_tag = tag
 
@@ -90,13 +97,13 @@ class ChangelogURLParser(BaseParser):
     if tag == 'a' and re.match(r"^(changelog|release\s+notes|what[^\s]+s\s+new)\b", contents, re.I | re.S):
       self.add_result((self.priority.index('anchor'), attributes['href']))
 
-  def on_json_ld(self, type, item):
+  def on_json_ld(self, item):
     if item.get('releaseNotes'):
       self.add_result((self.priority.index('json-ld'), item['releaseNotes']))
 
-  def on_schema_org(self, type, property, content):
-    if property == 'releaseNotes':
-      self.add_result((self.priority.index('schema-org'), content))
+  def on_schema_org(self, type, contents, tag, attributes):
+    if attributes['itemprop'] == 'releaseNotes':
+      self.add_result((self.priority.index('schema-org'), contents))
 
   def on_tag(self, tag, attributes):
     if tag == 'a' and attributes.get('href'):
