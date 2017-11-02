@@ -158,6 +158,15 @@ class ImageURLParser(BaseParser):
 class ResultException(Exception):
   pass
 
+class ScreenshotsURLParser(BaseParser):
+  def on_contents(self, tag, attributes, contents):
+    if tag == 'a' and attributes.get('href') and re.search(r"\bscreenshots\b", contents, re.I):
+      raise ResultException(attributes['href'])
+
+  def on_tag(self, tag, attributes):
+    if tag == 'a':
+      self.read_contents(tag, attributes)
+
 class VideoPosterURLsParser(BaseParser):
   is_multiple = True
 
@@ -274,6 +283,8 @@ parse_github_releases_url = lambda url: check_github_repository(extract_github_r
 parse_github_repository = lambda url: check_github_repository(extract_github_repository(url))
 
 parse_image_url = lambda url: normalize_url(url, parse_html(ImageURLParser, fetch_url_cached(url)))
+
+parse_screenshots_url = lambda url: normalize_url(url, parse_html(ScreenshotsURLParser, fetch_url_cached(url)))
 
 parse_video_poster_urls = lambda url: tuple(set((normalize_url(url, video_url), normalize_url(url, poster_url)) for poster_url, video_url in zip(parse_html(VideoPosterURLsParser, fetch_url_cached(url)), parse_html(VideoURLsParser, fetch_url_cached(url))) if poster_url))
 
