@@ -129,6 +129,25 @@ class DownloadsURLParser(BaseParser):
     if tag == 'a' and attributes.get('href'):
       self.read_contents(tag, attributes)
 
+class ImageParser(BaseParser):
+  priority = (
+    'og-image',
+    'schema-org',
+    'json-ld',
+  )
+
+  def on_json_ld(self, item):
+    if item['@type'] in self.data_types and item.get('image'):
+      self.add_result((self.priority.index('json-ld'), item['image']))
+
+  def on_schema_org(self, type, contents, tag, attributes):
+    if type in self.data_types and attributes['itemprop'] == 'image':
+      self.add_result((self.priority.index('schema-org'), contents))
+
+  def on_tag(self, tag, attributes):
+    if tag == 'meta' and attributes.get('property') in ('og:image', 'og:image:url', 'og:image:secure-url') and attributes.get('content'):
+      self.add_result((self.priority.index('og-image'), attributes['content']))
+
 class ResultException(Exception):
   pass
 
@@ -178,6 +197,8 @@ filter_downloads_url = lambda homepage_url, url: \
     "https://www.mozilla.org/en-US/firefox/developer/": r"/firefox/",
     "https://www.mozilla.org/en-US/thunderbird/": r"/firefox/",
   }.get(homepage_url, r"^$"), url) else url
+
+get_app_image_path = lambda app, hash: "{}/image-{}".format(get_app_media_path(app), hash)
 
 get_app_info_path = lambda app: "{}/info".format(get_app_media_path(app))
 
@@ -230,13 +251,22 @@ parse_github_releases_url = lambda url: check_github_repository(extract_github_r
 
 parse_github_repository = lambda url: check_github_repository(extract_github_repository(url))
 
+parse_image = lambda url: normalize_url(url, parse_html(ImageParser, fetch_url_cached(url)))
+
+update_app_image = lambda app, url: \
+  get_app_image_path(app, tuxapp.hash_md5(url)) \
+    if os.path.isfile(get_app_image_path(app, tuxapp.hash_md5(url))) else \
+  all(tuxapp.remove_file(path) for path in glob.iglob(get_app_image_path(app, '*'))) and \
+  tuxapp.download_file(url, get_app_image_path(app, tuxapp.hash_md5(url)))
+
 update_app_media = lambda app: \
   write_app_info(app, {
     'changelog-url': parse_changelog_url(tuxapp.query_appfile(app, 'homepage-url')),
     'download-formats': parse_download_formats(tuxapp.query_appfile(app, 'homepage-url')),
     'download-url': parse_downloads_url(tuxapp.query_appfile(app, 'homepage-url')),
     'github-repository': parse_github_repository(tuxapp.query_appfile(app, 'homepage-url')),
-  })
+  }) and \
+  update_app_image(app, parse_image(tuxapp.query_appfile(app, 'homepage-url')))
 
 write_app_info = lambda app, info: tuxapp.write_file(get_app_info_path(app), ''.join("{}={}\n".format(key, info[key]) for key in sorted(info)))
 
