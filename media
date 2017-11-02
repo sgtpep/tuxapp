@@ -19,8 +19,10 @@ class BaseParser(HTMLParser):
   contents_attributes = {}
   contents_tag = None
   is_head = False
+  is_multiple = False
   previous_attributes = {}
   previous_tag = None
+  results = []
   schema_org_type = None
 
   data_types = (
@@ -34,11 +36,14 @@ class BaseParser(HTMLParser):
     self.results = []
 
   def add_result(self, result):
-    self.results.append(result)
+    self.results.append(self.filter_text(result) if self.is_multiple else (result[:-1], self.filter_text(result[-1])))
 
   def feed(self, *args, **kwargs):
     HTMLParser.feed(self, *args, **kwargs)
     self.raise_result()
+
+  def filter_text(self, string):
+    return re.sub(r"\s+", ' ', string.replace('\t', ' ')).strip()
 
   def handle_data(self, data):
     getattr(self, 'on_data', lambda *args, **kwargs: None)(self.previous_tag, self.previous_attributes, data.strip())
@@ -74,8 +79,10 @@ class BaseParser(HTMLParser):
     self.previous_tag = tag
 
   def raise_result(self):
-    if self.results:
-      raise ResultException(sorted(self.results, key=lambda item: item[:-1], reverse=True)[0][-1])
+    if self.is_multiple:
+      raise ResultException(self.results)
+    else:
+      raise ResultException(sorted(self.results, key=lambda item: item[:-1], reverse=True)[0][-1] if self.results else '')
 
   def read_contents(self, tag, attributes):
     self.contents_attributes = attributes
@@ -154,9 +161,8 @@ class ResultException(Exception):
 def parse_html(parser, html):
   try:
     parser().feed(html)
-    return ''
   except ResultException as exception:
-    return re.sub(r"\s+", ' ', exception.args[0].replace('\t', ' ')).strip() if exception.args else ''
+    return exception.args[0] if exception.args else ''
 
 def update_app_media_worker(app):
   return update_app_media(app)
