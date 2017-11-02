@@ -101,7 +101,7 @@ class ChangelogURLParser(BaseParser):
   )
 
   def on_contents(self, tag, attributes, contents):
-    if tag == 'a' and re.match(r"^(changelog|release\s+notes|what[^\s]+s\s+new)\b", contents, re.I | re.S):
+    if tag == 'a' and attributes.get('href') and re.match(r"^(changelog|release\s+notes|what[^\s]+s\s+new)\b", contents, re.I | re.S):
       self.add_result((self.priority.index('anchor'), attributes['href']))
 
   def on_json_ld(self, item):
@@ -113,7 +113,7 @@ class ChangelogURLParser(BaseParser):
       self.add_result((self.priority.index('schema-org'), contents))
 
   def on_tag(self, tag, attributes):
-    if tag == 'a' and attributes.get('href'):
+    if tag == 'a':
       self.read_contents(tag, attributes)
 
 class DownloadsURLParser(BaseParser):
@@ -126,14 +126,14 @@ class DownloadsURLParser(BaseParser):
     return re.sub(r"^.+\b(github\.com/[\w-]+/[\w-]+/releases)\b.*$", r"https://\1", url, 1)
 
   def on_contents(self, tag, attributes, contents):
-    if tag == 'a':
+    if tag == 'a' and attributes.get('href'):
       if re.match(r"^(desktop\s+apps|downloads?)$", contents, re.I | re.S) or re.search(r"\s+(downloads|platforms)$", contents, re.I | re.S):
         self.add_result((self.priority.index('downloads'), self.filter_url(attributes['href'])))
       elif re.match(r"^[Dd]ownload\s+[A-Z]", contents, re.S):
         self.add_result((self.priority.index('download'), self.filter_url(attributes['href'])))
 
   def on_tag(self, tag, attributes):
-    if tag == 'a' and attributes.get('href'):
+    if tag == 'a':
       self.read_contents(tag, attributes)
 
 class ImageURLParser(BaseParser):
