@@ -248,6 +248,7 @@ test_updated_app = lambda app, path: \
 
 try_app_process = tuxapp.logs("Trying {1} on {0}")(
   lambda distribution, app: \
+    install_missing_package('strace') and \
     tuxapp.read_process(r"""
     output=$(timeout -k 3 3 {} 2>&1)
     kill $(echo "$output" | grep -Po "(?<= Process )\d+") 2> /dev/null
