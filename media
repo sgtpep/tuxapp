@@ -160,19 +160,17 @@ fetch_url_cached = tuxapp.memoizes()(
   lambda url: tuxapp.fetch_url(url)
 )
 
-filter_app_changelog_url = lambda app, url: \
+filter_changelog_url = lambda homepage_url, url: \
   '' if re.search({
-    'firefox-developer-edition': r"/firefox/",
-  }.get(app, r"^$"), url) else url
+    "https://www.mozilla.org/en-US/firefox/developer/": r"/firefox/",
+  }.get(homepage_url, r"^$"), url) else url
 
-filter_app_downloads_url = lambda app, url: \
+filter_downloads_url = lambda homepage_url, url: \
   '' if re.search({
-    'firefox-developer-edition': r"/firefox/",
-    'google-chrome-beta': r"/chrome/browser/$",
-    'thunderbird': r"/firefox/",
-  }.get(app, r"^$"), url) else url
-
-filter_app_github_repository = lambda app, repository: '' if {}.get(app, '') == repository else repository
+    "https://www.google.com/chrome/browser/beta.html": r"/chrome/browser/$",
+    "https://www.mozilla.org/en-US/firefox/developer/": r"/firefox/",
+    "https://www.mozilla.org/en-US/thunderbird/": r"/firefox/",
+  }.get(homepage_url, r"^$"), url) else url
 
 get_app_info_path = lambda app: "{}/info".format(get_app_media_path(app))
 
@@ -200,17 +198,24 @@ normalize_url = lambda page_url, url, base_url=None: \
 parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url_cached(url)) or url, url)
 
 parse_changelog_url = lambda url: \
-  normalize_url(url,
+  filter_changelog_url(url, normalize_url(url,
     parse_html(ChangelogURLParser, fetch_url_cached(url)) or \
     parse_html(ChangelogURLParser, fetch_url_cached(normalize_url(url, parse_html(DownloadsURLParser, fetch_url_cached(url))) or url)) or \
     parse_github_releases_url(url)
-  )
+  ))
+
+parse_download_formats = lambda url: \
+  ' '.join(sorted(set(format.lower() for format in re.findall(r"\b(appimage|deb|flatpak|rpm|snap|tar)\b", fetch_url_cached(
+    parse_github_latest_release_url(url) or \
+    parse_downloads_url(url) or \
+    url
+  ), re.I))))
 
 parse_downloads_url = lambda url: \
-  normalize_url(url,
+  filter_downloads_url(url, normalize_url(url,
     parse_html(DownloadsURLParser, fetch_url_cached(url)) or \
     parse_github_latest_release_url(url)
-  )
+  ))
 
 parse_github_latest_release_url = lambda url: check_github_repository(extract_github_repository(url), "https://github.com/{}/releases/latest")
 
@@ -220,9 +225,10 @@ parse_github_repository = lambda url: check_github_repository(extract_github_rep
 
 update_app_media = lambda app: \
   write_app_info(app, {
-    'changelog-url': filter_app_changelog_url(app, parse_changelog_url(tuxapp.query_appfile(app, 'homepage-url'))),
-    'download-url': filter_app_downloads_url(app, parse_downloads_url(tuxapp.query_appfile(app, 'homepage-url'))),
-    'github-repository': filter_app_github_repository(app, parse_github_repository(tuxapp.query_appfile(app, 'homepage-url'))),
+    'changelog-url': parse_changelog_url(tuxapp.query_appfile(app, 'homepage-url')),
+    'download-formats': parse_download_formats(tuxapp.query_appfile(app, 'homepage-url')),
+    'download-url': parse_downloads_url(tuxapp.query_appfile(app, 'homepage-url')),
+    'github-repository': parse_github_repository(tuxapp.query_appfile(app, 'homepage-url')),
   })
 
 write_app_info = lambda app, info: tuxapp.write_file(get_app_info_path(app), ''.join("{}={}\n".format(key, info[key]) for key in sorted(info)))
