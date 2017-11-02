@@ -283,7 +283,7 @@ filter_version_url = lambda homepage_url, url: \
     if url == homepage_url else \
   re.sub(r"(\bgithub\.com/[\w-]+/[\w-]+/releases)(?!/latest$).*", r"\1/latest", url)
 
-generate_appfile = lambda appfile: '\n'.join(u"{}={}".format(key, appfile[key]) for key in sorted(appfile) if key != 'app')
+generate_appfile = lambda appfile: ''.join(u"{}={}\n".format(key, appfile[key]) for key in sorted(appfile) if key != 'app')
 
 get_default_app = lambda: 'temp'
 
@@ -458,7 +458,7 @@ update_appfile_version_url = lambda appfile: update_appfile(appfile, 'version-ur
 
 write_appfile = lambda appfile: \
   tuxapp.remove_file(tuxapp.get_appfile_path(get_default_app())) and \
-  tuxapp.write_file(tuxapp.get_appfile_path(appfile['app']), u"{}\n".format(generate_appfile(dict(dict.fromkeys(validate.get_appfile_keys(), ''), **appfile))))
+  tuxapp.write_file(tuxapp.get_appfile_path(appfile['app']), generate_appfile(dict(dict.fromkeys(validate.get_appfile_keys(), ''), **appfile)))
 
 if __name__ == '__main__':
   main()
