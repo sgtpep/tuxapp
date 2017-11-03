@@ -272,6 +272,8 @@ normalize_url = lambda page_url, url, base_url=None: \
     if url and url != '#' and not re.match(r"^\w+:", url) else \
   ''
 
+parse_app_screenshot_urls = lambda app, url: parse_screenshot_urls(url) + parse_debian_screenshot_urls(app, url)
+
 parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url_cached(url)) or url, url)
 
 parse_changelog_url = lambda url: \
@@ -280,6 +282,8 @@ parse_changelog_url = lambda url: \
     normalize_url(url, parse_html(ChangelogURLParser, fetch_url_cached(normalize_url(url, parse_html(DownloadsURLParser, fetch_url_cached(url))) or url))) or \
     parse_github_releases_url(url)
   )
+
+parse_debian_screenshot_urls = lambda app, url: tuple(url for url in parse_screenshot_urls("https://screenshots.debian.net/package/{}".format(app)) if not url.endswith("/no-screenshots-available.svg"))
 
 parse_download_formats = lambda url: \
   ' '.join(sorted(set(format.lower() for format in re.findall(r"\b(appimage|deb|flatpak|rpm|snap|tar)\b", fetch_url_cached(
@@ -339,7 +343,7 @@ update_app_media = lambda app: \
   }) and \
   update_app_files(app, get_app_image_path, tuple(url for url in (parse_image_url(tuxapp.query_appfile(app, 'homepage-url')),) if url)) and \
   update_app_files(app, get_app_video_thumbnail_path, parse_video_thumbnail_urls(tuxapp.query_appfile(app, 'homepage-url'))) and \
-  update_app_files(app, get_app_screenshot_path, parse_screenshot_urls(tuxapp.query_appfile(app, 'homepage-url')))
+  update_app_files(app, get_app_screenshot_path, parse_app_screenshot_urls(app, tuxapp.query_appfile(app, 'homepage-url')))
 
 write_app_info = lambda app, info: tuxapp.write_file(get_app_info_path(app), ''.join("{}={}\n".format(key, info[key]) for key in sorted(info)))
 
