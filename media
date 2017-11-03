@@ -330,7 +330,7 @@ update_app_file = lambda app, get_path, url: \
   tuxapp.download_file(url, get_path(app, tuxapp.hash_md5(url)))
 
 update_app_files = lambda app, get_path, urls: \
-  all(tuxapp.remove_file(path) for path in glob.iglob(get_path(app, '*'))) and \
+  all(tuxapp.remove_file(path) for path in glob.iglob(get_path(app, '*')) if path not in tuple(get_path(app, tuxapp.hash_md5(url)) for url in urls)) and \
   all(update_app_file(app, get_path, url) for url in urls)
 
 update_app_media = lambda app: \
