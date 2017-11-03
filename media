@@ -231,6 +231,11 @@ fetch_url_cached = tuxapp.memoizes()(
   lambda url: tuxapp.fetch_url(url)
 )
 
+filter_app_debian_screenshot_urls = lambda app, urls: \
+  () if app in (
+    'skype',
+  ) else urls
+
 filter_changelog_url = lambda homepage_url, url: \
   '' if re.search({
     "https://www.mozilla.org/en-US/firefox/developer/": r"/firefox/",
@@ -272,7 +277,9 @@ normalize_url = lambda page_url, url, base_url=None: \
     if url and url != '#' and not re.match(r"^\w+:", url) else \
   ''
 
-parse_app_screenshot_urls = lambda app, url: parse_screenshot_urls(url) + parse_debian_screenshot_urls(app, url)
+parse_app_debian_screenshot_urls = lambda app, url: filter_app_debian_screenshot_urls(app, tuple(url for url in parse_screenshot_urls("https://screenshots.debian.net/package/{}".format(app)) if not url.endswith("/no-screenshots-available.svg")))
+
+parse_app_screenshot_urls = lambda app, url: parse_screenshot_urls(url) + parse_app_debian_screenshot_urls(app, url)
 
 parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url_cached(url)) or url, url)
 
@@ -282,8 +289,6 @@ parse_changelog_url = lambda url: \
     normalize_url(url, parse_html(ChangelogURLParser, fetch_url_cached(normalize_url(url, parse_html(DownloadsURLParser, fetch_url_cached(url))) or url))) or \
     parse_github_releases_url(url)
   )
-
-parse_debian_screenshot_urls = lambda app, url: tuple(url for url in parse_screenshot_urls("https://screenshots.debian.net/package/{}".format(app)) if not url.endswith("/no-screenshots-available.svg"))
 
 parse_download_formats = lambda url: \
   ' '.join(sorted(set(format.lower() for format in re.findall(r"\b(appimage|deb|flatpak|rpm|snap|tar)\b", fetch_url_cached(
