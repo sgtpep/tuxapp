@@ -158,6 +158,22 @@ class ImageURLParser(BaseParser):
 class ResultException(Exception):
   pass
 
+class ScreenshotURLsParser(BaseParser):
+  is_multiple = True
+  tag = None
+
+  def on_tag(self, tag, attributes):
+    if tag in ('a', 'img') and re.search(r"\bscreen", str(attributes), re.I):
+      if tag == 'a' and attributes.get('href') and tuxapp.parse_url(attributes['href']).path.rsplit('.', 1)[-1].lower() in ('gif', 'jpeg', 'jpg', 'png', 'svg') and (not self.tag or self.tag == tag):
+        self.tag = tag
+        self.add_result(attributes['href'])
+      elif tag == 'img' and (not self.tag or self.tag == tag):
+        self.tag = tag
+        if attributes.get('srcset'):
+          self.add_result(attributes['srcset'].split()[0])
+        elif attributes.get('src'):
+          self.add_result(attributes['src'])
+
 class ScreenshotsURLParser(BaseParser):
   def on_contents(self, tag, attributes, contents):
     if tag == 'a' and attributes.get('href') and re.search(r"\bscreenshots\b", contents, re.I):
@@ -233,6 +249,8 @@ get_app_info_path = lambda app: "{}/info".format(get_app_media_path(app))
 
 get_app_media_path = lambda app: "{}/tuxapp-media/{}".format(tuxapp.get_xdg_cache_path(), app)
 
+get_app_screenshot_path = lambda app, hash: "{}/screenshot-{}".format(get_app_media_path(app), hash)
+
 get_app_video_thumbnail_path = lambda app, hash: "{}/video-{}".format(get_app_media_path(app), hash)
 
 main = tuxapp.handles_exceptions(
@@ -284,6 +302,8 @@ parse_github_repository = lambda url: check_github_repository(extract_github_rep
 
 parse_image_url = lambda url: normalize_url(url, parse_html(ImageURLParser, fetch_url_cached(url)))
 
+parse_screenshot_urls = lambda url: tuple(normalize_url(url, screenshot_url) for screenshot_url in parse_html(ScreenshotURLsParser, fetch_url_cached(parse_screenshots_url(url) or url)))
+
 parse_screenshots_url = lambda url: normalize_url(url, parse_html(ScreenshotsURLParser, fetch_url_cached(url)))
 
 parse_video_poster_urls = lambda url: tuple(set((normalize_url(url, video_url), normalize_url(url, poster_url)) for poster_url, video_url in zip(parse_html(VideoPosterURLsParser, fetch_url_cached(url)), parse_html(VideoURLsParser, fetch_url_cached(url))) if poster_url))
@@ -318,7 +338,8 @@ update_app_media = lambda app: \
     'video-urls': ' '.join(parse_video_urls(tuxapp.query_appfile(app, 'homepage-url'))),
   }) and \
   update_app_files(app, get_app_image_path, tuple(url for url in (parse_image_url(tuxapp.query_appfile(app, 'homepage-url')),) if url)) and \
-  update_app_files(app, get_app_video_thumbnail_path, parse_video_thumbnail_urls(tuxapp.query_appfile(app, 'homepage-url')))
+  update_app_files(app, get_app_video_thumbnail_path, parse_video_thumbnail_urls(tuxapp.query_appfile(app, 'homepage-url'))) and \
+  update_app_files(app, get_app_screenshot_path, parse_screenshot_urls(tuxapp.query_appfile(app, 'homepage-url')))
 
 write_app_info = lambda app, info: tuxapp.write_file(get_app_info_path(app), ''.join("{}={}\n".format(key, info[key]) for key in sorted(info)))
 
