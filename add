@@ -46,9 +46,9 @@ class DescriptionParser(media.BaseParser):
     if item['@type'] in self.data_types and item.get('description'):
       self.add_result((self.priority.index('json-ld-{}'.format(item['@type'])), item['description']))
 
-  def on_schema_org(self, type, contents, tag, attributes):
+  def on_schema_org(self, type, content, tag, attributes):
     if type in self.data_types and attributes['itemprop'] == 'description':
-      self.add_result((self.priority.index('schema-org-{}'.format(type)), contents))
+      self.add_result((self.priority.index('schema-org-{}'.format(type)), content))
 
   def on_tag(self, tag, attributes):
     if tag == 'meta' and attributes.get('content'):
@@ -88,21 +88,21 @@ class NameParser(media.BaseParser):
     'application-name',
   )
 
-  def on_contents(self, tag, attributes, contents):
+  def on_content(self, tag, attributes, content):
     if tag in ('a', 'h1'):
-      self.add_result((self.priority.index('heading-anchor'), contents))
+      self.add_result((self.priority.index('heading-anchor'), content))
 
   def on_json_ld(self, item):
     if item['@type'] in self.data_types and item.get('name'):
       self.add_result((self.priority.index('json-ld-{}'.format(item['@type'])), item['name']))
 
-  def on_schema_org(self, type, contents, tag, attributes):
+  def on_schema_org(self, type, content, tag, attributes):
     if type in self.data_types and attributes['itemprop'] == 'name':
-      self.add_result((self.priority.index('schema-org-{}'.format(type)), contents))
+      self.add_result((self.priority.index('schema-org-{}'.format(type)), content))
 
   def on_tag(self, tag, attributes):
     if tag == 'a' and self.previous_tag == 'h1' or tag == 'h1' and self.previous_tag == 'a':
-      self.read_contents(tag, attributes)
+      self.read_content(tag, attributes)
     elif tag == 'meta' and attributes.get('content'):
       if attributes.get('name') == 'application-name':
         self.add_result((self.priority.index('application-name'), attributes['content']))

@@ -196,7 +196,7 @@ def check_app_firejail(app):
       print(get_message('firejail-missing'), file=sys.stderr)
   return True
 
-def copy_contents(file, destination_file, offset=0, size=None, chunk_size=65536):
+def copy_content(file, destination_file, offset=0, size=None, chunk_size=65536):
   with file, destination_file:
     file.seek(offset)
     try:
@@ -320,10 +320,10 @@ def touch_file(path, timestamp=None):
   )
   return path
 
-def write_file(path, contents='', is_append=False):
+def write_file(path, content='', is_append=False):
   import io
   with io.open(make_file_directories(path), 'a' if is_append else 'w') as file:
-    file.write(contents if isinstance(contents, u''.__class__) or not hasattr(contents, 'decode') else contents.decode('utf-8', 'replace'))
+    file.write(content if isinstance(content, u''.__class__) or not hasattr(content, 'decode') else content.decode('utf-8', 'replace'))
     return file.name
 
 are_app_packages_updated = lambda app, packages: all(is_app_package_updated(app, url) for url in resolve_package_urls_cached(packages))
@@ -1056,7 +1056,7 @@ parse_package_lists = \
   ))
 
 pipe_process = lambda file, process, offset=0, size=None: \
-  copy_contents(file, process.stdin, offset, size) and \
+  copy_content(file, process.stdin, offset, size) and \
   process.wait() == 0
 
 purge_cache = \
@@ -1260,7 +1260,7 @@ update_package_lists = memoizes(True)(
     )
 )
 
-write_executable_file = lambda path, contents: change_file_mode(write_file(path, contents), lambda mode: mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+write_executable_file = lambda path, content: change_file_mode(write_file(path, content), lambda mode: mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 if __name__ == '__main__':
   main()

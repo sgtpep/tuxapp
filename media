@@ -15,9 +15,9 @@ except ImportError:
 tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
 
 class BaseParser(HTMLParser):
-  contents = ''
-  contents_attributes = {}
-  contents_tag = None
+  content = ''
+  content_attributes = {}
+  content_tag = None
   is_head = False
   is_multiple = False
   previous_attributes = {}
@@ -47,8 +47,8 @@ class BaseParser(HTMLParser):
 
   def handle_data(self, data):
     getattr(self, 'on_data', lambda *args, **kwargs: None)(self.previous_tag, self.previous_attributes, data.strip())
-    if self.contents_tag:
-      self.contents += data
+    if self.content_tag:
+      self.content += data
     if self.previous_attributes.get('itemprop'):
       getattr(self, 'on_schema_org', lambda *args, **kwargs: None)(self.schema_org_type, data, self.previous_tag, self.previous_attributes)
     if self.previous_tag == 'script' and self.previous_attributes.get('type') == 'application/ld+json' and data.strip():
@@ -60,11 +60,11 @@ class BaseParser(HTMLParser):
           getattr(self, 'on_json_ld', lambda *args, **kwargs: None)(item)
 
   def handle_endtag(self, tag):
-    if tag == self.contents_tag:
-      getattr(self, 'on_contents', lambda *args, **kwargs: None)(self.contents_tag, self.contents_attributes, self.contents.strip())
-      self.contents = ''
-      self.contents_attributes = {}
-      self.contents_tag = None
+    if tag == self.content_tag:
+      getattr(self, 'on_content', lambda *args, **kwargs: None)(self.content_tag, self.content_attributes, self.content.strip())
+      self.content= ''
+      self.content_attributes = {}
+      self.content_tag = None
     if self.is_head and tag == 'head':
       self.raise_result()
 
@@ -84,9 +84,9 @@ class BaseParser(HTMLParser):
     else:
       raise ResultException(sorted(self.results, key=lambda item: item[:-1], reverse=True)[0][-1] if self.results else '')
 
-  def read_contents(self, tag, attributes):
-    self.contents_attributes = attributes
-    self.contents_tag = tag
+  def read_content(self, tag, attributes):
+    self.content_attributes = attributes
+    self.content_tag = tag
 
 class BaseURLParser(BaseParser):
   def on_tag(self, tag, attributes):
@@ -100,21 +100,21 @@ class ChangelogURLParser(BaseParser):
     'json-ld',
   )
 
-  def on_contents(self, tag, attributes, contents):
-    if tag == 'a' and attributes.get('href') and re.match(r"^(changelog|release\s+notes|what[^\s]+s\s+new)\b", contents, re.I | re.S):
+  def on_content(self, tag, attributes, content):
+    if tag == 'a' and attributes.get('href') and re.match(r"^(changelog|release\s+notes|what[^\s]+s\s+new)\b", content, re.I | re.S):
       self.add_result((self.priority.index('anchor'), attributes['href']))
 
   def on_json_ld(self, item):
     if item.get('releaseNotes'):
       self.add_result((self.priority.index('json-ld'), item['releaseNotes']))
 
-  def on_schema_org(self, type, contents, tag, attributes):
+  def on_schema_org(self, type, content, tag, attributes):
     if attributes['itemprop'] == 'releaseNotes':
-      self.add_result((self.priority.index('schema-org'), contents))
+      self.add_result((self.priority.index('schema-org'), content))
 
   def on_tag(self, tag, attributes):
     if tag == 'a':
-      self.read_contents(tag, attributes)
+      self.read_content(tag, attributes)
 
 class DownloadsURLParser(BaseParser):
   priority = (
@@ -125,16 +125,16 @@ class DownloadsURLParser(BaseParser):
   def filter_url(self, url):
     return re.sub(r"^.+\b(github\.com/[\w-]+/[\w-]+/releases)\b.*$", r"https://\1", url, 1)
 
-  def on_contents(self, tag, attributes, contents):
+  def on_content(self, tag, attributes, content):
     if tag == 'a' and attributes.get('href'):
-      if re.match(r"^(desktop\s+apps|downloads?)$", contents, re.I | re.S) or re.search(r"\s+(downloads|platforms)$", contents, re.I | re.S):
+      if re.match(r"^(desktop\s+apps|downloads?)$", content, re.I | re.S) or re.search(r"\s+(downloads|platforms)$", content, re.I | re.S):
         self.add_result((self.priority.index('downloads'), self.filter_url(attributes['href'])))
-      elif re.match(r"^[Dd]ownload\s+[A-Z]", contents, re.S):
+      elif re.match(r"^[Dd]ownload\s+[A-Z]", content, re.S):
         self.add_result((self.priority.index('download'), self.filter_url(attributes['href'])))
 
   def on_tag(self, tag, attributes):
     if tag == 'a':
-      self.read_contents(tag, attributes)
+      self.read_content(tag, attributes)
 
 class ImageURLParser(BaseParser):
   priority = (
@@ -147,9 +147,9 @@ class ImageURLParser(BaseParser):
     if item['@type'] in self.data_types and item.get('image'):
       self.add_result((self.priority.index('json-ld'), item['image']))
 
-  def on_schema_org(self, type, contents, tag, attributes):
+  def on_schema_org(self, type, content, tag, attributes):
     if type in self.data_types and attributes['itemprop'] == 'image':
-      self.add_result((self.priority.index('schema-org'), contents))
+      self.add_result((self.priority.index('schema-org'), content))
 
   def on_tag(self, tag, attributes):
     if tag == 'meta' and attributes.get('property') in ('og:image', 'og:image:url', 'og:image:secure-url') and attributes.get('content'):
@@ -175,13 +175,13 @@ class ScreenshotURLsParser(BaseParser):
           self.add_result(attributes['src'])
 
 class ScreenshotsURLParser(BaseParser):
-  def on_contents(self, tag, attributes, contents):
-    if tag == 'a' and attributes.get('href') and re.search(r"\bscreenshots\b", contents, re.I):
+  def on_content(self, tag, attributes, content):
+    if tag == 'a' and attributes.get('href') and re.search(r"\bscreenshots\b", content, re.I):
       raise ResultException(attributes['href'])
 
   def on_tag(self, tag, attributes):
     if tag == 'a':
-      self.read_contents(tag, attributes)
+      self.read_content(tag, attributes)
 
 class VideoPosterURLsParser(BaseParser):
   is_multiple = True
