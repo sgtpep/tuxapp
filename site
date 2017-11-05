@@ -1,0 +1,371 @@
+#!/usr/bin/env python
+from __future__ import print_function
+import base64
+import cgi
+import functools
+import glob
+import imp
+import mimetypes
+import os
+import re
+import string
+import sys
+
+media = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'media'))
+tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
+
+def write_app_page_worker(app):
+  return write_app_page(app)
+
+@tuxapp.silences
+def write_app_pages(apps):
+  import contextlib
+  import multiprocessing
+  with contextlib.closing(multiprocessing.Pool(10)) as pool:
+    return functools.reduce(lambda result, app_result: result and app_result, pool.imap_unordered(write_app_page_worker, apps), True)
+
+build_actions = lambda *children: \
+  join_elements(
+    build_tag('style', """
+    @media (min-width: 30em) {
+      .actions {
+        float: right;
+        margin: 0;
+      }
+    }
+    .actions > * {
+      margin-right: 0.5em;
+    }
+    .actions > :last-child {
+      margin-right: 0;
+    }
+    """),
+    build_tag("p.actions", *children),
+  )
+
+build_app_card = lambda app, is_heading=False: \
+  join_elements(
+    build_tag('style', """
+    .app-card {
+      margin: 1em 0;
+    }
+    .app-card > :first-child {
+      min-width: 2em;
+    }
+    .app-card-icon {
+      margin: auto;
+      max-width: 100%;
+    }
+    .app-card.is-heading .app-card-icon {
+      max-height: 3em;
+    }
+    .app-card-name {
+      font-size: larger;
+      font-weight: bold;
+    }
+    .app-card.is-heading .app-card-name {
+      font-size: x-large;
+    }
+    .app-card.is-heading .app-card-title {
+      font-weight: bold;
+    }
+    """),
+    build_tag(".flag.app-card{}".format(".is-heading" if is_heading else ''),
+      build_tag('', build_tag("img.app-card-icon", src=build_data_uri(media.get_app_icon_path(app)))),
+      build_tag('',
+        build_tag(".app-card-name", tuxapp.query_appfile(app, 'name')),
+        build_tag(".app-card-title", tuxapp.query_appfile(app, 'title')),
+      ),
+    ),
+  )
+
+build_app_page = lambda app: \
+  build_page("{} - {}".format(
+    tuxapp.query_appfile(app, 'name'),
+    tuxapp.query_appfile(app, 'category').title(),
+  ),
+    build_actions(
+      build_tag('a', "Edit appfile", href=get_github_url("edit/master/apps/{}".format(app))),
+      build_tag('a', "Report issue", href=get_github_url("issues/new?title={}".format(app))),
+    ),
+    build_breadcrumbs(
+      build_tag('a', tuxapp.query_appfile(app, 'category').title(), href='..'),
+      build_tag('h1', tuxapp.query_appfile(app, 'name')),
+    ),
+    build_app_card(app, True),
+  )
+
+build_breadcrumbs = lambda *children: \
+  join_elements(
+    build_tag('style', """
+    .breadcrumbs {
+      margin: 1em 0;
+    }
+    .breadcrumbs h1 {
+      display: inline;
+      font-size: medium;
+    }
+    """),
+    build_tag(".breadcrumbs", " &gt; ".join((build_tag("a", "Home", href="/"),) + children)),
+  )
+
+build_data_uri = lambda path: \
+  "data:{};base64,{}".format(mimetypes.guess_type(path)[0], base64.b64encode(tuxapp.read_file(path, True))) \
+    if os.path.isfile(path) else \
+  ''
+
+build_flag = lambda *children, **attributes: \
+  join_elements(
+    build_tag('style', """
+    .flag {
+      display: block;
+      width: 100%;
+    }
+    .flag > * {
+      display: table-cell;
+      vertical-align: middle;
+    }
+    .flag > :first-child {
+      padding-right: 0.5em;
+    }
+    .flag > :first-child img {
+      display: block;
+    }
+    .flag > :last-child {
+      width: 100%;
+    }
+    """),
+    build_tag(".flag", *children, **attributes),
+  )
+
+build_footer = tuxapp.memoizes()(
+  lambda: \
+    join_elements(
+      build_separator(),
+      build_actions(
+        build_tag('a', "Source code", href=get_github_url()),
+        build_tag('a', "Issues", href=get_github_url("issues")),
+      ),
+      build_tag('style', """
+      .footer-copyright {
+        color: grey;
+        font-size: smaller;
+      }
+      """),
+      build_tag(".footer-copyright",
+        build_tag('p', u"\N{COPYRIGHT SIGN} 2017 {}".format(get_site_name())),
+        build_tag('p', u"Linux\N{COPYRIGHT SIGN} is the registered trademark of Linus Torvalds in the U.S. and other countries."),
+      ),
+      build_tag('script', """
+      if (location.protocol == "file:") {
+        Array.prototype.forEach.call(document.querySelectorAll('a'), function(anchor) {
+          if (anchor.href == "file:///") anchor.href = location.href.replace(/(\/""" + os.path.basename(get_build_path()) + """\/).*$/, "$1index.html", 1);
+          else if (~anchor.href.indexOf("file:///") && !~anchor.href.indexOf('#')) anchor.href += "index.html";
+        });
+      }
+      """),
+    )
+)
+
+build_header = tuxapp.memoizes()(
+  lambda: \
+    join_elements(
+      "<!DOCTYPE html>",
+      build_tag('link',
+        href=build_data_uri(get_logo_path()),
+        rel='icon',
+      ),
+      build_tag('meta', charset='utf-8'),
+      build_tag('meta',
+        content="width=device-width, initial-scale=1",
+        name='viewport',
+      ),
+      build_flag(
+        build_tag('a',
+          build_tag('style', """
+          .header-logo {
+            max-width: 3.5em;
+          }
+          """),
+          build_tag("img.header-logo", src=build_data_uri(get_logo_path())),
+          href='/',
+          title="Home",
+        ),
+        build_tag('',
+          build_tag('style', """
+          .header-top > :last-child {
+            display: block;
+          }
+          @media (min-width: 30em) {
+            .header-top > :last-child {
+              display: table-cell;
+              text-align: right;
+            }
+          }
+          """),
+          build_tag(".flag.header-top",
+            build_tag('style', """
+            .header-name {
+              color: inherit;
+              font-family: serif;
+              font-size: xx-large;
+              text-decoration: none;
+              white-space: nowrap;
+            }
+            """),
+            build_tag("a.header-name", get_site_name(),
+              href="/",
+              title="Home",
+            ),
+            build_search(),
+          ),
+          build_tag('style', """
+          .header-description {
+            color: grey;
+            font-style: italic;
+          }
+          """),
+          build_tag(".header-description", u"An open catalog of easily installable and up-to-date Linux\N{COPYRIGHT SIGN} applications."),
+        ),
+      ),
+      build_separator(),
+    )
+)
+
+build_page = lambda title, *children: \
+  process_styles(join_elements(
+    build_tag('style', """
+    :link {
+      color: mediumblue;
+    }
+    :visited {
+      color: navy;
+    }
+    :link:active,
+    :visited:active {
+      color: red;
+    }
+    body {
+      color: #222;
+      font-family: sans-serif;
+      margin: 1em auto;
+      max-width: 60em;
+      padding: 0 1em;
+      word-wrap: break-word;
+    }
+    """),
+    build_header(),
+    build_tag('title', "{} - {}".format(title, get_site_name()) if title else get_site_name()),
+    join_elements(*children),
+    build_footer(),
+  ))
+
+build_search = lambda: \
+  join_elements(
+    build_tag('style', """
+    .header-search.is-hidden {
+      display: none;
+    }
+    """),
+    build_tag("form.header-search.is-hidden",
+      build_tag('script', """document.forms[0].className = document.forms[0].className.replace(" is-hidden", '');"""),
+      build_tag('input',
+        name='query',
+        placeholder="Search",
+        type='search',
+      ),
+      onsubmit="""location = "https://www.google.ru/search?q=" + encodeURIComponent("site:" + location.host + ' ' + this.query.value); return false;""",
+    ),
+  )
+
+build_separator = lambda: \
+  join_elements(
+    build_tag('style', """
+    .separator {
+      background: lightgrey;
+      border: none;
+      clear: both;
+      height: 1px;
+      margin: 1em 0;
+    }
+    """),
+    build_tag("hr.separator"),
+  )
+
+build_tag = lambda selector, *children, **attributes: \
+  u"""<{}{}>{}{}""".format(
+    extract_tag_name(selector),
+    " {}".format(build_tag_attributes(selector, attributes)) if attributes or '#' in selector or '.' in selector else '',
+    ''.join(children),
+    "</{}>".format(extract_tag_name(selector)) if children or extract_tag_name(selector) not in get_void_elements() else '',
+  )
+
+build_tag_attributes = lambda selector, attributes: \
+  ' '.join("{}{}".format(
+    name,
+    '' if value is True else "=\"{}\"".format(cgi.escape(value, True)),
+  ) for name, value in sorted(dict(attributes, **{
+    'class': ' '.join(sorted(re.findall(r"(?<=\.)[\w-]+", selector))),
+    'id': ' '.join(sorted(re.findall(r"(?<=#)[\w-]+", selector))),
+  }).items()) if value)
+
+extract_tag_name = lambda selector: re.split(r"[#.]", selector, 1)[0] or 'div'
+
+filter_html = lambda html: html
+
+get_app_page_path = lambda app: "{}/apps/{}/index.html".format(get_build_path(), app)
+
+get_assets_path = lambda: "{}/assets".format(os.path.dirname(__file__))
+
+get_build_path = lambda: "{}/build".format(os.path.dirname(__file__))
+
+get_github_url = lambda url='': "https://github.com/{}{}".format(tuxapp.get_github_repository(), "/{}".format(url) if url else '')
+
+get_logo_path = lambda: "{}/logo.png".format(get_assets_path())
+
+get_site_name = lambda: "TuxApp"
+
+get_style_comparison_value = lambda styles: "{:03d}{}".format(":{}.#".format(string.letters).find(styles[0]), styles)
+
+get_styles_index = lambda html: html.find('>', html.rfind("<meta ")) + 1 or len(html)
+
+get_void_elements = lambda: \
+  (
+    'area',
+    'base',
+    'br',
+    'col',
+    'embed',
+    'hr',
+    'img',
+    'input',
+    'keygen',
+    'link',
+    'meta',
+    'param',
+    'source',
+    'track',
+    'wbr',
+  )
+
+join_elements = lambda *elements: ''.join(elements)
+
+main = \
+  tuxapp.handles_exceptions(
+  tuxapp.does(lambda arguments=tuple(sys.argv[1:]), *args, **kwargs: arguments and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.join_arguments(get_app_page_path(tuxapp.extract_app(argument)) for argument in arguments))))(
+    lambda arguments=tuple(sys.argv[1:]): \
+      (arguments or tuxapp.remove_directory(get_build_path())) and \
+      write_app_pages(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
+  ))
+
+process_styles = lambda html: \
+  u"{}{}{}".format(
+    re.sub(r"<style>.*?</style>", '', html[:get_styles_index(html)], 0, re.S),
+    build_tag('style', ''.join(sorted(set(re.sub(r"^\s+", '', styles, 0, re.M).replace('\n', '') for styles in re.findall(r"<style>(.*?)</style>", html, re.S)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y))))),
+    re.sub(r"<style>.*?</style>", '', html[get_styles_index(html):], 0, re.S),
+  )
+
+write_app_page = lambda app: tuxapp.write_file(get_app_page_path(app), filter_html(build_app_page(app)))
+
+if __name__ == '__main__':
+  main()
