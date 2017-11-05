@@ -218,6 +218,11 @@ check_github_repository = lambda repository, format="{}": \
     if repository and not re.search(r"/releases$", fetch_headers_cached("https://github.com/{}/releases/latest".format(repository)), re.M) else \
   ''
 
+download_missing_app_file = lambda app, get_path, url: \
+  get_path(app, tuxapp.hash_md5(url)) \
+    if os.path.isfile(get_path(app, tuxapp.hash_md5(url))) else \
+  tuxapp.download_file(url, get_path(app, tuxapp.hash_md5(url)))
+
 extract_github_repository = lambda url: \
   tuxapp.search(r"\bgithub\.com/([\w-]+/[\w-]+)/releases\b", fetch_url_cached(url), 0, 1) or \
   tuxapp.search(r"\bgithub\.com/([\w-]+/[\w-]+)\b", fetch_url_cached(url), 0, 1) or \
@@ -329,14 +334,11 @@ parse_youtube_thumbnail_urls = lambda url: tuple("https://img.youtube.com/vi/{}/
 
 parse_youtube_urls = lambda url: tuple("https://www.youtube.com/watch?v={}".format(id) for id in parse_youtube_ids(url))
 
-update_app_file = lambda app, get_path, url: \
-  get_path(app, tuxapp.hash_md5(url)) \
-    if not url or os.path.isfile(get_path(app, tuxapp.hash_md5(url))) else \
-  tuxapp.download_file(url, get_path(app, tuxapp.hash_md5(url)))
+update_app_file = lambda app, get_path, url: update_app_files(app, get_path, (url,) if url else ())
 
 update_app_files = lambda app, get_path, urls: \
   all(tuxapp.remove_file(path) for path in glob.iglob(get_path(app, '*')) if path not in tuple(get_path(app, tuxapp.hash_md5(url)) for url in urls)) and \
-  all(update_app_file(app, get_path, url) for url in urls)
+  all(download_missing_app_file(app, get_path, url) for url in urls)
 
 update_app_media = lambda app: \
   write_app_info(app, {
@@ -346,7 +348,7 @@ update_app_media = lambda app: \
     'github-repository': parse_github_repository(tuxapp.query_appfile(app, 'homepage-url')),
     'video-urls': ' '.join(parse_video_urls(tuxapp.query_appfile(app, 'homepage-url'))),
   }) and \
-  update_app_files(app, get_app_image_path, tuple(url for url in (parse_image_url(tuxapp.query_appfile(app, 'homepage-url')),) if url)) and \
+  update_app_file(app, get_app_image_path, parse_image_url(tuxapp.query_appfile(app, 'homepage-url'))) and \
   update_app_files(app, get_app_video_thumbnail_path, parse_video_thumbnail_urls(tuxapp.query_appfile(app, 'homepage-url'))) and \
   update_app_files(app, get_app_screenshot_path, parse_app_screenshot_urls(app, tuxapp.query_appfile(app, 'homepage-url')))
 
