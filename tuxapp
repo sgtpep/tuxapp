@@ -741,7 +741,7 @@ install_app_browser = lambda app: \
 echo "$1" > "$TUXAPP_URLS"
 """)
 
-install_app_desktop_entry = logs_after(lambda app, *args, **kwargs: not os.path.isfile(get_app_desktop_entry_path(app)) and "Added the menu item: {}".format(query_appfile_name(app)))(
+install_app_desktop_entry = logs_after(lambda app, *args, **kwargs: not os.path.isfile(get_app_desktop_entry_path(app)) and "Added the menu item: {}".format(query_appfile(app, 'name')))(
   lambda app: \
     write_file(get_app_desktop_entry_path(app), r"""[Desktop Entry]
 Categories={category}
@@ -754,7 +754,7 @@ Type=Application
 """.format(
   category=generate_desktop_entry_category(query_appfile(app, 'category')),
   icon_path=install_app_icon(app) or '',
-  name=query_appfile_name(app),
+  name=query_appfile(app, 'name'),
   runner_path=install_app_runner(app),
   title=query_appfile(app, 'title'),
 )))
@@ -1072,8 +1072,6 @@ query_appfile = asserts(lambda app, key, *args, **kwargs: kwargs['result'] is No
 query_appfile_download_urls = asserts("No download URL of {} for your architecture")(
   lambda app: tuple(filter_app_download_url(app, url) for url in query_appfile(app, 'download-{}-url'.format(detect_architecture())).split())
 )
-
-query_appfile_name = lambda app: query_appfile(app, 'name') or app
 
 query_appfile_packages = lambda app: expand_packages(query_appfile(app, 'packages').split())
 
