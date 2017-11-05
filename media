@@ -253,6 +253,8 @@ filter_downloads_url = lambda homepage_url, url: \
     "https://www.mozilla.org/en-US/thunderbird/": r"/firefox/",
   }.get(homepage_url, r"^$"), url) else url
 
+get_app_icon_path = lambda app, hash: "{}/icon-{}".format(get_app_media_path(app), hash)
+
 get_app_image_path = lambda app, hash: "{}/image-{}".format(get_app_media_path(app), hash)
 
 get_app_info_path = lambda app: "{}/info".format(get_app_media_path(app))
@@ -348,6 +350,7 @@ update_app_media = lambda app: \
     'github-repository': parse_github_repository(tuxapp.query_appfile(app, 'homepage-url')),
     'video-urls': ' '.join(parse_video_urls(tuxapp.query_appfile(app, 'homepage-url'))),
   }) and \
+  update_app_file(app, get_app_icon_path, tuxapp.query_appfile(app, 'icon-url')) and \
   update_app_file(app, get_app_image_path, parse_image_url(tuxapp.query_appfile(app, 'homepage-url'))) and \
   update_app_files(app, get_app_video_thumbnail_path, parse_video_thumbnail_urls(tuxapp.query_appfile(app, 'homepage-url'))) and \
   update_app_files(app, get_app_screenshot_path, parse_app_screenshot_urls(app, tuxapp.query_appfile(app, 'homepage-url')))
