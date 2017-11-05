@@ -318,7 +318,7 @@ parse_github_repository = lambda url: check_github_repository(extract_github_rep
 
 parse_image_url = lambda url: normalize_url(url, parse_html(ImageURLParser, fetch_url_cached(url)))
 
-parse_screenshot_urls = lambda url: tuple(normalize_url(url, screenshot_url) for screenshot_url in parse_html(ScreenshotURLsParser, fetch_url_cached(parse_screenshots_url(url) or url)))
+parse_screenshot_urls = lambda url: tuple(normalize_url(url, screenshot_url) for screenshot_url in parse_html(ScreenshotURLsParser, fetch_url_cached(parse_screenshots_url(url) or url)) if normalize_url(url, screenshot_url))
 
 parse_screenshots_url = lambda url: normalize_url(url, parse_html(ScreenshotsURLParser, fetch_url_cached(url)))
 
