@@ -284,9 +284,9 @@ normalize_url = lambda page_url, url, base_url=None: \
     if url and url != '#' and not re.match(r"^\w+:", url) else \
   ''
 
-parse_app_debian_screenshot_urls = lambda app, url: filter_app_debian_screenshot_urls(app, tuple(url for url in parse_screenshot_urls("https://screenshots.debian.net/package/{}".format(app)) if not url.endswith("/no-screenshots-available.svg")))
+parse_app_debian_screenshot_urls = lambda app: filter_app_debian_screenshot_urls(app, tuple(url for url in parse_screenshot_urls("https://screenshots.debian.net/package/{}".format(app)) if not url.endswith("/no-screenshots-available.svg")))
 
-parse_app_screenshot_urls = lambda app, url: parse_screenshot_urls(url) + parse_app_debian_screenshot_urls(app, url)
+parse_app_screenshot_urls = lambda app, url: parse_screenshot_urls(url) + parse_app_debian_screenshot_urls(app)
 
 parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url_cached(url)) or url, url)
 
