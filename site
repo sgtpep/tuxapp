@@ -240,13 +240,13 @@ build_footer = tuxapp.memoizes()(
         build_tag('p', "Linux&reg; is the registered trademark of Linus Torvalds in the U.S. and other countries."),
       ),
       build_tag('script', r"""
-      (function() {
       if (location.protocol == "file:") {
         Array.prototype.forEach.call(document.querySelectorAll('a'), function(anchor) {
           if (anchor.href == "file:///") anchor.href = location.href.replace(/(\/""" + os.path.basename(get_build_path()) + r"""\/).*$/, "$1index.html", 1);
           else if (~anchor.href.indexOf("file:///") && !~anchor.href.indexOf('#')) anchor.href += "index.html";
         });
       }
+      (function() {
       var scrollTop = 0;
       function getElement(selector, url) {
         (document.getElementById((url || location.hash).split('#', 1)[1]) || { querySelector: function() {} }).querySelector(selector);
