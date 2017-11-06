@@ -14,6 +14,7 @@ import sys
 media = imp.load_source('media', os.path.join(os.path.dirname(__file__), 'media'))
 tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
 
+@tuxapp.asserts(lambda path, *args, **kwargs: "Unknown image format: {}".format(os.path.basename(path)))
 def detect_image_extension(path):
   if 'imghdr' not in sys.modules:
     import imghdr
