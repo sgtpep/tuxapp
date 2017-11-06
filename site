@@ -461,7 +461,7 @@ build_search = lambda: \
     }
     """),
     build_tag("form.header-search.is-hidden",
-      build_tag('script', r"""document.forms[0].className = document.forms[0].className.replace(" is-hidden", '');"""),
+      build_tag('script', r"""document.querySelector(".header-search").className = document.querySelector(".header-search").className.replace(" is-hidden", '');"""),
       build_tag('input',
         name='query',
         placeholder="Search",
