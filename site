@@ -344,14 +344,14 @@ build_header = tuxapp.memoizes()(
     )
 )
 
-build_lightbox = lambda text, filename, previous_filename=None, next_filename=None: \
+build_lightbox = lambda text, filename: \
   join_elements(
-    build_tag('a', build_tag('img',
+    build_tag("a.lightbox", build_tag('img',
       alt=text,
       src=filename,
     ), href="#{}".format(filename.rsplit('.', 1)[0])),
     build_tag('style', """
-    .lightbox {
+    .lightbox-overlay {
       background: rgba(0, 0, 0, 0.75);
       bottom: 0;
       display: none;
@@ -360,12 +360,12 @@ build_lightbox = lambda text, filename, previous_filename=None, next_filename=No
       right: 0;
       top: 0;
     }
-    .lightbox:target {
+    .lightbox-overlay:target {
       display: block;
     }
-    .lightbox iframe,
-    .lightbox img,
-    .lightbox video {
+    .lightbox-overlay iframe,
+    .lightbox-overlay img,
+    .lightbox-overlay video {
       -webkit-transform: translate(-50%, -50%);
       left: 50%;
       max-height: 90vh;
@@ -375,7 +375,7 @@ build_lightbox = lambda text, filename, previous_filename=None, next_filename=No
       transform: translate(-50%, -50%);
     }
     """),
-    build_tag("#{}.lightbox".format(filename.rsplit('.', 1)[0]),
+    build_tag("#{}.lightbox-overlay".format(filename.rsplit('.', 1)[0]),
       build_tag('img',
         alt=text,
         src=filename,
@@ -401,32 +401,29 @@ build_lightbox = lambda text, filename, previous_filename=None, next_filename=No
         title="Close",
       ),
       build_tag('style', """
+      .lightbox-action.is-next,
+      .lightbox-action.is-previous {
+        margin-top: -0.6em;
+        top: 50%;
+      }
+      .lightbox-action.is-next[href="#"],
+      .lightbox-action.is-previous[href="#"] {
+        visibility: hidden;
+      }
+      .lightbox-action.is-next {
+        right: 0;
+      }
       .lightbox-action.is-previous {
         left: 0;
-        margin-top: -0.6em;
-        top: 50%;
       }
       """),
-      build_tag("a.lightbox-action.is-previous", "&#9666;",
-        href="#{}".format(previous_filename.rsplit('.', 1)[0]),
-        title="Previous",
-      ) if previous_filename else '',
-      build_tag('style', """
-      .lightbox-action.is-next {
-        margin-top: -0.6em;
-        right: 0;
-        top: 50%;
-      }
-      """),
-      build_tag("a.lightbox-action.is-next", "&#9656;",
-        href="#{}".format(next_filename.rsplit('.', 1)[0]),
-        title="Next",
-      ) if next_filename else '',
+      build_tag("a.lightbox-action.is-next", "&#9656;", title="Next"),
+      build_tag("a.lightbox-action.is-previous", "&#9666;", title="Previous"),
     ),
   )
 
 build_page = lambda title, *children: \
-  process_styles(join_elements(
+  process_scripts(process_styles(process_lightbox(join_elements(
     build_tag('style', """
     :link {
       color: mediumblue;
@@ -451,7 +448,7 @@ build_page = lambda title, *children: \
     build_tag('title', "{} - {}".format(title, get_site_name()) if title else get_site_name()),
     join_elements(*children),
     build_footer(),
-  ))
+  ))))
 
 build_search = lambda: \
   join_elements(
@@ -553,11 +550,20 @@ main = \
       write_app_pages(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
   ))
 
+process_lightbox = lambda html: update_lightbox(html, tuple(re.findall(r""" class="lightbox"[^"]* href="([^"]+)""", html)))
+
+process_scripts = lambda html: \
+  re.sub(r"(<script[^>]*>)(.*?)(</script>)", lambda match: "{}{}{}".format(
+    match.group(1),
+    re.sub(r"^\s+", '', match.group(2), 0, re.M).replace('\n', ''),
+    match.group(3),
+  ), html, 0, re.S)
+
 process_styles = lambda html: \
   u"{}{}{}".format(
-    re.sub(r"<style>.*?</style>", '', html[:get_styles_index(html)], 0, re.S),
-    build_tag('style', ''.join(sorted(set(re.sub(r"^\s+", '', styles, 0, re.M).replace('\n', '') for styles in re.findall(r"<style>(.*?)</style>", html, re.S)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y))))),
-    re.sub(r"<style>.*?</style>", '', html[get_styles_index(html):], 0, re.S),
+    re.sub(r"<style[^>]*>.*?</style>", '', html[:get_styles_index(html)], 0, re.S),
+    build_tag('style', ''.join(sorted(set(re.sub(r"^\s+", '', styles, 0, re.M).replace('\n', '') for styles in re.findall(r"<style[^>]*>(.*?)</style>", html, re.S)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y))))),
+    re.sub(r"<style[^>]*>.*?</style>", '', html[get_styles_index(html):], 0, re.S),
   )
 
 symlink_app_image = lambda app, path: \
@@ -566,6 +572,17 @@ symlink_app_image = lambda app, path: \
     os.path.basename(path),
     detect_image_extension(path),
   ), path))
+
+update_lightbox = lambda html, urls: \
+  functools.reduce(
+    lambda html, url: re.sub(r"""( class="lightbox-action is-previous" (?!href=))""", r"""\g<0>href="{}" """.format(url), html, 1),
+    ('#',) + urls[:-1],
+    functools.reduce(
+      lambda html, url: re.sub(r"""( class="lightbox-action is-next" (?!href=))""", r"""\g<0>href="{}" """.format(url), html, 1),
+      urls[1:] + ('#',),
+      html,
+    ),
+  )
 
 write_app_page = lambda app: tuxapp.write_file(get_app_page_path(app), filter_html(build_app_page(app)))
 
