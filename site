@@ -253,6 +253,7 @@ build_footer = tuxapp.memoizes()(
       }
       addEventListener('hashchange', function(event) {
         scrollTo(0, scrollTop);
+        if (/#$/.test(event.newURL)) history.replaceState({}, '', location.href.slice(0, -1));
         if (/#video-$/.test(event.oldURL)) {
           if (getElement('video', event.oldURL)) getElement('video', event.oldURL).pause();
           else if (getElement('iframe', event.oldURL)) getElement('iframe', event.oldURL).contentWindow.postMessage('{ "event": "command", "func": "pauseVideo", "args": "" }', '*');
