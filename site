@@ -130,9 +130,7 @@ build_app_thumbnails = lambda app: \
       }
     }
     """),
-    build_tag(".app-thumbnails",
-      ''.join(build_lightbox("Screenshot", symlink_app_image(app, path)) for path in glob.iglob(media.get_app_screenshot_path(app, '*'))),
-    ),
+    build_tag(".app-thumbnails", ''.join(build_lightbox("Screenshot", symlink_app_image(app, path)) for path in glob.iglob(media.get_app_screenshot_path(app, '*')))),
   )
 
 build_breadcrumbs = lambda *children: \
