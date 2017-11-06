@@ -194,7 +194,10 @@ build_card = lambda path, name, title, is_heading=False: \
   )
 
 build_data_uri = lambda path: \
-  "data:{};base64,{}".format(mimetypes.guess_type(path)[0], base64.b64encode(tuxapp.read_file(path, True))) \
+  "data:{};base64,{}".format(
+    mimetypes.guess_type("_.{}".format(detect_image_extension(path)))[0],
+    base64.b64encode(tuxapp.read_file(path, True)),
+  ) \
     if os.path.isfile(path) else \
   ''
 
