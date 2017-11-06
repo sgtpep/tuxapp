@@ -266,8 +266,8 @@ build_footer = tuxapp.memoizes()(
       addEventListener('keydown', function(event) {
         if (location.hash) {
           if (event.keyCode == 27) location.hash = '';
-          else if (event.keyCode == 37 && getElement(".lightbox-action.is-previous")) location = getElement(".lightbox-action.is-previous").href;
-          else if (event.keyCode == 39 && getElement(".lightbox-action.is-next")) location = getElement(".lightbox-action.is-next").href;
+          else if (event.keyCode == 37 && getElement(".lightbox-action.is-previous").hash) location.hash = getElement(".lightbox-action.is-previous").hash;
+          else if (event.keyCode == 39 && getElement(".lightbox-action.is-next").hash) location.hash = getElement(".lightbox-action.is-next").hash;
           else var isDefault = true;
           if (!isDefault) event.preventDefault();
         }
