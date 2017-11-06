@@ -11,7 +11,7 @@ import re
 import string
 import sys
 
-media = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'media'))
+media = imp.load_source('media', os.path.join(os.path.dirname(__file__), 'media'))
 tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
 
 def write_app_page_worker(app):
