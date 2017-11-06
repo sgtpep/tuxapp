@@ -249,7 +249,7 @@ build_footer = tuxapp.memoizes()(
       (function() {
       var scrollTop = 0;
       function getElement(selector, url) {
-        (document.getElementById((url || location.hash).split('#', 1)[1]) || { querySelector: function() {} }).querySelector(selector);
+        return (document.getElementById((url || location.hash).split('#', 2)[1]) || { querySelector: function() {} }).querySelector(selector);
       }
       addEventListener('hashchange', function(event) {
         scrollTo(0, scrollTop);
