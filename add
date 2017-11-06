@@ -267,7 +267,7 @@ filter_url_path = lambda url: "{}/".format(url) if validate.is_url_valid(url) an
 filter_version_url = lambda homepage_url, url: \
   '' \
     if url == homepage_url else \
-  re.sub(r"(\bgithub\.com/[\w-]+/[\w-]+/releases)(?!/latest$).*", r"\1/latest", url)
+  re.sub(r"\bgithub\.com/[\w-]+/[\w-]+/releases(?!/latest$).*", r"\g<0>/latest", url)
 
 generate_appfile = lambda appfile: ''.join(u"{}={}\n".format(key, appfile[key]) for key in sorted(appfile) if key != 'app')
 
