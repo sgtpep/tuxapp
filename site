@@ -14,6 +14,13 @@ import sys
 media = imp.load_source('media', os.path.join(os.path.dirname(__file__), 'media'))
 tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
 
+def detect_image_extension(path):
+  if 'imghdr' not in sys.modules:
+    import imghdr
+    imghdr.tests.append(lambda header, file: b"<svg " in header and 'svg')
+    imghdr.tests.append(lambda header, file: header[:4] == b"\0\0\1\0" and 'ico')
+  return sys.modules['imghdr'].what(path) or ''
+
 def write_app_page_worker(app):
   return write_app_page(app)
 
@@ -44,39 +51,35 @@ build_actions = lambda *children: \
   )
 
 build_app_card = lambda app, is_heading=False: \
+  build_card(
+    next(glob.iglob(media.get_app_icon_path(app, '*')), None),
+    tuxapp.query_appfile(app, 'name'),
+    tuxapp.query_appfile(app, 'title'),
+    is_heading,
+  )
+
+build_app_image = lambda app, path: \
   join_elements(
     build_tag('style', """
-    .app-card {
+    .app-image {
+      display: block;
       margin: 1em 0;
     }
-    .app-card > :first-child {
-      min-width: 2em;
+    @media (min-width: 40em) {
+      .app-image {
+        float: right;
+        margin-left: 1em;
+        margin-top: 0;
+        max-width: 50%;
+      }
     }
-    .app-card-icon {
-      margin: auto;
+    .app-image img {
+      display: block;
+      max-height: 15em;
       max-width: 100%;
     }
-    .app-card.is-heading .app-card-icon {
-      max-height: 3em;
-    }
-    .app-card-name {
-      font-size: larger;
-      font-weight: bold;
-    }
-    .app-card.is-heading .app-card-name {
-      font-size: x-large;
-    }
-    .app-card.is-heading .app-card-title {
-      font-weight: bold;
-    }
     """),
-    build_tag(".flag.app-card{}".format(".is-heading" if is_heading else ''),
-      build_tag('', build_tag("img.app-card-icon", src=build_data_uri(media.get_app_icon_path(app)))),
-      build_tag('',
-        build_tag(".app-card-name", tuxapp.query_appfile(app, 'name')),
-        build_tag(".app-card-title", tuxapp.query_appfile(app, 'title')),
-      ),
-    ),
+    build_tag(".app-image", build_lightbox("Image", symlink_app_image(app, path))),
   )
 
 build_app_page = lambda app: \
@@ -93,6 +96,39 @@ build_app_page = lambda app: \
       build_tag('h1', tuxapp.query_appfile(app, 'name')),
     ),
     build_app_card(app, True),
+    ''.join(build_app_image(app, path) for path in glob.iglob(media.get_app_image_path(app, '*'))),
+    build_tag('p', tuxapp.query_appfile(app, 'description')) if tuxapp.query_appfile(app, 'description') else '',
+    build_tag('p', tuxapp.query_appfile(app, 'note')) if tuxapp.query_appfile(app, 'note') else '',
+    build_app_thumbnails(app),
+  )
+
+build_app_thumbnails = lambda app: \
+  join_elements(
+    build_tag('style', """
+    .app-thumbnails {
+      margin: 1em 0;
+    }
+    .app-thumbnails > * {
+      display: inline-block;
+      margin-right: 0.25em;
+    }
+    .app-thumbnails img,
+    .app-thumbnails video {
+      display: block;
+      max-height: 5em;
+      max-width: 10em;
+    }
+    @media (min-width: 40em) {
+      .app-thumbnails img,
+      .app-thumbnails video {
+        max-height: 7.5em;
+        max-width: 15em;
+      }
+    }
+    """),
+    build_tag(".app-thumbnails",
+      ''.join(build_lightbox("Screenshot", symlink_app_image(app, path)) for path in glob.iglob(media.get_app_screenshot_path(app, '*'))),
+    ),
   )
 
 build_breadcrumbs = lambda *children: \
@@ -107,6 +143,51 @@ build_breadcrumbs = lambda *children: \
     }
     """),
     build_tag(".breadcrumbs", " &gt; ".join((build_tag("a", "Home", href="/"),) + children)),
+  )
+
+build_card = lambda path, name, title, is_heading=False: \
+  join_elements(
+    build_tag('style', """
+    .card {
+      margin: 1em 0;
+    }
+    .card > :first-child {
+      min-width: 2em;
+    }
+    """),
+    build_tag(".flag.card{}".format(".is-heading" if is_heading else ''),
+      build_tag('style', """
+      .card-icon {
+        margin: auto;
+        max-width: 100%;
+      }
+      .card.is-heading .card-icon {
+        max-height: 3em;
+      }
+      """),
+      build_tag('', build_tag("img.card-icon",
+        alt="Icon",
+        src=build_data_uri(path),
+      )),
+      build_tag('',
+        build_tag('style', """
+        .card-name {
+          font-size: larger;
+          font-weight: bold;
+        }
+        .card.is-heading .card-name {
+          font-size: x-large;
+        }
+        """),
+        build_tag(".card-name", name),
+        build_tag('style', """
+        .card.is-heading .card-title {
+          font-weight: bold;
+        }
+        """),
+        build_tag(".card-title", title),
+      ),
+    ),
   )
 
 build_data_uri = lambda path: \
@@ -153,16 +234,41 @@ build_footer = tuxapp.memoizes()(
       }
       """),
       build_tag(".footer-copyright",
-        build_tag('p', u"\N{COPYRIGHT SIGN} 2017 {}".format(get_site_name())),
-        build_tag('p', u"Linux\N{COPYRIGHT SIGN} is the registered trademark of Linus Torvalds in the U.S. and other countries."),
+        build_tag('p', "&copy; 2017 {}".format(get_site_name())),
+        build_tag('p', "Linux&reg; is the registered trademark of Linus Torvalds in the U.S. and other countries."),
       ),
-      build_tag('script', """
+      build_tag('script', r"""
+      (function() {
       if (location.protocol == "file:") {
         Array.prototype.forEach.call(document.querySelectorAll('a'), function(anchor) {
-          if (anchor.href == "file:///") anchor.href = location.href.replace(/(\/""" + os.path.basename(get_build_path()) + """\/).*$/, "$1index.html", 1);
+          if (anchor.href == "file:///") anchor.href = location.href.replace(/(\/""" + os.path.basename(get_build_path()) + r"""\/).*$/, "$1index.html", 1);
           else if (~anchor.href.indexOf("file:///") && !~anchor.href.indexOf('#')) anchor.href += "index.html";
         });
       }
+      var scrollTop = 0;
+      function getElement(selector, url) {
+        (document.getElementById((url || location.hash).split('#', 1)[1]) || { querySelector: function() {} }).querySelector(selector);
+      }
+      addEventListener('hashchange', function(event) {
+        scrollTo(0, scrollTop);
+        if (/#video-$/.test(event.oldURL)) {
+          if (getElement('video', event.oldURL)) getElement('video', event.oldURL).pause();
+          else if (getElement('iframe', event.oldURL)) getElement('iframe', event.oldURL).contentWindow.postMessage('{ "event": "command", "func": "pauseVideo", "args": "" }', '*');
+        }
+      });
+      addEventListener('keydown', function(event) {
+        if (location.hash) {
+          if (event.keyCode == 27) location.hash = '';
+          else if (event.keyCode == 37 && getElement(".lightbox-action.is-previous")) location = getElement(".lightbox-action.is-previous").href;
+          else if (event.keyCode == 39 && getElement(".lightbox-action.is-next")) location = getElement(".lightbox-action.is-next").href;
+          else var isDefault = true;
+          if (!isDefault) event.preventDefault();
+        }
+      });
+      addEventListener('scroll', function(event) {
+        scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+      });
+      })();
       """),
     )
 )
@@ -187,7 +293,10 @@ build_header = tuxapp.memoizes()(
             max-width: 3.5em;
           }
           """),
-          build_tag("img.header-logo", src=build_data_uri(get_logo_path())),
+          build_tag("img.header-logo",
+            alt="Logo",
+            src=build_data_uri(get_logo_path(),
+          )),
           href='/',
           title="Home",
         ),
@@ -225,12 +334,93 @@ build_header = tuxapp.memoizes()(
             font-style: italic;
           }
           """),
-          build_tag(".header-description", u"An open catalog of easily installable and up-to-date Linux\N{COPYRIGHT SIGN} applications."),
+          build_tag(".header-description", "An open catalog of easily installable and up-to-date Linux&reg; applications."),
         ),
       ),
       build_separator(),
     )
 )
+
+build_lightbox = lambda text, filename, previous_filename=None, next_filename=None: \
+  join_elements(
+    build_tag('a', build_tag('img',
+      alt=text,
+      src=filename,
+    ), href="#{}".format(filename.rsplit('.', 1)[0])),
+    build_tag('style', """
+    .lightbox {
+      background: rgba(0, 0, 0, 0.75);
+      bottom: 0;
+      display: none;
+      left: 0;
+      position: fixed;
+      right: 0;
+      top: 0;
+    }
+    .lightbox:target {
+      display: block;
+    }
+    .lightbox iframe,
+    .lightbox img,
+    .lightbox video {
+      -webkit-transform: translate(-50%, -50%);
+      left: 50%;
+      max-height: 90vh;
+      max-width: 90vw;
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    """),
+    build_tag("#{}.lightbox".format(filename.rsplit('.', 1)[0]),
+      build_tag('img',
+        alt=text,
+        src=filename,
+      ),
+      build_tag('style', """
+      .lightbox-action {
+        color: white;
+        font-size: 2.5em;
+        position: absolute;
+        text-align: center;
+        text-decoration: none;
+        width: 1.2em;
+      }
+      """),
+      build_tag('style', """
+      .lightbox-action.is-close {
+        right: 0;
+        top: 0;
+      }
+      """),
+      build_tag("a.lightbox-action.is-close", "&times;",
+        href='#',
+        title="Close",
+      ),
+      build_tag('style', """
+      .lightbox-action.is-previous {
+        left: 0;
+        margin-top: -0.6em;
+        top: 50%;
+      }
+      """),
+      build_tag("a.lightbox-action.is-previous", "&#9666;",
+        href="#{}".format(previous_filename.rsplit('.', 1)[0]),
+        title="Previous",
+      ) if previous_filename else '',
+      build_tag('style', """
+      .lightbox-action.is-next {
+        margin-top: -0.6em;
+        right: 0;
+        top: 50%;
+      }
+      """),
+      build_tag("a.lightbox-action.is-next", "&#9656;",
+        href="#{}".format(next_filename.rsplit('.', 1)[0]),
+        title="Next",
+      ) if next_filename else '',
+    ),
+  )
 
 build_page = lambda title, *children: \
   process_styles(join_elements(
@@ -268,7 +458,7 @@ build_search = lambda: \
     }
     """),
     build_tag("form.header-search.is-hidden",
-      build_tag('script', """document.forms[0].className = document.forms[0].className.replace(" is-hidden", '');"""),
+      build_tag('script', r"""document.forms[0].className = document.forms[0].className.replace(" is-hidden", '');"""),
       build_tag('input',
         name='query',
         placeholder="Search",
@@ -305,15 +495,17 @@ build_tag_attributes = lambda selector, attributes: \
     name,
     '' if value is True else "=\"{}\"".format(cgi.escape(value, True)),
   ) for name, value in sorted(dict(attributes, **{
-    'class': ' '.join(sorted(re.findall(r"(?<=\.)[\w-]+", selector))),
-    'id': ' '.join(sorted(re.findall(r"(?<=#)[\w-]+", selector))),
+    'class': ' '.join(re.findall(r"(?<=\.)[\w-]+", selector)),
+    'id': ' '.join(re.findall(r"(?<=#)[\w-]+", selector)),
   }).items()) if value)
 
 extract_tag_name = lambda selector: re.split(r"[#.]", selector, 1)[0] or 'div'
 
 filter_html = lambda html: html
 
-get_app_page_path = lambda app: "{}/apps/{}/index.html".format(get_build_path(), app)
+get_app_directory_path = lambda app: "{}/apps/{}".format(get_build_path(), app)
+
+get_app_page_path = lambda app: "{}/index.html".format(get_app_directory_path(app))
 
 get_assets_path = lambda: "{}/assets".format(os.path.dirname(__file__))
 
@@ -364,6 +556,13 @@ process_styles = lambda html: \
     build_tag('style', ''.join(sorted(set(re.sub(r"^\s+", '', styles, 0, re.M).replace('\n', '') for styles in re.findall(r"<style>(.*?)</style>", html, re.S)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y))))),
     re.sub(r"<style>.*?</style>", '', html[get_styles_index(html):], 0, re.S),
   )
+
+symlink_app_image = lambda app, path: \
+  os.path.basename(tuxapp.symlink_file("{}/{}.{}".format(
+    get_app_directory_path(app),
+    os.path.basename(path),
+    detect_image_extension(path),
+  ), path))
 
 write_app_page = lambda app: tuxapp.write_file(get_app_page_path(app), filter_html(build_app_page(app)))
 
