@@ -1127,12 +1127,16 @@ resolve_package_urls_cached = lambda packages: \
     if any(is_file_newer(path, get_package_urls_cache_path(packages)) for path in update_package_lists()) else \
   read_file(get_package_urls_cache_path(packages)).splitlines()
 
-resolve_packages = lambda packages, resolved_packages=set(): functools.reduce(lambda packages, package: \
-  packages | {package} | resolve_packages(
-    tuple(package for package in query_package_depends(package) if package.startswith('lib') and package != 'libc6' and package not in resolved_packages),
-    packages | {package},
-  ),
-packages, set())
+resolve_packages = lambda packages, resolved_packages=set(): \
+  functools.reduce(
+    lambda packages, package: \
+      packages | {package} | resolve_packages(
+        tuple(package for package in query_package_depends(package) if package.startswith('lib') and package != 'libc6' and package not in resolved_packages),
+        packages | {package},
+      ),
+    packages,
+    set(),
+  )
 
 sanitize_app_executable = lambda app, command: \
   join_arguments(("{}{}".format(

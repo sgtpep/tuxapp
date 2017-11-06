@@ -211,7 +211,11 @@ def update_apps_media(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
-    return functools.reduce(lambda result, app_result: result and app_result, pool.imap_unordered(update_app_media_worker, apps), True)
+    return functools.reduce(
+      lambda result, app_result: result and app_result,
+      pool.imap_unordered(update_app_media_worker, apps),
+      True,
+    )
 
 are_app_debian_screenshots_ignored = lambda app: \
   app in (

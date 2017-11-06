@@ -45,7 +45,11 @@ def validate_appfiles(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
-    return functools.reduce(lambda result, app_result: result and app_result, pool.imap_unordered(validate_appfile_worker, apps), True)
+    return functools.reduce(
+      lambda result, app_result: result and app_result,
+      pool.imap_unordered(validate_appfile_worker, apps),
+      True,
+    )
 
 @tuxapp.asserts("Malformed pattern")
 def validate_regex(pattern):
