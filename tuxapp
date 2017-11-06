@@ -308,9 +308,10 @@ def split_command(command):
     pass
 
 def symlink_file(path, target_path):
-  if os.path.islink(path):
-    os.remove(path)
-  os.symlink(target_path, path)
+  if not os.path.islink(path) or os.readlink(path) != target_path:
+    if os.path.islink(path):
+      os.remove(path)
+    os.symlink(target_path, make_file_directories(path))
   return path
 
 def touch_file(path, timestamp=None):
