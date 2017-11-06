@@ -62,7 +62,7 @@ class BaseParser(HTMLParser):
   def handle_endtag(self, tag):
     if tag == self.content_tag:
       getattr(self, 'on_content', lambda *args, **kwargs: None)(self.content_tag, self.content_attributes, self.content.strip())
-      self.content= ''
+      self.content = ''
       self.content_attributes = {}
       self.content_tag = None
     if self.is_head and tag == 'head':
@@ -213,6 +213,11 @@ def update_apps_media(apps):
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
     return functools.reduce(lambda result, app_result: result and app_result, pool.imap_unordered(update_app_media_worker, apps), True)
 
+are_app_debian_screenshots_ignored = lambda app: \
+  app in (
+    'skype',
+  )
+
 check_github_repository = lambda repository, format="{}": \
   format.format(repository) \
     if repository and not re.search(r"/releases$", fetch_headers_cached("https://github.com/{}/releases/latest".format(repository)), re.M) else \
@@ -236,22 +241,17 @@ fetch_url_cached = tuxapp.memoizes()(
   lambda url: tuxapp.fetch_url(url)
 )
 
-filter_app_debian_screenshot_urls = lambda app, urls: \
-  () if app in (
-    'skype',
-  ) else urls
-
-filter_changelog_url = lambda homepage_url, url: \
+filter_changelog_url = lambda url, changelog_url: \
   '' if re.search({
     "https://www.mozilla.org/en-US/firefox/developer/": r"/firefox/",
-  }.get(homepage_url, r"^$"), url) else url
+  }.get(url, r"^$"), changelog_url) else changelog_url
 
-filter_downloads_url = lambda homepage_url, url: \
+filter_downloads_url = lambda url, downloads_url: \
   '' if re.search({
     "https://www.google.com/chrome/browser/beta.html": r"/chrome/browser/$",
     "https://www.mozilla.org/en-US/firefox/developer/": r"/firefox/",
     "https://www.mozilla.org/en-US/thunderbird/": r"/firefox/",
-  }.get(homepage_url, r"^$"), url) else url
+  }.get(url, r"^$"), downloads_url) else downloads_url
 
 get_app_icon_path = lambda app, hash: "{}/icon-{}".format(get_app_media_path(app), hash)
 
@@ -264,6 +264,11 @@ get_app_media_path = lambda app: "{}/tuxapp-media/{}".format(tuxapp.get_xdg_cach
 get_app_screenshot_path = lambda app, hash: "{}/screenshot-{}".format(get_app_media_path(app), hash)
 
 get_app_video_thumbnail_path = lambda app, hash: "{}/video-{}".format(get_app_media_path(app), hash)
+
+is_screenshot_url_ignored = lambda url, screenshot_url: \
+  bool(re.search({
+    "https://code.visualstudio.com/": r"\.svg$",
+  }.get(url, r"^$"), screenshot_url))
 
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): update_apps_media(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
@@ -284,7 +289,10 @@ normalize_url = lambda page_url, url, base_url=None: \
     if url and url != '#' and not re.match(r"^\w+:", url) else \
   ''
 
-parse_app_debian_screenshot_urls = lambda app: filter_app_debian_screenshot_urls(app, tuple(url for url in parse_screenshot_urls("https://screenshots.debian.net/package/{}".format(app)) if not url.endswith("/no-screenshots-available.svg")))
+parse_app_debian_screenshot_urls = lambda app: \
+  () \
+    if are_app_debian_screenshots_ignored(app) else \
+  tuple(url for url in parse_screenshot_urls("https://screenshots.debian.net/package/{}".format(app)) if not url.endswith("/no-screenshots-available.svg"))
 
 parse_app_screenshot_urls = lambda app, url: parse_screenshot_urls(url) + parse_app_debian_screenshot_urls(app)
 
@@ -318,13 +326,13 @@ parse_github_repository = lambda url: check_github_repository(extract_github_rep
 
 parse_image_url = lambda url: normalize_url(url, parse_html(ImageURLParser, fetch_url_cached(url)))
 
-parse_screenshot_urls = lambda url: tuple(normalize_url(url, screenshot_url) for screenshot_url in parse_html(ScreenshotURLsParser, fetch_url_cached(parse_screenshots_url(url) or url)) if normalize_url(url, screenshot_url))
+parse_screenshot_urls = lambda url: tuple(normalize_url(url, screenshot_url) for screenshot_url in parse_html(ScreenshotURLsParser, fetch_url_cached(parse_screenshots_url(url) or url)) if normalize_url(url, screenshot_url) and not is_screenshot_url_ignored(url, screenshot_url))
 
 parse_screenshots_url = lambda url: normalize_url(url, parse_html(ScreenshotsURLParser, fetch_url_cached(url)))
 
-parse_video_poster_urls = lambda url: tuple(set((normalize_url(url, video_url), normalize_url(url, poster_url)) for poster_url, video_url in zip(parse_html(VideoPosterURLsParser, fetch_url_cached(url)), parse_html(VideoURLsParser, fetch_url_cached(url))) if poster_url))
+parse_video_poster_urls = lambda url: tuple(set((normalize_url(url, video_url), normalize_url(url, poster_url)) for poster_url, video_url in zip(parse_html(VideoPosterURLsParser, fetch_url_cached(url)), parse_html(VideoURLsParser, fetch_url_cached(url))) if normalize_url(url, poster_url)))
 
-parse_video_src_urls = lambda url: tuple(set(normalize_url(url, video_url) for video_url in parse_html(VideoURLsParser, fetch_url_cached(url))))
+parse_video_src_urls = lambda url: tuple(set(normalize_url(url, video_url) for video_url in parse_html(VideoURLsParser, fetch_url_cached(url)) if normalize_url(url, video_url)))
 
 parse_video_thumbnail_urls = lambda url: parse_youtube_thumbnail_urls(url) + parse_video_poster_urls(url)
 
