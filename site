@@ -87,7 +87,10 @@ build_app_gallery = lambda app: \
       }
     }
     """),
-    build_tag(".app-gallery", ''.join(build_lightbox("Screenshot", symlink_app_image(app, path)) for path in glob.iglob(media.get_app_screenshot_path(app, '*')))),
+    build_tag(".app-gallery",
+      ''.join(build_lightbox("Screenshot", symlink_app_image(app, path)) for path in glob.iglob(media.get_app_screenshot_path(app, '*'))),
+      ''.join(build_lightbox("Video", symlink_app_image(app, media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))) if os.path.isfile(media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))) else os.path.basename(media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))), url) for url in query_app_info(app, 'video-urls').split()),
+    ),
   )
 
 build_app_image = lambda app, path: \
@@ -348,12 +351,19 @@ build_header = tuxapp.memoizes()(
     )
 )
 
-build_lightbox = lambda text, filename: \
+build_lightbox = lambda text, path, url=None: \
   join_elements(
-    build_tag("a.lightbox", build_tag('img',
-      alt=text,
-      src=filename,
-    ), href="#{}".format(filename.rsplit('.', 1)[0])),
+    build_tag("a.lightbox",
+      build_tag('video',
+        preload='metadata',
+        src=url,
+      ) \
+        if url and not os.path.isfile(path) else \
+      build_tag('img',
+        alt=text,
+        src=os.path.basename(path),
+      ), href="#{}".format(os.path.basename(path).rsplit('.', 1)[0]),
+    ),
     build_tag('style', """
     .lightbox-overlay {
       background: rgba(0, 0, 0, 0.75);
@@ -378,11 +388,27 @@ build_lightbox = lambda text, filename: \
       top: 50%;
       transform: translate(-50%, -50%);
     }
+    .lightbox-overlay iframe {
+      border: none;
+    }
     """),
-    build_tag("#{}.lightbox-overlay".format(filename.rsplit('.', 1)[0]),
+    build_tag("#{}.lightbox-overlay".format(os.path.basename(path).rsplit('.', 1)[0]),
+      build_tag('iframe',
+        allowfullscreen=True,
+        height='480',
+        src="https://www.youtube.com/embed/{}?enablejsapi=1".format(tuxapp.search("(?<=^https://www\.youtube\.com/watch\?v=).+", url)),
+        width='853',
+      ) \
+        if url and url.startswith("https://www.youtube.com/") else \
+      build_tag('video',
+        controls=True,
+        preload='metadata',
+        src=url,
+      ) \
+        if url else \
       build_tag('img',
         alt=text,
-        src=filename,
+        src=os.path.basename(path),
       ),
       build_tag('style', """
       .lightbox-action {
@@ -572,12 +598,16 @@ process_styles = lambda html: \
     re.sub(r"<style[^>]*>.*?</style>", '', html[get_styles_index(html):], 0, re.S),
   )
 
+query_app_info = tuxapp.asserts(lambda app, key, *args, **kwargs: kwargs['result'] is None and "Failed to get {}.{}".format(app, key))(
+  lambda app, key: tuxapp.search(r"(?<=^{}=).*$".format(re.escape(key)), tuxapp.read_file(media.get_app_info_path(app)), re.M)
+)
+
 symlink_app_image = lambda app, path: \
-  os.path.basename(tuxapp.symlink_file("{}/{}.{}".format(
+  tuxapp.symlink_file("{}/{}.{}".format(
     get_app_directory_path(app),
     os.path.basename(path),
     detect_image_extension(path),
-  ), path))
+  ), path)
 
 update_lightbox = lambda html, urls: \
   functools.reduce(
