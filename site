@@ -124,13 +124,13 @@ build_app_page = lambda app: \
       build_tag('a', "Report issue", href=get_github_url("issues/new?title={}".format(app))),
     ),
     build_breadcrumbs(
-      build_tag('a', tuxapp.query_appfile(app, 'category').title(), href='..'),
-      build_tag('h1', tuxapp.query_appfile(app, 'name')),
+      build_tag('a', escape_html(tuxapp.query_appfile(app, 'category').title()), href='..'),
+      build_tag('h1', escape_html(tuxapp.query_appfile(app, 'name'))),
     ),
     build_app_card(app, True),
     ''.join(build_app_image(app, path) for path in glob.iglob(media.get_app_image_path(app, '*'))),
-    build_tag('p', tuxapp.query_appfile(app, 'description')) if tuxapp.query_appfile(app, 'description') else '',
-    build_tag('p', tuxapp.query_appfile(app, 'note')) if tuxapp.query_appfile(app, 'note') else '',
+    build_tag('p', escape_html(tuxapp.query_appfile(app, 'description'))) if tuxapp.query_appfile(app, 'description') else '',
+    build_tag('p', escape_html(tuxapp.query_appfile(app, 'note'))) if tuxapp.query_appfile(app, 'note') else '',
     build_app_gallery(app),
   )
 
@@ -182,13 +182,13 @@ build_card = lambda path, name, title, is_heading=False: \
           font-size: x-large;
         }
         """),
-        build_tag(".card-name", name),
+        build_tag(".card-name", escape_html(name)),
         build_tag('style', """
         .card.is-heading .card-title {
           font-weight: bold;
         }
         """),
-        build_tag(".card-title", title),
+        build_tag(".card-title", escape_html(title)),
       ),
     ),
   )
@@ -449,7 +449,7 @@ build_page = lambda title, *children: \
     }
     """),
     build_header(),
-    build_tag('title', "{} - {}".format(title, get_site_name()) if title else get_site_name()),
+    build_tag('title', "{} - {}".format(escape_html(title), get_site_name()) if title else get_site_name()),
     join_elements(*children),
     build_footer(),
   ))))
@@ -497,11 +497,13 @@ build_tag = lambda selector, *children, **attributes: \
 build_tag_attributes = lambda selector, attributes: \
   ' '.join("{}{}".format(
     name,
-    '' if value is True else "=\"{}\"".format(cgi.escape(value, True)),
+    '' if value is True else "=\"{}\"".format(escape_html(value)),
   ) for name, value in sorted(dict(attributes, **{
     'class': ' '.join(re.findall(r"(?<=\.)[\w-]+", selector)),
     'id': ' '.join(re.findall(r"(?<=#)[\w-]+", selector)),
   }).items()) if value)
+
+escape_html = lambda html: cgi.escape(html, True)
 
 extract_tag_name = lambda selector: re.split(r"[#.]", selector, 1)[0] or 'div'
 
