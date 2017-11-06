@@ -355,6 +355,7 @@ update_app_media = lambda app: \
     'download-formats': parse_download_formats(tuxapp.query_appfile(app, 'homepage-url')),
     'downloads-url': parse_downloads_url(tuxapp.query_appfile(app, 'homepage-url')),
     'github-repository': parse_github_repository(tuxapp.query_appfile(app, 'homepage-url')),
+    'screenshot-urls': ' '.join(parse_app_screenshot_urls(app, tuxapp.query_appfile(app, 'homepage-url'))),
     'video-urls': ' '.join(parse_video_urls(tuxapp.query_appfile(app, 'homepage-url'))),
   }) and \
   update_app_file(app, get_app_icon_path, tuxapp.query_appfile(app, 'icon-url')) and \

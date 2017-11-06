@@ -88,7 +88,7 @@ build_app_gallery = lambda app: \
     }
     """),
     build_tag(".app-gallery",
-      ''.join(build_lightbox("Screenshot", symlink_app_image(app, path)) for path in glob.iglob(media.get_app_screenshot_path(app, '*'))),
+      ''.join(build_lightbox("Screenshot", symlink_app_image(app, media.get_app_screenshot_path(app, tuxapp.hash_md5(url)))) for url in query_app_info(app, 'screenshot-urls').split()),
       ''.join(build_lightbox("Video", symlink_app_image(app, media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))) if os.path.isfile(media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))) else os.path.basename(media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))), url) for url in query_app_info(app, 'video-urls').split()),
     ),
   )
