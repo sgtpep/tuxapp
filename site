@@ -156,21 +156,22 @@ build_app_info = lambda app: \
 build_app_instructions = lambda app: \
   join_elements(
     build_tag('h2', "How to install"),
-    build_tag('p', """This command will install <code>{}</code> using the <code>tuxapp</code> script hosted on <a href="https://github.com/{}/blob/master/tuxapp">GitHub</a>:""".format(app, tuxapp.get_github_repository())),
+    build_tag('p', """Run this command from the terminal to install <code>{}</code> using the <code>tuxapp</code> script hosted on <a href="https://github.com/{}/blob/master/tuxapp">GitHub</a>:""".format(app, tuxapp.get_github_repository())),
     build_tag('style', """
     .instructions-code {
       user-select: all;
       white-space: pre-wrap;
     }
     """),
-    build_tag('pre', build_tag("code.instructions-code", r"""python <(url=https://raw.githubusercontent.com/{}/master/tuxapp; wget -O - $url || curl $url) {}""".format(tuxapp.get_github_repository(), app))),
-    build_tag('p', "Alternatively, you may also download the <code>tuxapp</code> script and install <code>{}</code> running it locally:".format(app)),
-    build_tag('pre', build_tag("code.instructions-code", r"""url=https://raw.githubusercontent.com/{}/master/tuxapp; wget $url || curl -o tuxapp $url
-chmod +x ./tuxapp
-./tuxapp {}
-""".format(tuxapp.get_github_repository(), app))),
-    build_tag('p', """To make apps run sandboxed install <a href="https://firejail.wordpress.com/">Firejail</a> using your package manager. For example, use this command on Debian/Ubuntu:"""),
-    build_tag('pre', build_tag("code.instructions-code", "sudo apt install firejail")),
+    build_tag('pre', build_tag("code.instructions-code", r"python <(url=https://raw.githubusercontent.com/{}/master/tuxapp; wget -O - $url || curl $url) {}".format(tuxapp.get_github_repository(), app))),
+    build_tag('p', "Alternatively, you may also download the <code>tuxapp</code> script and run it locally to install <code>{}</code>:".format(app)),
+    build_tag('pre', '\n'.join(build_tag("code.instructions-code", command) for command in (
+      r"url=https://raw.githubusercontent.com/{}/master/tuxapp; wget $url || curl -o tuxapp $url".format(tuxapp.get_github_repository()),
+      r"chmod +x ./tuxapp",
+      r"./tuxapp {}".format(app),
+    ))),
+    build_tag('p', """To make apps run sandboxed (isolated from your system and sensitive files) install <a href="https://firejail.wordpress.com/">Firejail</a> using your package manager. For example, on Debian/Ubuntu use this command:"""),
+    build_tag('pre', build_tag("code.instructions-code", r"sudo apt install firejail")),
   )
 
 build_app_page = lambda app: \
