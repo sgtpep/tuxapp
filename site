@@ -342,19 +342,26 @@ build_footer = tuxapp.memoizes()(
     )
 )
 
+build_head = lambda title: \
+  join_elements(
+    "<!DOCTYPE html>",
+    """<html lang="en">""",
+    build_tag('meta', charset='utf-8'),
+    build_tag('meta',
+      content="width=device-width, initial-scale=1",
+      name='viewport',
+    ),
+    build_tag('link',
+      href=build_data_uri(get_logo_path()),
+      rel='icon',
+    ),
+    build_tag('title', "{} - {}".format(escape_html(title), get_site_name()) if title else get_site_name()),
+    get_styles_placeholder(),
+  )
+
 build_header = tuxapp.memoizes()(
   lambda: \
     join_elements(
-      "<!DOCTYPE html>",
-      build_tag('link',
-        href=build_data_uri(get_logo_path()),
-        rel='icon',
-      ),
-      build_tag('meta', charset='utf-8'),
-      build_tag('meta',
-        content="width=device-width, initial-scale=1",
-        name='viewport',
-      ),
       build_flag(
         build_tag('a',
           build_tag('style', """
@@ -513,6 +520,7 @@ build_lightbox = lambda text, path, url=None: \
 
 build_page = lambda title, *children: \
   process_scripts(process_styles(process_lightbox(join_elements(
+    build_head(title),
     build_tag('style', """
     :link {
       color: mediumblue;
@@ -534,7 +542,6 @@ build_page = lambda title, *children: \
     }
     """),
     build_header(),
-    build_tag('title', "{} - {}".format(escape_html(title), get_site_name()) if title else get_site_name()),
     join_elements(*children),
     build_footer(),
   ))))
@@ -634,7 +641,7 @@ get_site_name = lambda: "TuxApp"
 
 get_style_comparison_value = lambda styles: "{:03d}{}".format(":{}.#".format(string.letters).find(styles[0]), styles)
 
-get_styles_index = lambda html: html.find('>', html.rfind("<meta ")) + 1 or len(html)
+get_styles_placeholder = lambda: "<!-- styles -->"
 
 get_void_elements = lambda: \
   (
@@ -676,9 +683,9 @@ process_scripts = lambda html: \
 
 process_styles = lambda html: \
   u"{}{}{}".format(
-    re.sub(r"<style[^>]*>.*?</style>", '', html[:get_styles_index(html)], 0, re.S),
+    re.sub(r"<style[^>]*>.*?</style>", '', html[:html.find(get_styles_placeholder())], 0, re.S),
     build_tag('style', ''.join(sorted(set(re.sub(r"^\s+", '', styles, 0, re.M).replace('\n', '') for styles in re.findall(r"<style[^>]*>(.*?)</style>", html, re.S)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y))))),
-    re.sub(r"<style[^>]*>.*?</style>", '', html[get_styles_index(html):], 0, re.S),
+    re.sub(r"<style[^>]*>.*?</style>", '', html[html.find(get_styles_placeholder()) + len(get_styles_placeholder()):], 0, re.S),
   )
 
 query_app_info = tuxapp.asserts(lambda app, key, *args, **kwargs: kwargs['result'] is None and "Failed to get {}.{}".format(app, key))(
