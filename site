@@ -108,8 +108,11 @@ build_app_image = lambda app, path: \
         max-width: 50%;
       }
     }
-    .app-image img {
+    .app-image .lightbox,
+    .app-image .lightbox img {
       display: block;
+    }
+    .app-image .lightbox img {
       max-height: 15em;
       max-width: 100%;
     }
