@@ -192,7 +192,7 @@ build_app_page = lambda app: \
     os.path.relpath(get_build_path(), os.path.dirname(get_app_page_path(app))),
     "{} - {}".format(query_app_name(app), get_app_category(app)),
     {
-      'description': tuxapp.query_appfile(app, 'description'),
+      'description': tuxapp.query_appfile(app, 'description') or tuxapp.query_appfile(app, 'title'),
       'image': build_app_og_image_url(app),
       'title': "Install {} with {}".format(tuxapp.query_appfile(app, 'name'), get_site_name()),
       'url': get_app_url(app),
