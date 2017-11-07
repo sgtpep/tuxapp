@@ -34,6 +34,8 @@ def write_app_pages(apps):
       True,
     )
 
+build_absolute_url = lambda url='': "https://tuxapp.org/{}".format(url)
+
 build_actions = lambda *children: \
   join_elements(
     build_tag('style', """
@@ -179,11 +181,21 @@ build_app_instructions = lambda app: \
     build_tag('pre', build_tag("code.instructions-code", r"sudo apt install firejail")),
   )
 
+build_app_og_image_url = lambda app: \
+  build_app_image_url(app, media.get_app_image_path(app, media.query_app_info(app, 'image-url'))) \
+    if media.query_app_info(app, 'image-url') else \
+  build_app_image_url(app, media.get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url')))
+
 build_app_page = lambda app: \
   build_page(
     os.path.relpath(get_build_path(), os.path.dirname(get_app_page_path(app))),
     "{} - {}".format(query_app_name(app), get_app_category(app)),
-    tuxapp.query_appfile(app, 'description'),
+    {
+      'description': tuxapp.query_appfile(app, 'description'),
+      'image': build_app_og_image_url(app),
+      'title': "Install {} with {}".format(tuxapp.query_appfile(app, 'name'), get_site_name()),
+      'url': get_app_url(app),
+    },
     build_actions(
       build_tag('a', "Edit appfile", href=get_github_url("edit/master/apps/{}".format(app))),
       build_tag('a', "Report issue", href=get_github_url("issues/new?title={}".format(app))),
@@ -341,15 +353,47 @@ build_footer = tuxapp.memoizes()(
     )
 )
 
-build_head = lambda base_url, title, description: \
+build_head = lambda base_url, title, overrides={}: \
   join_elements(
     "<!DOCTYPE html>",
     """<html lang="en">""",
     build_tag('base', href=base_url),
     build_tag('meta', charset='utf-8'),
     build_tag('meta',
+      content=get_site_name(),
+      name='application-name',
+    ),
+    build_tag('meta',
+      content=overrides.get('description', get_site_description()),
+      name='description',
+    ),
+    build_tag('meta',
       content="width=device-width, initial-scale=1",
       name='viewport',
+    ),
+    build_tag('meta',
+      content=overrides.get('description', get_site_description()),
+      property='og:description',
+    ),
+    build_tag('meta',
+      content=build_absolute_url(overrides.get('image', get_logo_url())),
+      property='og:image',
+    ),
+    build_tag('meta',
+      content=get_site_name(),
+      property='og:site_name',
+    ),
+    build_tag('meta',
+      content=overrides.get('title', get_site_name()),
+      property='og:title',
+    ),
+    build_tag('meta',
+      content='website',
+      property='og:type',
+    ),
+    build_tag('meta',
+      content=build_absolute_url(overrides.get('url', '')),
+      property='og:url',
     ),
     build_tag('link',
       href=get_logo_url(),
@@ -410,7 +454,7 @@ build_header = tuxapp.memoizes()(
             font-style: italic;
           }
           """),
-          build_tag(".header-description", "An open catalog of easily installable and up-to-date Linux&reg; applications."),
+          build_tag(".header-description", get_site_description()),
         ),
       ),
       build_separator(),
@@ -519,9 +563,9 @@ build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
     ),
   )
 
-build_page = lambda base_url, title, description, *children: \
+build_page = lambda base_url, title, overrides, *children: \
   process_scripts(process_styles(process_lightbox(join_elements(
-    build_head(base_url, title, description),
+    build_head(base_url, title, overrides),
     build_tag('style', """
     :link {
       color: mediumblue;
@@ -635,6 +679,8 @@ get_download_format_name = lambda format: \
 get_github_url = lambda url='': "https://github.com/{}{}".format(tuxapp.get_github_repository(), "/{}".format(url) if url else '')
 
 get_logo_url = lambda: "logo.png"
+
+get_site_description = lambda: u"An open catalog of easily installable and up-to-date Linux\N{REGISTERED SIGN} applications"
 
 get_site_name = lambda: "TuxApp"
 
