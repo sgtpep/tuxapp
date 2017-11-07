@@ -343,24 +343,32 @@ parse_youtube_thumbnail_urls = lambda url: tuple(("https://www.youtube.com/watch
 
 parse_youtube_urls = lambda url: tuple("https://www.youtube.com/watch?v={}".format(id) for id in parse_youtube_ids(url))
 
+query_app_info = tuxapp.asserts(lambda app, key, *args, **kwargs: kwargs['result'] is None and "Failed to get {}.{}".format(app, key))(
+  lambda app, key: tuxapp.search(r"(?<=^{}=).*$".format(re.escape(key)), tuxapp.read_file(get_app_info_path(app)), re.M)
+)
+
 update_app_file = lambda app, get_path, url: update_app_files(app, get_path, (url,) if url else ())
 
 update_app_files = lambda app, get_path, urls: \
   all(tuxapp.remove_file(path) for path in glob.iglob(get_path(app, '*')) if path not in tuple(get_path(app, tuxapp.hash_md5(url[0] if isinstance(url, tuple) else url)) for url in urls)) and \
   all(tuxapp.download_missing_file(url[1] if isinstance(url, tuple) else url, get_path(app, tuxapp.hash_md5(url[0] if isinstance(url, tuple) else url))) for url in urls)
 
-update_app_media = lambda app: \
+update_app_info = lambda app: \
   write_app_info(app, {
     'changelog-url': parse_changelog_url(tuxapp.query_appfile(app, 'homepage-url')),
     'download-formats': parse_download_formats(tuxapp.query_appfile(app, 'homepage-url')),
     'downloads-url': parse_downloads_url(tuxapp.query_appfile(app, 'homepage-url')),
     'github-repository': parse_github_repository(tuxapp.query_appfile(app, 'homepage-url')),
+    'image-url': parse_image_url(tuxapp.query_appfile(app, 'homepage-url')),
     'screenshot-urls': ' '.join(parse_app_screenshot_urls(app, tuxapp.query_appfile(app, 'homepage-url'))),
     'video-urls': ' '.join(parse_video_urls(tuxapp.query_appfile(app, 'homepage-url'))),
-  }) and \
+  })
+
+update_app_media = lambda app: \
+  update_app_info(app) and \
   update_app_file(app, get_app_icon_path, tuxapp.query_appfile(app, 'icon-url')) and \
-  update_app_file(app, get_app_image_path, parse_image_url(tuxapp.query_appfile(app, 'homepage-url'))) and \
-  update_app_files(app, get_app_screenshot_path, parse_app_screenshot_urls(app, tuxapp.query_appfile(app, 'homepage-url'))) and \
+  update_app_file(app, get_app_image_path, query_app_info(app, 'image-url')) and \
+  update_app_files(app, get_app_screenshot_path, query_app_info(app, 'screenshot-urls').split()) and \
   update_app_files(app, get_app_video_thumbnail_path, parse_video_thumbnail_urls(tuxapp.query_appfile(app, 'homepage-url')))
 
 write_app_info = lambda app, info: tuxapp.write_file(get_app_info_path(app), ''.join("{}={}\n".format(key, info[key]) for key in sorted(info)))
