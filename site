@@ -56,7 +56,7 @@ build_actions = lambda *children: \
 build_app_card = lambda app, is_heading=False: \
   build_card(
     get_app_url(app),
-    symlink_app_image(app, media.get_app_icon_path(app, tuxapp.hash_md5(tuxapp.query_appfile(app, 'icon-url')))),
+    symlink_app_image(app, media.get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url'))),
     query_app_name(app),
     tuxapp.query_appfile(app, 'title'),
     is_heading,
@@ -87,8 +87,8 @@ build_app_gallery = lambda app: \
     }
     """),
     build_tag(".app-gallery",
-      ''.join(build_lightbox("Screenshot", get_app_url(app), symlink_app_image(app, media.get_app_screenshot_path(app, tuxapp.hash_md5(url)))) for url in media.query_app_info(app, 'screenshot-urls').split()),
-      ''.join(build_lightbox("Video", get_app_url(app), symlink_app_image(app, media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))) if os.path.isfile(media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))) else os.path.basename(media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))), url) for url in media.query_app_info(app, 'video-urls').split()),
+      ''.join(build_lightbox("Screenshot", get_app_url(app), symlink_app_image(app, media.get_app_screenshot_path(app, url))) for url in media.query_app_info(app, 'screenshot-urls').split()),
+      ''.join(build_lightbox("Video", get_app_url(app), symlink_app_image(app, media.get_app_video_thumbnail_path(app, url)) if os.path.isfile(media.get_app_video_thumbnail_path(app, url)) else os.path.basename(media.get_app_video_thumbnail_path(app, url)), url) for url in media.query_app_info(app, 'video-urls').split()),
     ),
   )
 
@@ -116,7 +116,7 @@ build_app_image = lambda app: \
       max-width: 100%;
     }
     """),
-    media.query_app_info(app, 'image-url') and build_tag(".app-image", build_lightbox("Image", get_app_url(app), symlink_app_image(app, media.get_app_image_path(app, tuxapp.hash_md5(media.query_app_info(app, 'image-url')))))),
+    media.query_app_info(app, 'image-url') and build_tag(".app-image", build_lightbox("Image", get_app_url(app), symlink_app_image(app, media.get_app_image_path(app, media.query_app_info(app, 'image-url'))))),
   )
 
 build_app_info = lambda app: \
