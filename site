@@ -55,8 +55,7 @@ build_actions = lambda *children: \
 
 build_app_card = lambda app, is_heading=False: \
   build_card(
-    get_app_url(app),
-    symlink_app_image(app, media.get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url'))),
+    build_app_image_url(app, media.get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url'))),
     query_app_name(app),
     tuxapp.query_appfile(app, 'title'),
     is_heading,
@@ -87,8 +86,8 @@ build_app_gallery = lambda app: \
     }
     """),
     build_tag(".app-gallery",
-      ''.join(build_lightbox("Screenshot", get_app_url(app), symlink_app_image(app, media.get_app_screenshot_path(app, url))) for url in media.query_app_info(app, 'screenshot-urls').split()),
-      ''.join(build_lightbox("Video", get_app_url(app), symlink_app_image(app, media.get_app_video_thumbnail_path(app, url)) if os.path.isfile(media.get_app_video_thumbnail_path(app, url)) else os.path.basename(media.get_app_video_thumbnail_path(app, url)), url) for url in media.query_app_info(app, 'video-urls').split()),
+      ''.join(build_lightbox("Screenshot", build_app_image_url(app, media.get_app_screenshot_path(app, url))) for url in media.query_app_info(app, 'screenshot-urls').split()),
+      ''.join(build_lightbox("Video", build_app_image_url(app, media.get_app_video_thumbnail_path(app, url)), url, not os.path.isfile(media.get_app_video_thumbnail_path(app, url))) for url in media.query_app_info(app, 'video-urls').split()),
     ),
   )
 
@@ -116,8 +115,15 @@ build_app_image = lambda app: \
       max-width: 100%;
     }
     """),
-    media.query_app_info(app, 'image-url') and build_tag(".app-image", build_lightbox("Image", get_app_url(app), symlink_app_image(app, media.get_app_image_path(app, media.query_app_info(app, 'image-url'))))),
+    media.query_app_info(app, 'image-url') and build_tag(".app-image", build_lightbox("Image", build_app_image_url(app, media.get_app_image_path(app, media.query_app_info(app, 'image-url'))))),
   )
+
+build_app_image_url = lambda app, path: \
+  os.path.join(get_app_url(app), os.path.basename(tuxapp.symlink_file(path, "{}/{}.{}".format(
+    get_app_path(app),
+    os.path.basename(path),
+    detect_image_extension(path),
+  )) if os.path.isfile(path) else path))
 
 build_app_info = lambda app: \
   join_elements(
@@ -209,7 +215,7 @@ build_breadcrumbs = lambda *children: \
     build_tag(".breadcrumbs", " &gt; ".join((build_tag("a", "Home", href='.'),) + children)),
   )
 
-build_card = lambda base_url, path, name, title, is_heading=False: \
+build_card = lambda icon_url, name, title, is_heading=False: \
   join_elements(
     build_tag('style', """
     .card {
@@ -231,7 +237,7 @@ build_card = lambda base_url, path, name, title, is_heading=False: \
       """),
       build_tag('', build_tag("img.card-icon",
         alt="Icon",
-        src=os.path.join(base_url, os.path.basename(path)),
+        src=icon_url,
       )),
       build_tag('',
         build_tag('style', """
@@ -411,18 +417,19 @@ build_header = tuxapp.memoizes()(
     )
 )
 
-build_lightbox = lambda text, base_url, path, video_url=None: \
+build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
   join_elements(
     build_tag("a.lightbox",
       build_tag('video',
         preload='metadata',
         src=video_url,
       ) \
-        if video_url and not os.path.isfile(path) else \
+        if is_video else \
       build_tag('img',
         alt=text,
-        src=os.path.join(base_url, os.path.basename(path)),
-      ), href="{}#{}".format(base_url, os.path.basename(path).rsplit('.', 1)[0]),
+        src=image_url,
+      ),
+      href="{}/#{}".format(os.path.dirname(image_url), os.path.basename(image_url).rsplit('.', 1)[0]),
     ),
     build_tag('style', """
     .lightbox-overlay {
@@ -452,7 +459,7 @@ build_lightbox = lambda text, base_url, path, video_url=None: \
       border: none;
     }
     """),
-    build_tag("#{}.lightbox-overlay".format(os.path.basename(path).rsplit('.', 1)[0]),
+    build_tag("#{}.lightbox-overlay".format(os.path.basename(image_url).rsplit('.', 1)[0]),
       build_tag('iframe',
         allowfullscreen=True,
         height='480',
@@ -468,7 +475,7 @@ build_lightbox = lambda text, base_url, path, video_url=None: \
         if video_url else \
       build_tag('img',
         alt=text,
-        src=os.path.join(base_url, os.path.basename(path)),
+        src=image_url,
       ),
       build_tag('style', """
       .lightbox-action {
@@ -487,7 +494,7 @@ build_lightbox = lambda text, base_url, path, video_url=None: \
       }
       """),
       build_tag("a.lightbox-action.is-close", "&times;",
-        href="{}#".format(base_url),
+        href="{}/#".format(os.path.dirname(image_url)),
         title="Close",
       ),
       build_tag('style', """
@@ -682,13 +689,6 @@ process_styles = lambda html: \
   )
 
 query_app_name = lambda app: tuxapp.query_appfile(app, 'name').lstrip('~')
-
-symlink_app_image = lambda app, path: \
-  tuxapp.symlink_file("{}/{}.{}".format(
-    get_app_path(app),
-    os.path.basename(path),
-    detect_image_extension(path),
-  ), path)
 
 update_lightbox = lambda html, urls: \
   functools.reduce(
