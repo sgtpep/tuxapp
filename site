@@ -532,7 +532,7 @@ build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
       build_tag('iframe',
         allowfullscreen=True,
         height='480',
-        src="https://www.youtube.com/embed/{}?enablejsapi=1".format(tuxapp.search("(?<=^https://www\.youtube\.com/watch\?v=).+", video_url)),
+        src="https://www.youtube.com/embed/{}?enablejsapi=1".format(tuxapp.search(r"(?<=^https://www\.youtube\.com/watch\?v=).+", video_url)),
         width='853',
       ) \
         if video_url and video_url.startswith("https://www.youtube.com/") else \
