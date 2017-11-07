@@ -4,6 +4,7 @@ import cgi
 import functools
 import glob
 import imp
+import json
 import os
 import re
 import string
@@ -196,6 +197,7 @@ build_app_page = lambda app: \
       'title': "Install {} with {}".format(tuxapp.query_appfile(app, 'name'), get_site_name()),
       'url': get_app_url(app),
     },
+    build_json_ld(get_app_json_ld(app)),
     build_actions(
       build_tag('a', "Edit appfile", href=get_github_url("edit/master/apps/{}".format(app))),
       build_tag('a', "Report issue", href=get_github_url("issues/new?title={}".format(app))),
@@ -364,7 +366,7 @@ build_head = lambda base_url, title, overrides={}: \
       name='application-name',
     ),
     build_tag('meta',
-      content=overrides.get('description', get_site_description()),
+      content=overrides.get('description', get_description()),
       name='description',
     ),
     build_tag('meta',
@@ -372,7 +374,7 @@ build_head = lambda base_url, title, overrides={}: \
       name='viewport',
     ),
     build_tag('meta',
-      content=overrides.get('description', get_site_description()),
+      content=overrides.get('description', get_description()),
       property='og:description',
     ),
     build_tag('meta',
@@ -400,7 +402,28 @@ build_head = lambda base_url, title, overrides={}: \
       rel='icon',
     ),
     build_tag('title', "{} - {}".format(escape_html(title), get_site_name()) if title else get_site_name()),
+    build_json_ld(get_json_ld()),
     get_styles_placeholder(),
+    build_tag('style', """
+    :link {
+      color: mediumblue;
+    }
+    :visited {
+      color: navy;
+    }
+    :link:active,
+    :visited:active {
+      color: red;
+    }
+    body {
+      color: #222;
+      font-family: sans-serif;
+      margin: 1em auto;
+      max-width: 60em;
+      padding: 0 1em;
+      word-wrap: break-word;
+    }
+    """),
   )
 
 build_header = tuxapp.memoizes()(
@@ -454,12 +477,14 @@ build_header = tuxapp.memoizes()(
             font-style: italic;
           }
           """),
-          build_tag(".header-description", get_site_description()),
+          build_tag(".header-description", get_description()),
         ),
       ),
       build_separator(),
     )
 )
+
+build_json_ld = lambda data: build_tag('script', json.dumps(data, ensure_ascii=False, separators=(',', ':'), sort_keys=True), type="application/ld+json")
 
 build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
   join_elements(
@@ -566,26 +591,6 @@ build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
 build_page = lambda base_url, title, overrides, *children: \
   process_scripts(process_styles(process_lightbox(join_elements(
     build_head(base_url, title, overrides),
-    build_tag('style', """
-    :link {
-      color: mediumblue;
-    }
-    :visited {
-      color: navy;
-    }
-    :link:active,
-    :visited:active {
-      color: red;
-    }
-    body {
-      color: #222;
-      font-family: sans-serif;
-      margin: 1em auto;
-      max-width: 60em;
-      padding: 0 1em;
-      word-wrap: break-word;
-    }
-    """),
     build_header(),
     join_elements(*children),
     build_footer(),
@@ -656,6 +661,22 @@ get_app_group = lambda app: tuxapp.query_appfile(app, 'group').replace('-', ' ')
 
 get_app_group_url = lambda app: "groups/{}/".format(tuxapp.query_appfile(app, 'group'))
 
+get_app_json_ld = lambda app: \
+  {
+    '@context': "http://schema.org",
+    '@type': 'SoftwareApplication',
+    'applicationCategory': get_app_category(app),
+    'description': tuxapp.query_appfile(app, 'description') or tuxapp.query_appfile(app, 'title'),
+    'image': build_absolute_url(build_app_og_image_url(app)),
+    'installUrl': build_absolute_url(get_app_url(app)),
+    'name': "{} on {}".format(tuxapp.query_appfile(app, 'name'), get_site_name()),
+    'operatingSystem': 'Linux',
+    'releaseNotes': media.query_app_info(app, 'changelog-url'),
+    'screenshot': build_absolute_url(build_app_image_url(app, media.get_app_screenshot_path(app, media.query_app_info(app, 'screenshot-urls').split()[0]))) if media.query_app_info(app, 'screenshot-urls') else '',
+    'softwareVersion': tuxapp.fetch_app_version(app),
+    'url': tuxapp.query_appfile(app, 'homepage-url'),
+  }
+
 get_app_page_path = lambda app: "{}/index.html".format(get_app_path(app))
 
 get_app_path = lambda app: "{}/apps/{}".format(get_build_path(), app)
@@ -665,6 +686,8 @@ get_app_url = lambda app: "{}/".format(os.path.relpath(get_app_path(app), get_bu
 get_assets_path = lambda: "{}/assets".format(os.path.dirname(__file__))
 
 get_build_path = lambda: "{}/build".format(os.path.dirname(__file__))
+
+get_description = lambda: u"An open catalog of easily installable and up-to-date Linux\N{REGISTERED SIGN} applications"
 
 get_download_format_name = lambda format: \
   {
@@ -678,9 +701,29 @@ get_download_format_name = lambda format: \
 
 get_github_url = lambda url='': "https://github.com/{}{}".format(tuxapp.get_github_repository(), "/{}".format(url) if url else '')
 
-get_logo_url = lambda: "logo.png"
+get_json_ld = lambda: \
+  [
+    {
+      '@context': "http://schema.org",
+      '@type': 'WebSite',
+      'description': get_description(),
+      'image': build_absolute_url(get_logo_url()),
+      'name': get_site_name(),
+      'url': build_absolute_url(),
+    },
+    {
+      '@context': "http://schema.org",
+      '@type': 'SoftwareApplication',
+      'description': tuxapp.get_description(),
+      'image': build_absolute_url(get_logo_url()),
+      'name': tuxapp.__name__,
+      'operatingSystem': 'Linux',
+      'softwareVersion': tuxapp.__version__,
+      'url': build_absolute_url(),
+    },
+  ]
 
-get_site_description = lambda: u"An open catalog of easily installable and up-to-date Linux\N{REGISTERED SIGN} applications"
+get_logo_url = lambda: "logo.png"
 
 get_site_name = lambda: "TuxApp"
 
@@ -721,7 +764,7 @@ main = \
 process_lightbox = lambda html: update_lightbox(html, tuple(re.findall(r""" class="lightbox"[^"]* href="([^"]+)""", html)))
 
 process_scripts = lambda html: \
-  re.sub(r"(<script[^>]*>)(.*?)(</script>)", lambda match: "{}{}{}".format(
+  re.sub(r"(<script>)(.*?)(</script>)", lambda match: u"{}{}{}".format(
     match.group(1),
     re.sub(r"^\s+", '', match.group(2), 0, re.M).replace('\n', ''),
     match.group(3),
@@ -729,9 +772,9 @@ process_scripts = lambda html: \
 
 process_styles = lambda html: \
   u"{}{}{}".format(
-    re.sub(r"<style[^>]*>.*?</style>", '', html[:html.find(get_styles_placeholder())], 0, re.S),
+    re.sub(r"<style>.*?</style>", '', html[:html.find(get_styles_placeholder())], 0, re.S),
     build_tag('style', ''.join(sorted(set(re.sub(r"^\s+", '', styles, 0, re.M).replace('\n', '') for styles in re.findall(r"<style[^>]*>(.*?)</style>", html, re.S)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y))))),
-    re.sub(r"<style[^>]*>.*?</style>", '', html[html.find(get_styles_placeholder()) + len(get_styles_placeholder()):], 0, re.S),
+    re.sub(r"<style>.*?</style>", '', html[html.find(get_styles_placeholder()) + len(get_styles_placeholder()):], 0, re.S),
   )
 
 query_app_name = lambda app: tuxapp.query_appfile(app, 'name').lstrip('~')
