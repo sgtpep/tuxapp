@@ -117,6 +117,39 @@ build_app_image = lambda app, path: \
     build_tag(".app-image", build_lightbox("Image", symlink_app_image(app, path))),
   )
 
+build_app_info = lambda app: \
+  join_elements(
+    build_tag('dt', "Category:"),
+    build_tag('dd', build_tag('a', escape_html(get_app_category(app)), href=get_app_category_url(app))),
+    build_tag('dt', "Group:"),
+    build_tag('dd', build_tag('a', escape_html(get_app_group(app)), href=get_app_group_url(app))),
+    build_tag('dt', "Free license:"),
+    build_tag('dd', 'yes' if tuxapp.query_appfile(app, 'free-license') == 'yes' else 'no'),
+    build_tag('dt', "Homepage:"),
+    build_tag('dd', build_tag('a', escape_html(tuxapp.query_appfile(app, 'homepage-url')), href=tuxapp.query_appfile(app, 'homepage-url'))),
+    join_elements(
+      build_tag('dt', "GitHub repository:"),
+      build_tag('dd', build_tag('a', escape_html(query_app_info(app, 'github-repository')), href="https://github.com/{}".format(query_app_info(app, 'github-repository')))),
+    ) if query_app_info(app, 'github-repository') else '',
+    build_tag('dt', "Version:"),
+    build_tag('dd',
+      escape_html(tuxapp.fetch_app_version(app)),
+      " ({})".format(build_tag('a', "changelog", href=query_app_info(app, 'changelog-url'))) if query_app_info(app, 'changelog-url') else '',
+    ),
+    build_tag('dt', "Downloads:"),
+    build_tag('dd',
+      build_tag('a', escape_html(get_app_downloads_url(app)), href=get_app_downloads_url(app)),
+      " ({})".format(escape_html(", ".join(re.findall(r"^download-(.+)-url=", tuxapp.read_appfile('atom'), re.M)))),
+    ),
+    join_elements(
+      build_tag('dt', "Distribution formats:"),
+      build_tag('dd',
+        build_tag('span', "&asymp; ", title="Detected automatically, may be inaccurate"),
+        escape_html(", ".join(get_download_format_name(format) for format in query_app_info(app, 'download-formats').split())),
+      ),
+    ) if query_app_info(app, 'download-formats') else '',
+  )
+
 build_app_page = lambda app: \
   build_page("{} - {}".format(
     tuxapp.query_appfile(app, 'name'),
@@ -127,13 +160,14 @@ build_app_page = lambda app: \
       build_tag('a', "Report issue", href=get_github_url("issues/new?title={}".format(app))),
     ),
     build_breadcrumbs(
-      build_tag('a', escape_html(tuxapp.query_appfile(app, 'category').title()), href='..'),
+      build_tag('a', escape_html(get_app_category(app)), href=get_app_category_url(app)),
       build_tag('h1', escape_html(tuxapp.query_appfile(app, 'name'))),
     ),
     build_app_card(app, True),
     ''.join(build_app_image(app, path) for path in glob.iglob(media.get_app_image_path(app, '*'))),
     build_tag('p', escape_html(tuxapp.query_appfile(app, 'description'))) if tuxapp.query_appfile(app, 'description') else '',
     build_tag('p', escape_html(tuxapp.query_appfile(app, 'note'))) if tuxapp.query_appfile(app, 'note') else '',
+    build_app_info(app),
     build_app_gallery(app),
   )
 
@@ -535,7 +569,17 @@ extract_tag_name = lambda selector: re.split(r"[#.]", selector, 1)[0] or 'div'
 
 filter_html = lambda html: html
 
+get_app_category = lambda app: tuxapp.query_appfile(app, 'category').title()
+
+get_app_category_url = lambda app: "../../categories/{}/".format(tuxapp.query_appfile(app, 'category'))
+
 get_app_directory_path = lambda app: "{}/apps/{}".format(get_build_path(), app)
+
+get_app_downloads_url = lambda app: query_app_info(app, 'downloads-url') or tuxapp.query_appfile(app, 'homepage-url')
+
+get_app_group = lambda app: tuxapp.query_appfile(app, 'group').replace('-', ' ').title()
+
+get_app_group_url = lambda app: "../../groups/{}/".format(tuxapp.query_appfile(app, 'group'))
 
 get_app_icon_path = tuxapp.asserts("No icon found for {}")(
   lambda app: next(glob.iglob(media.get_app_icon_path(app, '*')), None)
@@ -546,6 +590,16 @@ get_app_page_path = lambda app: "{}/index.html".format(get_app_directory_path(ap
 get_assets_path = lambda: "{}/assets".format(os.path.dirname(__file__))
 
 get_build_path = lambda: "{}/build".format(os.path.dirname(__file__))
+
+get_download_format_name = lambda format: \
+  {
+    'appimage': "AppImage",
+    'deb': "deb",
+    'flatpak': "Flatpak",
+    'rpm': "rpm",
+    'snap': "snap",
+    'tar': "tarball",
+  }.get(format, format.title())
 
 get_github_url = lambda url='': "https://github.com/{}{}".format(tuxapp.get_github_repository(), "/{}".format(url) if url else '')
 
