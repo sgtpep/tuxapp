@@ -58,7 +58,7 @@ build_actions = lambda *children: \
 build_app_card = lambda app, is_heading=False: \
   build_card(
     get_app_icon_path(app),
-    tuxapp.query_appfile(app, 'name'),
+    query_app_name(app),
     tuxapp.query_appfile(app, 'title'),
     is_heading,
   )
@@ -175,7 +175,7 @@ chmod +x ./tuxapp
 
 build_app_page = lambda app: \
   build_page("{} - {}".format(
-    tuxapp.query_appfile(app, 'name'),
+    query_app_name(app),
     tuxapp.query_appfile(app, 'category').title(),
   ),
     build_actions(
@@ -184,7 +184,7 @@ build_app_page = lambda app: \
     ),
     build_breadcrumbs(
       build_tag('a', escape_html(get_app_category(app)), href=get_app_category_url(app)),
-      build_tag('h1', escape_html(tuxapp.query_appfile(app, 'name'))),
+      build_tag('h1', escape_html(query_app_name(app))),
     ),
     build_app_card(app, True),
     ''.join(build_app_image(app, path) for path in glob.iglob(media.get_app_image_path(app, '*'))),
@@ -683,6 +683,8 @@ process_styles = lambda html: \
 query_app_info = tuxapp.asserts(lambda app, key, *args, **kwargs: kwargs['result'] is None and "Failed to get {}.{}".format(app, key))(
   lambda app, key: tuxapp.search(r"(?<=^{}=).*$".format(re.escape(key)), tuxapp.read_file(media.get_app_info_path(app)), re.M)
 )
+
+query_app_name = lambda app: tuxapp.query_appfile(app, 'name').lstrip('~')
 
 symlink_app_image = lambda app, path: \
   tuxapp.symlink_file("{}/{}.{}".format(
