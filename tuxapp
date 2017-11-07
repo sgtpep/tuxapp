@@ -308,11 +308,11 @@ def split_command(command):
     pass
 
 def symlink_file(path, target_path):
-  if not os.path.islink(path) or os.readlink(path) != target_path:
-    if os.path.islink(path):
-      os.remove(path)
-    os.symlink(target_path, make_file_directories(path))
-  return path
+  if not os.path.islink(target_path) or os.readlink(target_path) != path:
+    if os.path.islink(target_path):
+      os.remove(target_path)
+    os.symlink(path, make_file_directories(target_path))
+  return target_path
 
 def touch_file(path, timestamp=None):
   os.utime(
@@ -1183,7 +1183,7 @@ unpack_app_distribution = lambda app, path: \
 
 unpack_app_package_distribution = lambda app, path: \
   unpack_package(path, get_app_distribution_path(app)) and \
-  all(symlink_file(path, os.path.relpath("{}{}".format(get_app_distribution_path(app), os.readlink(path)), os.path.dirname(path))) for path in glob.iglob("{}/usr/bin/*".format(get_app_distribution_path(app))) if os.path.islink(path) and os.readlink(path).startswith('/')) and \
+  all(symlink_file(os.path.relpath("{}{}".format(get_app_distribution_path(app), os.readlink(path)), os.path.dirname(path)), path) for path in glob.iglob("{}/usr/bin/*".format(get_app_distribution_path(app))) if os.path.islink(path) and os.readlink(path).startswith('/')) and \
   get_app_distribution_path(app)
 
 unpack_app_tarball_distribution = logs(lambda app, path, *args, **kwargs: "Preparing to unpack {}".format(os.path.basename(path)))(
