@@ -153,6 +153,26 @@ build_app_info = lambda app: \
     ) if query_app_info(app, 'download-formats') else '',
   )
 
+build_app_instructions = lambda app: \
+  join_elements(
+    build_tag('h2', "How to install"),
+    build_tag('p', """This command will install <code>{}</code> using the <code>tuxapp</code> script hosted on <a href="https://github.com/{}/blob/master/tuxapp">GitHub</a>:""".format(app, tuxapp.get_github_repository())),
+    build_tag('style', """
+    .instructions-code {
+      user-select: all;
+      white-space: pre-wrap;
+    }
+    """),
+    build_tag('pre', build_tag("code.instructions-code", r"""python <(url=https://raw.githubusercontent.com/{}/master/tuxapp; wget -O - $url || curl $url) {}""".format(tuxapp.get_github_repository(), app))),
+    build_tag('p', "You may also download the <code>tuxapp</code> script and install <code>{}</code> using it locally:".format(app)),
+    build_tag('pre', build_tag("code.instructions-code", r"""url=https://raw.githubusercontent.com/{}/master/tuxapp; wget $url || curl -o tuxapp $url
+chmod +x ./tuxapp
+./tuxapp {}
+""".format(tuxapp.get_github_repository(), app))),
+    build_tag('p', """To make apps run sandboxed install <a href="https://firejail.wordpress.com/">Firejail</a> using your package manager. For example, use this command on Debian/Ubuntu:"""),
+    build_tag('pre', build_tag("code.instructions-code", "sudo apt install firejail")),
+  )
+
 build_app_page = lambda app: \
   build_page("{} - {}".format(
     tuxapp.query_appfile(app, 'name'),
@@ -172,6 +192,7 @@ build_app_page = lambda app: \
     build_tag('p', escape_html(tuxapp.query_appfile(app, 'note'))) if tuxapp.query_appfile(app, 'note') else '',
     build_app_info(app),
     build_app_gallery(app),
+    build_app_instructions(app),
   )
 
 build_breadcrumbs = lambda *children: \
