@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import base64
 import cgi
 import functools
 import glob
 import imp
-import mimetypes
 import os
 import re
 import string
@@ -57,7 +55,8 @@ build_actions = lambda *children: \
 
 build_app_card = lambda app, is_heading=False: \
   build_card(
-    get_app_icon_path(app),
+    get_app_url(app),
+    symlink_app_image(app, media.get_app_icon_path(app, tuxapp.hash_md5(tuxapp.query_appfile(app, 'icon-url')))),
     query_app_name(app),
     tuxapp.query_appfile(app, 'title'),
     is_heading,
@@ -88,12 +87,12 @@ build_app_gallery = lambda app: \
     }
     """),
     build_tag(".app-gallery",
-      ''.join(build_lightbox("Screenshot", symlink_app_image(app, media.get_app_screenshot_path(app, tuxapp.hash_md5(url)))) for url in query_app_info(app, 'screenshot-urls').split()),
-      ''.join(build_lightbox("Video", symlink_app_image(app, media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))) if os.path.isfile(media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))) else os.path.basename(media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))), url) for url in query_app_info(app, 'video-urls').split()),
+      ''.join(build_lightbox("Screenshot", get_app_url(app), symlink_app_image(app, media.get_app_screenshot_path(app, tuxapp.hash_md5(url)))) for url in media.query_app_info(app, 'screenshot-urls').split()),
+      ''.join(build_lightbox("Video", get_app_url(app), symlink_app_image(app, media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))) if os.path.isfile(media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))) else os.path.basename(media.get_app_video_thumbnail_path(app, tuxapp.hash_md5(url))), url) for url in media.query_app_info(app, 'video-urls').split()),
     ),
   )
 
-build_app_image = lambda app, path: \
+build_app_image = lambda app: \
   join_elements(
     build_tag('style', """
     .app-image {
@@ -117,7 +116,7 @@ build_app_image = lambda app, path: \
       max-width: 100%;
     }
     """),
-    build_tag(".app-image", build_lightbox("Image", symlink_app_image(app, path))),
+    media.query_app_info(app, 'image-url') and build_tag(".app-image", build_lightbox("Image", get_app_url(app), symlink_app_image(app, media.get_app_image_path(app, tuxapp.hash_md5(media.query_app_info(app, 'image-url')))))),
   )
 
 build_app_info = lambda app: \
@@ -132,12 +131,12 @@ build_app_info = lambda app: \
     build_tag('dd', build_tag('a', escape_html(tuxapp.query_appfile(app, 'homepage-url')), href=tuxapp.query_appfile(app, 'homepage-url'))),
     join_elements(
       build_tag('dt', "GitHub repository:"),
-      build_tag('dd', build_tag('a', escape_html(query_app_info(app, 'github-repository')), href="https://github.com/{}".format(query_app_info(app, 'github-repository')))),
-    ) if query_app_info(app, 'github-repository') else '',
+      build_tag('dd', build_tag('a', escape_html(media.query_app_info(app, 'github-repository')), href="https://github.com/{}".format(media.query_app_info(app, 'github-repository')))),
+    ) if media.query_app_info(app, 'github-repository') else '',
     build_tag('dt', "Version:"),
     build_tag('dd',
       escape_html(tuxapp.fetch_app_version(app)),
-      " ({})".format(build_tag('a', "changelog", href=query_app_info(app, 'changelog-url'))) if query_app_info(app, 'changelog-url') else '',
+      media.query_app_info(app, 'changelog-url') and " ({})".format(build_tag('a', "changelog", href=media.query_app_info(app, 'changelog-url'))),
     ),
     build_tag('dt', "Downloads:"),
     build_tag('dd',
@@ -148,15 +147,15 @@ build_app_info = lambda app: \
       build_tag('dt', "Distribution formats:"),
       build_tag('dd',
         build_tag('span', "&asymp; ", title="Detected automatically, may be inaccurate"),
-        escape_html(", ".join(get_download_format_name(format) for format in query_app_info(app, 'download-formats').split())),
+        escape_html(", ".join(get_download_format_name(format) for format in media.query_app_info(app, 'download-formats').split())),
       ),
-    ) if query_app_info(app, 'download-formats') else '',
+    ) if media.query_app_info(app, 'download-formats') else '',
   )
 
 build_app_instructions = lambda app: \
   join_elements(
     build_tag('h2', "How to install"),
-    build_tag('p', """Run this command from the terminal to install <code>{}</code> using the <code>tuxapp</code> script hosted on <a href="https://github.com/{}/blob/master/tuxapp">GitHub</a>:""".format(app, tuxapp.get_github_repository())),
+    build_tag('p', """Run this command from the terminal to install <code>{}</code> using the <code>tuxapp</code> script hosted on <a href="{}">GitHub</a>:""".format(app, get_github_url("blob/master/tuxapp"))),
     build_tag('style', """
     .instructions-code {
       user-select: all;
@@ -175,10 +174,10 @@ build_app_instructions = lambda app: \
   )
 
 build_app_page = lambda app: \
-  build_page("{} - {}".format(
-    query_app_name(app),
-    tuxapp.query_appfile(app, 'category').title(),
-  ),
+  build_page(
+    os.path.relpath(get_build_path(), os.path.dirname(get_app_page_path(app))),
+    "{} - {}".format(query_app_name(app), get_app_category(app)),
+    tuxapp.query_appfile(app, 'description'),
     build_actions(
       build_tag('a', "Edit appfile", href=get_github_url("edit/master/apps/{}".format(app))),
       build_tag('a', "Report issue", href=get_github_url("issues/new?title={}".format(app))),
@@ -188,9 +187,9 @@ build_app_page = lambda app: \
       build_tag('h1', escape_html(query_app_name(app))),
     ),
     build_app_card(app, True),
-    ''.join(build_app_image(app, path) for path in glob.iglob(media.get_app_image_path(app, '*'))),
-    build_tag('p', escape_html(tuxapp.query_appfile(app, 'description'))) if tuxapp.query_appfile(app, 'description') else '',
-    build_tag('p', escape_html(tuxapp.query_appfile(app, 'note'))) if tuxapp.query_appfile(app, 'note') else '',
+    build_app_image(app),
+    tuxapp.query_appfile(app, 'description') and build_tag('p', escape_html(tuxapp.query_appfile(app, 'description'))),
+    tuxapp.query_appfile(app, 'note') and build_tag('p', escape_html(tuxapp.query_appfile(app, 'note'))),
     build_app_info(app),
     build_app_gallery(app),
     build_app_instructions(app),
@@ -207,10 +206,10 @@ build_breadcrumbs = lambda *children: \
       font-size: medium;
     }
     """),
-    build_tag(".breadcrumbs", " &gt; ".join((build_tag("a", "Home", href="/"),) + children)),
+    build_tag(".breadcrumbs", " &gt; ".join((build_tag("a", "Home", href='.'),) + children)),
   )
 
-build_card = lambda path, name, title, is_heading=False: \
+build_card = lambda base_url, path, name, title, is_heading=False: \
   join_elements(
     build_tag('style', """
     .card {
@@ -232,7 +231,7 @@ build_card = lambda path, name, title, is_heading=False: \
       """),
       build_tag('', build_tag("img.card-icon",
         alt="Icon",
-        src=build_data_uri(path),
+        src=os.path.join(base_url, os.path.basename(path)),
       )),
       build_tag('',
         build_tag('style', """
@@ -254,14 +253,6 @@ build_card = lambda path, name, title, is_heading=False: \
       ),
     ),
   )
-
-build_data_uri = lambda path: \
-  "data:{};base64,{}".format(
-    mimetypes.guess_type("_.{}".format(detect_image_extension(path)))[0],
-    base64.b64encode(tuxapp.read_file(path, True)),
-  ) \
-    if os.path.isfile(path) else \
-  ''
 
 build_flag = lambda *children, **attributes: \
   join_elements(
@@ -308,8 +299,10 @@ build_footer = tuxapp.memoizes()(
       build_tag('script', r"""
       if (location.protocol == "file:") {
         Array.prototype.forEach.call(document.querySelectorAll('a'), function(anchor) {
-          if (anchor.href == "file:///") anchor.href = location.href.replace(/(\/""" + os.path.basename(get_build_path()) + r"""\/).*$/, "$1index.html", 1);
-          else if (~anchor.href.indexOf("file:///") && !~anchor.href.indexOf('#')) anchor.href += "index.html";
+          if (~anchor.href.indexOf("file:///")) {
+            if (~anchor.href.indexOf('#')) anchor.href = anchor.href.replace('#', "index.html#", 1);
+            else anchor.href += "index.html";
+          }
         });
       }
       (function() {
@@ -326,8 +319,8 @@ build_footer = tuxapp.memoizes()(
         }
       });
       addEventListener('keydown', function(event) {
-        if (location.hash) {
-          if (event.keyCode == 27) location.hash = '';
+        if (location.hash && getElement(".lightbox-action")) {
+          if (event.keyCode == 27) location.hash = getElement(".lightbox-action.is-close").hash;
           else if (event.keyCode == 37 && getElement(".lightbox-action.is-previous").hash) location.hash = getElement(".lightbox-action.is-previous").hash;
           else if (event.keyCode == 39 && getElement(".lightbox-action.is-next").hash) location.hash = getElement(".lightbox-action.is-next").hash;
           else var isDefault = true;
@@ -342,17 +335,18 @@ build_footer = tuxapp.memoizes()(
     )
 )
 
-build_head = lambda title: \
+build_head = lambda base_url, title, description: \
   join_elements(
     "<!DOCTYPE html>",
     """<html lang="en">""",
+    build_tag('base', href=base_url),
     build_tag('meta', charset='utf-8'),
     build_tag('meta',
       content="width=device-width, initial-scale=1",
       name='viewport',
     ),
     build_tag('link',
-      href=build_data_uri(get_logo_path()),
+      href=get_logo_url(),
       rel='icon',
     ),
     build_tag('title', "{} - {}".format(escape_html(title), get_site_name()) if title else get_site_name()),
@@ -371,9 +365,9 @@ build_header = tuxapp.memoizes()(
           """),
           build_tag("img.header-logo",
             alt="Logo",
-            src=build_data_uri(get_logo_path(),
-          )),
-          href='/',
+            src=get_logo_url(),
+          ),
+          href='.',
           title="Home",
         ),
         build_tag('',
@@ -399,7 +393,7 @@ build_header = tuxapp.memoizes()(
             }
             """),
             build_tag("a.header-name", get_site_name(),
-              href="/",
+              href='.',
               title="Home",
             ),
             build_search(),
@@ -417,18 +411,18 @@ build_header = tuxapp.memoizes()(
     )
 )
 
-build_lightbox = lambda text, path, url=None: \
+build_lightbox = lambda text, base_url, path, video_url=None: \
   join_elements(
     build_tag("a.lightbox",
       build_tag('video',
         preload='metadata',
-        src=url,
+        src=video_url,
       ) \
-        if url and not os.path.isfile(path) else \
+        if video_url and not os.path.isfile(path) else \
       build_tag('img',
         alt=text,
-        src=os.path.basename(path),
-      ), href="#{}".format(os.path.basename(path).rsplit('.', 1)[0]),
+        src=os.path.join(base_url, os.path.basename(path)),
+      ), href="{}#{}".format(base_url, os.path.basename(path).rsplit('.', 1)[0]),
     ),
     build_tag('style', """
     .lightbox-overlay {
@@ -462,19 +456,19 @@ build_lightbox = lambda text, path, url=None: \
       build_tag('iframe',
         allowfullscreen=True,
         height='480',
-        src="https://www.youtube.com/embed/{}?enablejsapi=1".format(tuxapp.search("(?<=^https://www\.youtube\.com/watch\?v=).+", url)),
+        src="https://www.youtube.com/embed/{}?enablejsapi=1".format(tuxapp.search("(?<=^https://www\.youtube\.com/watch\?v=).+", video_url)),
         width='853',
       ) \
-        if url and url.startswith("https://www.youtube.com/") else \
+        if video_url and video_url.startswith("https://www.youtube.com/") else \
       build_tag('video',
         controls=True,
         preload='metadata',
-        src=url,
+        src=video_url,
       ) \
-        if url else \
+        if video_url else \
       build_tag('img',
         alt=text,
-        src=os.path.basename(path),
+        src=os.path.join(base_url, os.path.basename(path)),
       ),
       build_tag('style', """
       .lightbox-action {
@@ -493,7 +487,7 @@ build_lightbox = lambda text, path, url=None: \
       }
       """),
       build_tag("a.lightbox-action.is-close", "&times;",
-        href='#',
+        href="{}#".format(base_url),
         title="Close",
       ),
       build_tag('style', """
@@ -502,8 +496,8 @@ build_lightbox = lambda text, path, url=None: \
         margin-top: -0.6em;
         top: 50%;
       }
-      .lightbox-action.is-next[href="#"],
-      .lightbox-action.is-previous[href="#"] {
+      .lightbox-action.is-next[href$="#"],
+      .lightbox-action.is-previous[href$="#"] {
         visibility: hidden;
       }
       .lightbox-action.is-next {
@@ -518,9 +512,9 @@ build_lightbox = lambda text, path, url=None: \
     ),
   )
 
-build_page = lambda title, *children: \
+build_page = lambda base_url, title, description, *children: \
   process_scripts(process_styles(process_lightbox(join_elements(
-    build_head(title),
+    build_head(base_url, title, description),
     build_tag('style', """
     :link {
       color: mediumblue;
@@ -581,15 +575,15 @@ build_separator = lambda: \
 build_tag = lambda selector, *children, **attributes: \
   u"""<{}{}>{}{}""".format(
     extract_tag_name(selector),
-    " {}".format(build_tag_attributes(selector, attributes)) if attributes or '#' in selector or '.' in selector else '',
+    u" {}".format(build_tag_attributes(selector, attributes)) if attributes or '#' in selector or '.' in selector else '',
     ''.join(children),
     "</{}>".format(extract_tag_name(selector)) if children or extract_tag_name(selector) not in get_void_elements() else '',
   )
 
 build_tag_attributes = lambda selector, attributes: \
-  ' '.join("{}{}".format(
+  ' '.join(u"{}{}".format(
     name,
-    '' if value is True else "=\"{}\"".format(escape_html(value)),
+    '' if value is True else u"=\"{}\"".format(escape_html(value)),
   ) for name, value in sorted(dict(attributes, **{
     'class': ' '.join(re.findall(r"(?<=\.)[\w-]+", selector)),
     'id': ' '.join(re.findall(r"(?<=#)[\w-]+", selector)),
@@ -603,21 +597,19 @@ filter_html = lambda html: html
 
 get_app_category = lambda app: tuxapp.query_appfile(app, 'category').title()
 
-get_app_category_url = lambda app: "../../categories/{}/".format(tuxapp.query_appfile(app, 'category'))
+get_app_category_url = lambda app: "categories/{}/".format(tuxapp.query_appfile(app, 'category'))
 
-get_app_directory_path = lambda app: "{}/apps/{}".format(get_build_path(), app)
-
-get_app_downloads_url = lambda app: query_app_info(app, 'downloads-url') or tuxapp.query_appfile(app, 'homepage-url')
+get_app_downloads_url = lambda app: media.query_app_info(app, 'downloads-url') or tuxapp.query_appfile(app, 'homepage-url')
 
 get_app_group = lambda app: tuxapp.query_appfile(app, 'group').replace('-', ' ').title()
 
-get_app_group_url = lambda app: "../../groups/{}/".format(tuxapp.query_appfile(app, 'group'))
+get_app_group_url = lambda app: "groups/{}/".format(tuxapp.query_appfile(app, 'group'))
 
-get_app_icon_path = tuxapp.asserts("No icon found for {}")(
-  lambda app: next(glob.iglob(media.get_app_icon_path(app, '*')), None)
-)
+get_app_page_path = lambda app: "{}/index.html".format(get_app_path(app))
 
-get_app_page_path = lambda app: "{}/index.html".format(get_app_directory_path(app))
+get_app_path = lambda app: "{}/apps/{}".format(get_build_path(), app)
+
+get_app_url = lambda app: "{}/".format(os.path.relpath(get_app_path(app), get_build_path()))
 
 get_assets_path = lambda: "{}/assets".format(os.path.dirname(__file__))
 
@@ -635,7 +627,7 @@ get_download_format_name = lambda format: \
 
 get_github_url = lambda url='': "https://github.com/{}{}".format(tuxapp.get_github_repository(), "/{}".format(url) if url else '')
 
-get_logo_path = lambda: "{}/logo.png".format(get_assets_path())
+get_logo_url = lambda: "logo.png"
 
 get_site_name = lambda: "TuxApp"
 
@@ -669,6 +661,7 @@ main = \
   tuxapp.does(lambda arguments=tuple(sys.argv[1:]), *args, **kwargs: arguments and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.join_arguments(get_app_page_path(tuxapp.extract_app(argument)) for argument in arguments))))(
     lambda arguments=tuple(sys.argv[1:]): \
       (arguments or tuxapp.remove_directory(get_build_path())) and \
+      tuxapp.copy_directory(get_assets_path(), get_build_path()) and \
       write_app_pages(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
   ))
 
@@ -688,15 +681,11 @@ process_styles = lambda html: \
     re.sub(r"<style[^>]*>.*?</style>", '', html[html.find(get_styles_placeholder()) + len(get_styles_placeholder()):], 0, re.S),
   )
 
-query_app_info = tuxapp.asserts(lambda app, key, *args, **kwargs: kwargs['result'] is None and "Failed to get {}.{}".format(app, key))(
-  lambda app, key: tuxapp.search(r"(?<=^{}=).*$".format(re.escape(key)), tuxapp.read_file(media.get_app_info_path(app)), re.M)
-)
-
 query_app_name = lambda app: tuxapp.query_appfile(app, 'name').lstrip('~')
 
 symlink_app_image = lambda app, path: \
   tuxapp.symlink_file("{}/{}.{}".format(
-    get_app_directory_path(app),
+    get_app_path(app),
     os.path.basename(path),
     detect_image_extension(path),
   ), path)
