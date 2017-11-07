@@ -57,7 +57,7 @@ build_actions = lambda *children: \
 
 build_app_card = lambda app, is_heading=False: \
   build_card(
-    next(glob.iglob(media.get_app_icon_path(app, '*')), None),
+    get_app_icon_path(app),
     tuxapp.query_appfile(app, 'name'),
     tuxapp.query_appfile(app, 'title'),
     is_heading,
@@ -536,6 +536,10 @@ extract_tag_name = lambda selector: re.split(r"[#.]", selector, 1)[0] or 'div'
 filter_html = lambda html: html
 
 get_app_directory_path = lambda app: "{}/apps/{}".format(get_build_path(), app)
+
+get_app_icon_path = tuxapp.asserts("No icon found for {}")(
+  lambda app: next(glob.iglob(media.get_app_icon_path(app, '*')), None)
+)
 
 get_app_page_path = lambda app: "{}/index.html".format(get_app_directory_path(app))
 
