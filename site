@@ -271,6 +271,10 @@ build_card = lambda icon_url, name, title, is_heading=False: \
         """),
         build_tag(".card-name", escape_html(name)),
         build_tag('style', """
+        a .card-title {
+          color: """ + get_text_color() + """;
+          display: inline-block;
+        }
         .card.is-heading .card-title {
           font-weight: bold;
         }
@@ -434,7 +438,7 @@ build_head = lambda base_url, title, overrides={}: \
       color: red;
     }
     body {
-      color: #222;
+      color: """ + get_text_color() + """;
       font-family: sans-serif;
       margin: 1em auto;
       max-width: 60em;
@@ -742,6 +746,8 @@ get_site_name = lambda: "TuxApp"
 get_style_comparison_value = lambda styles: "{:03d}{}".format(":{}.#".format(string.letters).find(styles[0]), styles)
 
 get_styles_placeholder = lambda: "<!-- styles -->"
+
+get_text_color = lambda: "#222"
 
 get_void_elements = lambda: \
   (
