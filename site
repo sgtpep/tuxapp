@@ -453,6 +453,12 @@ build_head = lambda base_url, title, overrides={}: \
     :visited:active {
       color: red;
     }
+    a {
+      transition: opacity 0.2s;
+    }
+    a:hover {
+      opacity: 0.7;
+    }
     body {
       color: """ + get_text_color() + """;
       font-family: sans-serif;
