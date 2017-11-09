@@ -329,7 +329,7 @@ parse_screenshot_urls = lambda url: tuple(normalize_url(url, screenshot_url) for
 
 parse_screenshots_url = lambda url: normalize_url(url, parse_html(ScreenshotsURLParser, fetch_url_cached(url)))
 
-parse_video_poster_urls = lambda url: tuple(normalize_url(url, poster_url) or '-' for poster_url, video_url in zip(parse_html(VideoPosterURLsParser, fetch_url_cached(url)), parse_html(VideoURLsParser, fetch_url_cached(url))) if normalize_url(url, video_url))
+parse_video_poster_urls = lambda url: tuple(normalize_url(url, poster_url) or '-' for video_url, poster_url in zip(parse_html(VideoURLsParser, fetch_url_cached(url)), parse_html(VideoPosterURLsParser, fetch_url_cached(url))) if normalize_url(url, video_url))
 
 parse_video_src_urls = lambda url: tuple(normalize_url(url, video_url) for video_url in parse_html(VideoURLsParser, fetch_url_cached(url)) if normalize_url(url, video_url))
 
