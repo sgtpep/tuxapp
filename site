@@ -21,17 +21,17 @@ def detect_image_extension(path):
     imghdr.tests.append(lambda header, file: header[:4] == b"\0\0\1\0" and 'ico')
   return sys.modules['imghdr'].what(path) or ''
 
-def write_app_page_worker(app):
-  return write_app_page(app)
+def write_app_worker(app):
+  return write_app(app)
 
 @tuxapp.silences
-def write_app_pages(apps):
+def write_apps(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
     return functools.reduce(
       lambda result, app_result: result and app_result,
-      pool.imap_unordered(write_app_page_worker, apps),
+      pool.imap_unordered(write_app_worker, apps),
       True,
     )
 
@@ -54,6 +54,38 @@ build_actions = lambda *children: \
     }
     """),
     build_tag("p.actions", *children),
+  )
+
+build_app = lambda app: \
+  join_elements(
+    build_head(
+      os.path.relpath(get_build_path(), os.path.dirname(get_app_path(app))),
+      "{} - {}".format(query_app_name(app), filter_category(tuxapp.query_appfile(app, 'category'))),
+      {
+        'description': tuxapp.query_appfile(app, 'description') or tuxapp.query_appfile(app, 'title'),
+        'image': build_app_og_image_url(app),
+        'title': "Install {} with {}".format(tuxapp.query_appfile(app, 'name'), get_site_name()),
+        'url': get_app_url(app),
+      },
+    ),
+    build_header(),
+    build_json_ld(get_app_json_ld(app)),
+    build_actions(
+      build_tag('a', "Edit appfile", href=get_github_url("edit/master/apps/{}".format(app))),
+      build_tag('a', "Report issue", href=get_github_url("issues/new?title={}".format(app))),
+    ),
+    build_breadcrumbs(
+      build_tag('a', escape_html(filter_category(tuxapp.query_appfile(app, 'category'))), href=get_category_url(tuxapp.query_appfile(app, 'category'))),
+      build_tag('h1', escape_html(query_app_name(app))),
+    ),
+    build_app_card(app, True),
+    build_app_image(app),
+    tuxapp.query_appfile(app, 'description') and build_tag('p', escape_html(tuxapp.query_appfile(app, 'description'))),
+    tuxapp.query_appfile(app, 'note') and build_tag('p', escape_html(tuxapp.query_appfile(app, 'note'))),
+    build_app_info(app),
+    build_app_gallery(app),
+    build_app_instructions(app),
+    build_footer(),
   )
 
 build_app_card = lambda app, is_heading=False: \
@@ -123,7 +155,7 @@ build_app_image = lambda app: \
 
 build_app_image_url = lambda app, path: \
   os.path.join(get_app_url(app), os.path.basename(tuxapp.symlink_file(path, "{}/{}.{}".format(
-    get_app_path(app),
+    os.path.dirname(get_app_path(app)),
     os.path.basename(path),
     detect_image_extension(path),
   )) if os.path.isfile(path) else path))
@@ -131,9 +163,9 @@ build_app_image_url = lambda app, path: \
 build_app_info = lambda app: \
   join_elements(
     build_tag('dt', "Category:"),
-    build_tag('dd', build_tag('a', escape_html(get_app_category(app)), href=get_app_category_url(app))),
+    build_tag('dd', build_tag('a', escape_html(filter_category(tuxapp.query_appfile(app, 'category'))), href=get_category_url(tuxapp.query_appfile(app, 'category')))),
     build_tag('dt', "Group:"),
-    build_tag('dd', build_tag('a', escape_html(get_app_group(app)), href=get_app_group_url(app))),
+    build_tag('dd', build_tag('a', escape_html(filter_group(tuxapp.query_appfile(app, 'group'))), href=get_group_url(tuxapp.query_appfile(app, 'group')))),
     build_tag('dt', "Free license:"),
     build_tag('dd', 'yes' if tuxapp.query_appfile(app, 'free-license') == 'yes' else 'no'),
     build_tag('dt', "Homepage:"),
@@ -149,14 +181,16 @@ build_app_info = lambda app: \
     ),
     build_tag('dt', "Downloads:"),
     build_tag('dd',
-      build_tag('a', escape_html(get_app_downloads_url(app)), href=get_app_downloads_url(app)),
+      build_tag('a', escape_html(media.query_app_info(app, 'downloads-url')), href=media.query_app_info(app, 'downloads-url')) \
+        if media.query_app_info(app, 'downloads-url') else \
+      build_tag('a', escape_html(tuxapp.query_appfile(app, 'homepage-url')), href=tuxapp.query_appfile(app, 'homepage-url')),
       " ({})".format(escape_html(", ".join(re.findall(r"^download-(.+)-url=", tuxapp.read_appfile('atom'), re.M)))),
     ),
     join_elements(
       build_tag('dt', "Distribution formats:"),
       build_tag('dd',
         build_tag('span', "&asymp; ", title="Detected automatically, may be inaccurate"),
-        escape_html(", ".join(get_download_format_name(format) for format in media.query_app_info(app, 'download-formats').split())),
+        escape_html(", ".join(get_format_name(format) for format in media.query_app_info(app, 'download-formats').split())),
       ),
     ) if media.query_app_info(app, 'download-formats') else '',
   )
@@ -186,34 +220,6 @@ build_app_og_image_url = lambda app: \
   build_app_image_url(app, media.get_app_image_path(app, media.query_app_info(app, 'image-url'))) \
     if media.query_app_info(app, 'image-url') else \
   build_app_image_url(app, media.get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url')))
-
-build_app_page = lambda app: \
-  build_page(
-    os.path.relpath(get_build_path(), os.path.dirname(get_app_page_path(app))),
-    "{} - {}".format(query_app_name(app), get_app_category(app)),
-    {
-      'description': tuxapp.query_appfile(app, 'description') or tuxapp.query_appfile(app, 'title'),
-      'image': build_app_og_image_url(app),
-      'title': "Install {} with {}".format(tuxapp.query_appfile(app, 'name'), get_site_name()),
-      'url': get_app_url(app),
-    },
-    build_json_ld(get_app_json_ld(app)),
-    build_actions(
-      build_tag('a', "Edit appfile", href=get_github_url("edit/master/apps/{}".format(app))),
-      build_tag('a', "Report issue", href=get_github_url("issues/new?title={}".format(app))),
-    ),
-    build_breadcrumbs(
-      build_tag('a', escape_html(get_app_category(app)), href=get_app_category_url(app)),
-      build_tag('h1', escape_html(query_app_name(app))),
-    ),
-    build_app_card(app, True),
-    build_app_image(app),
-    tuxapp.query_appfile(app, 'description') and build_tag('p', escape_html(tuxapp.query_appfile(app, 'description'))),
-    tuxapp.query_appfile(app, 'note') and build_tag('p', escape_html(tuxapp.query_appfile(app, 'note'))),
-    build_app_info(app),
-    build_app_gallery(app),
-    build_app_instructions(app),
-  )
 
 build_breadcrumbs = lambda *children: \
   join_elements(
@@ -272,6 +278,12 @@ build_card = lambda icon_url, name, title, is_heading=False: \
         build_tag(".card-title", escape_html(title)),
       ),
     ),
+  )
+
+build_category = lambda category: \
+  join_elements(
+    build_head(os.path.relpath(get_build_path(), os.path.dirname(get_category_path(category))), filter_category(category)),
+    build_header(),
   )
 
 build_flag = lambda *children, **attributes: \
@@ -354,6 +366,12 @@ build_footer = tuxapp.memoizes()(
       """),
     )
 )
+
+build_group = lambda group: \
+  join_elements(
+    build_head(os.path.relpath(get_build_path(), os.path.dirname(get_group_path(group))), filter_group(group)),
+    build_header(),
+  )
 
 build_head = lambda base_url, title, overrides={}: \
   join_elements(
@@ -588,14 +606,6 @@ build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
     ),
   )
 
-build_page = lambda base_url, title, overrides, *children: \
-  process_scripts(process_styles(process_lightbox(join_elements(
-    build_head(base_url, title, overrides),
-    build_header(),
-    join_elements(*children),
-    build_footer(),
-  ))))
-
 build_search = lambda: \
   join_elements(
     build_tag('style', """
@@ -649,23 +659,17 @@ escape_html = lambda html: cgi.escape(html, True)
 
 extract_tag_name = lambda selector: re.split(r"[#.]", selector, 1)[0] or 'div'
 
-filter_html = lambda html: html
+filter_category = lambda category: category.title()
 
-get_app_category = lambda app: tuxapp.query_appfile(app, 'category').title()
+filter_group = lambda group: group.replace('-', ' ').title()
 
-get_app_category_url = lambda app: "categories/{}/".format(tuxapp.query_appfile(app, 'category'))
-
-get_app_downloads_url = lambda app: media.query_app_info(app, 'downloads-url') or tuxapp.query_appfile(app, 'homepage-url')
-
-get_app_group = lambda app: tuxapp.query_appfile(app, 'group').replace('-', ' ').title()
-
-get_app_group_url = lambda app: "groups/{}/".format(tuxapp.query_appfile(app, 'group'))
+filter_html = lambda html: process_scripts(process_styles(process_lightbox(html)))
 
 get_app_json_ld = lambda app: \
   {
     '@context': "http://schema.org",
     '@type': 'SoftwareApplication',
-    'applicationCategory': get_app_category(app),
+    'applicationCategory': filter_category(tuxapp.query_appfile(app, 'category')),
     'description': tuxapp.query_appfile(app, 'description') or tuxapp.query_appfile(app, 'title'),
     'image': build_absolute_url(build_app_og_image_url(app)),
     'installUrl': build_absolute_url(get_app_url(app)),
@@ -677,19 +681,21 @@ get_app_json_ld = lambda app: \
     'url': tuxapp.query_appfile(app, 'homepage-url'),
   }
 
-get_app_page_path = lambda app: "{}/index.html".format(get_app_path(app))
+get_app_path = lambda app: "{}/apps/{}/index.html".format(get_build_path(), app)
 
-get_app_path = lambda app: "{}/apps/{}".format(get_build_path(), app)
-
-get_app_url = lambda app: "{}/".format(os.path.relpath(get_app_path(app), get_build_path()))
+get_app_url = lambda app: "{}/".format(os.path.relpath(os.path.dirname(get_app_path(app)), get_build_path()))
 
 get_assets_path = lambda: "{}/assets".format(os.path.dirname(__file__))
 
 get_build_path = lambda: "{}/build".format(os.path.dirname(__file__))
 
+get_category_path = lambda category: "{}/categories/{}/index.html".format(get_build_path(), category)
+
+get_category_url = lambda category: "{}/".format(os.path.relpath(os.path.dirname(get_category_path(category)), get_build_path()))
+
 get_description = lambda: u"An open catalog of easily installable and up-to-date Linux\N{REGISTERED SIGN} applications"
 
-get_download_format_name = lambda format: \
+get_format_name = lambda format: \
   {
     'appimage': "AppImage",
     'deb': "deb",
@@ -700,6 +706,10 @@ get_download_format_name = lambda format: \
   }.get(format, format.title())
 
 get_github_url = lambda url='': "https://github.com/{}{}".format(tuxapp.get_github_repository(), "/{}".format(url) if url else '')
+
+get_group_path = lambda group: "{}/groups/{}/index.html".format(get_build_path(), group)
+
+get_group_url = lambda group: "{}/".format(os.path.relpath(os.path.dirname(get_group_path(group)), get_build_path()))
 
 get_json_ld = lambda: \
   [
@@ -723,7 +733,9 @@ get_json_ld = lambda: \
     },
   ]
 
-get_logo_url = lambda: "logo.png"
+get_logo_path = lambda: "{}/logo.png".format(get_build_path())
+
+get_logo_url = lambda: os.path.relpath(get_logo_path(), get_build_path())
 
 get_site_name = lambda: "TuxApp"
 
@@ -754,11 +766,14 @@ join_elements = lambda *elements: ''.join(elements)
 
 main = \
   tuxapp.handles_exceptions(
-  tuxapp.does(lambda arguments=tuple(sys.argv[1:]), *args, **kwargs: arguments and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.join_arguments(get_app_page_path(tuxapp.extract_app(argument)) for argument in arguments))))(
+  tuxapp.does(lambda arguments=tuple(sys.argv[1:]), *args, **kwargs: arguments and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.join_arguments(get_app_path(tuxapp.extract_app(argument)) for argument in arguments))))(
     lambda arguments=tuple(sys.argv[1:]): \
       (arguments or tuxapp.remove_directory(get_build_path())) and \
       tuxapp.copy_directory(get_assets_path(), get_build_path()) and \
-      write_app_pages(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
+      write_apps(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*'))) and \
+      (arguments or write_categories(tuxapp.extract_app(path) for path in sorted(glob.iglob(tuxapp.get_appfile_path('*'))))) and \
+      (arguments or write_groups(tuxapp.extract_app(path) for path in sorted(glob.iglob(tuxapp.get_appfile_path('*'))))) and \
+      (arguments or write_index())
   ))
 
 process_lightbox = lambda html: update_lightbox(html, tuple(re.findall(r""" class="lightbox"[^"]* href="([^"]+)""", html)))
@@ -790,7 +805,17 @@ update_lightbox = lambda html, urls: \
     ),
   )
 
-write_app_page = lambda app: tuxapp.write_file(get_app_page_path(app), filter_html(build_app_page(app)))
+write_app = lambda app: tuxapp.write_file(get_app_path(app), filter_html(build_app(app)))
+
+write_categories = lambda apps: write_lists(apps, 'category', get_category_path, build_category)
+
+write_groups = lambda apps: write_lists(apps, 'group', get_group_path, build_group)
+
+write_index = lambda: True
+
+write_lists = lambda apps, key, get_path, build: \
+  all(tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build_app_card(app), True) if os.path.isfile(get_path(tuxapp.query_appfile(app, key))) else tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build(tuxapp.query_appfile(app, key))) for app in apps) and \
+  all(tuxapp.write_file(path, filter_html(u"{}{}".format(tuxapp.read_file(path), build_footer()))) for path in glob.iglob(get_category_path('*')))
 
 if __name__ == '__main__':
   main()
