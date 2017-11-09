@@ -714,7 +714,7 @@ get_json_ld = lambda: \
     {
       '@context': "http://schema.org",
       '@type': 'SoftwareApplication',
-      'description': tuxapp.get_description(),
+      'description': tuxapp.get_description().format(tuxapp.__name__),
       'image': build_absolute_url(get_logo_url()),
       'name': tuxapp.__name__,
       'operatingSystem': 'Linux',
