@@ -94,6 +94,7 @@ build_app_card = lambda app, url=None, is_heading=False: \
     query_app_name(app),
     tuxapp.query_appfile(app, 'title'),
     url,
+    ("free license",) if tuxapp.query_appfile(app, 'free-license') else (),
     is_heading,
   )
 
@@ -236,7 +237,7 @@ build_breadcrumbs = lambda *children: \
     build_tag(".breadcrumbs", " &gt; ".join((build_tag("a", "Home", href='.'),) + children)),
   )
 
-build_card = lambda icon_url, name, title, url=None, is_heading=False: \
+build_card = lambda icon_url, name, title, url=None, tags=(), is_heading=False: \
   join_elements(
     build_tag('style', """
     .card {
@@ -270,11 +271,24 @@ build_card = lambda icon_url, name, title, url=None, is_heading=False: \
           font-size: x-large;
         }
         """),
-        build_tag(".card-name", escape_html(name)),
+        build_tag("span.card-name", escape_html(name)),
+        build_tag('style', """
+        .card-tag {
+          color: grey;
+          display: inline-block;
+          font-size: small;
+          margin-left: 0.5em;
+        }
+        .card.is-heading .card-tag {
+          font-size: medium;
+        }
+        """),
+        ''.join(build_tag("span.card-tag", escape_html(tag)) for tag in tags),
         build_tag('style', """
         a .card-title {
           color: """ + get_text_color() + """;
           display: inline-block;
+          width: 100%;
         }
         .card.is-heading .card-title {
           font-weight: bold;
