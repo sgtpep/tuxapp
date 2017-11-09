@@ -303,6 +303,7 @@ build_category = lambda category: \
     build_head(os.path.relpath(get_build_path(), os.path.dirname(get_category_path(category))), filter_category(category)),
     build_header(),
     build_breadcrumbs(build_tag('h1', escape_html(filter_category(category)))),
+    build_tag('p', escape_html("{}.".format(get_category_description(category)))),
   )
 
 build_flag = lambda *children, **attributes: \
@@ -714,6 +715,22 @@ get_app_url = lambda app: "{}/".format(os.path.relpath(os.path.dirname(get_app_p
 get_assets_path = lambda: "{}/assets".format(os.path.dirname(__file__))
 
 get_build_path = lambda: "{}/build".format(os.path.dirname(__file__))
+
+get_category_description = lambda category: \
+  {
+    'audio': "Applications for presenting, creating, or processing audio",
+    'development': "Applications for development",
+    'education': "Educational software",
+    'game': "Video games",
+    'graphics': "Applications for viewing, creating, or processing graphics",
+    'network': "Network applications",
+    'office': "Office type applications",
+    'science': "Scientific software",
+    'settings': "Settings applications",
+    'system': "System applications",
+    'utility': "Small utility applications",
+    'video': "Applications for presenting, creating, or processing video",
+  }[category]
 
 get_category_path = lambda category: "{}/categories/{}/index.html".format(get_build_path(), category)
 
