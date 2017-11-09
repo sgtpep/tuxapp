@@ -665,9 +665,10 @@ build_separator = lambda: \
   )
 
 build_tag = lambda selector, *children, **attributes: \
-  u"""<{}{}>{}{}""".format(
+  u"""<{}{}{}>{}{}""".format(
     extract_tag_name(selector),
     u" {}".format(build_tag_attributes(selector, attributes)) if attributes or '#' in selector or '.' in selector else '',
+    '' if children or extract_tag_name(selector) not in get_void_elements() else '/',
     ''.join(children),
     "</{}>".format(extract_tag_name(selector)) if children or extract_tag_name(selector) not in get_void_elements() else '',
   )
