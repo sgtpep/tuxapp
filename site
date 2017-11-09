@@ -271,30 +271,28 @@ build_card = lambda icon_url, name, title, url=None, tags=(), is_heading=False: 
           font-size: x-large;
         }
         """),
-        build_tag("span.card-name", escape_html(name)),
+        build_tag(".card-name", escape_html(name)),
         build_tag('style', """
-        .card-tag {
-          color: grey;
+        .card-title {
           display: inline-block;
-          font-size: small;
-          margin-left: 0.5em;
         }
-        .card.is-heading .card-tag {
-          font-size: medium;
-        }
-        """),
-        ''.join(build_tag("span.card-tag", escape_html(tag)) for tag in tags),
-        build_tag('style', """
         a .card-title {
           color: """ + get_text_color() + """;
-          display: inline-block;
-          width: 100%;
         }
         .card.is-heading .card-title {
           font-weight: bold;
         }
         """),
         build_tag(".card-title", escape_html(title)),
+        build_tag('style', """
+        .card-tag {
+          color: grey;
+          display: inline-block;
+          font-size: smaller;
+          margin-left: 0.5em;
+        }
+        """),
+        ''.join(build_tag("span.card-tag", escape_html(tag)) for tag in tags),
       ),
       href=url,
     ),
