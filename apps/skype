@@ -1,5 +1,5 @@
 category=network
-description=Stay in touch with family and friends for free. Get international calling, free online calls and Skype for Business on desktop and mobile.
+description=The Skype you know and love has a fresh new design and a ton of new features to help you stay connected with everyone you care about.
 download-x86-64-url=https://go.skype.com/skypeforlinux-64.deb
 download-x86-url=
 executable=usr/share/skypeforlinux/skypeforlinux
@@ -11,6 +11,6 @@ icon-url=https://secure.skypeassets.com/i/common/images/icons/favicon.ico
 name=Skype
 note=GNOME Keyring needs to be installed on your system to enable automatic sign-in.
 packages=group-electron libsecret-1-0
-title=Free calls to friends and family
+title=Enhanced features for free calls and chat
 version-regex=/skypeforlinux_([^_]+)
 version-url=https://repo.skype.com/deb/dists/stable/main/binary-amd64/Packages.gz
