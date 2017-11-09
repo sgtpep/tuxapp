@@ -121,18 +121,34 @@ def logs_result(message):
 
 def memoizes(is_persistent=False):
   def decorator(function):
-    function.cache = [{}]
+    function.memoized = {}
+    function.unmemoized = function
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
-      if is_persistent and not function.cache[0]:
-        import shelve
-        function.cache[0] = shelve.open(make_file_directories("{}/memoized-python{}".format(get_cache_path(), sys.version_info.major)))
       key = "{}{}".format(args, kwargs)
-      if key not in function.cache[0] or function.cache[0][key][1] < time.time() - 5 * 60:
-        function.cache[0][key] = function(*args, **kwargs), time.time()
-        if is_persistent:
-          function.cache[0].sync()
-      return function.cache[0][key][0]
+      expiration = time.time() - 5 * 60
+      if is_persistent:
+        import sqlite3
+        if not hasattr(memoizes, 'connection'):
+          memoizes.connection = sqlite3.connect(make_file_directories("{}/memoized".format(get_cache_path())), isolation_level=None)
+          memoizes.connection.execute("CREATE TABLE IF NOT EXISTS cache (key BLOB PRIMARY KEY, value BLOB, timestamp REAL)")
+        cache_key = sqlite3.Binary(function.__code__.co_code + key.encode())
+        row = memoizes.connection.execute("SELECT value FROM cache WHERE key = ? AND timestamp >= ?", (cache_key, expiration)).fetchone()
+        import pickle
+        if row:
+          return pickle.loads(row[0])
+        else:
+          result = function(*args, **kwargs)
+          memoizes.connection.execute("REPLACE INTO cache (key, value, timestamp) VALUES (?, ?, ?)", (
+            cache_key,
+            sqlite3.Binary(pickle.dumps(result, 2)),
+            time.time(),
+          ))
+          return result
+      else:
+        if key not in function.memoized or function.memoized[key][1] < expiration:
+          function.memoized[key] = function(*args, **kwargs), time.time()
+        return function.memoized[key][0]
     return wrapper
   return decorator
 
@@ -171,15 +187,6 @@ def unasserts(default=None):
         return default
     return wrapper
   return decorator
-
-def unmemoizes(function):
-  @functools.wraps(function)
-  def wrapper(*args, **kwargs):
-    key = "{}{}".format(args, kwargs)
-    if key in function.cache[0]:
-      del function.cache[0][key]
-    return function(*args, **kwargs)
-  return wrapper
 
 def change_file_mode(path, get_mode):
   os.chmod(path, get_mode(os.stat(path).st_mode))
