@@ -78,7 +78,7 @@ build_app = lambda app: \
       build_tag('a', escape_html(filter_category(tuxapp.query_appfile(app, 'category'))), href=get_category_url(tuxapp.query_appfile(app, 'category'))),
       build_tag('h1', escape_html(query_app_name(app))),
     ),
-    build_app_card(app, True),
+    build_app_card(app, None, True),
     build_app_image(app),
     tuxapp.query_appfile(app, 'description') and build_tag('p', escape_html(tuxapp.query_appfile(app, 'description'))),
     tuxapp.query_appfile(app, 'note') and build_tag('p', escape_html(tuxapp.query_appfile(app, 'note'))),
@@ -88,11 +88,12 @@ build_app = lambda app: \
     build_footer(),
   )
 
-build_app_card = lambda app, is_heading=False: \
+build_app_card = lambda app, url=None, is_heading=False: \
   build_card(
     build_app_image_url(app, media.get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url'))),
     query_app_name(app),
     tuxapp.query_appfile(app, 'title'),
+    url,
     is_heading,
   )
 
@@ -235,7 +236,7 @@ build_breadcrumbs = lambda *children: \
     build_tag(".breadcrumbs", " &gt; ".join((build_tag("a", "Home", href='.'),) + children)),
   )
 
-build_card = lambda icon_url, name, title, is_heading=False: \
+build_card = lambda icon_url, name, title, url=None, is_heading=False: \
   join_elements(
     build_tag('style', """
     .card {
@@ -245,7 +246,7 @@ build_card = lambda icon_url, name, title, is_heading=False: \
       min-width: 2em;
     }
     """),
-    build_tag(".flag.card{}".format(".is-heading" if is_heading else ''),
+    build_tag("{}.flag.card{}".format('a' if url else '', ".is-heading" if is_heading else ''),
       build_tag('style', """
       .card-icon {
         margin: auto;
@@ -281,6 +282,7 @@ build_card = lambda icon_url, name, title, is_heading=False: \
         """),
         build_tag(".card-title", escape_html(title)),
       ),
+      href=url,
     ),
   )
 
