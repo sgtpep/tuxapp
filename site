@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import cgi
+import datetime
 import functools
 import glob
 import imp
@@ -305,6 +306,38 @@ build_category = lambda category: \
     build_tag('p', escape_html("{}.".format(get_category_description(category)))),
   )
 
+build_feed = lambda apps: \
+  join_elements(
+    """<?xml version="1.0" encoding="utf-8"?>""",
+    build_tag('feed',
+      build_tag('icon', escape_html(get_logo_url())),
+      build_tag('id', escape_html(build_absolute_url())),
+      build_tag('link', href=build_absolute_url()),
+      build_tag('link',
+        href=get_feed_url(),
+        rel='self',
+      ),
+      build_tag('logo', escape_html(get_logo_url())),
+      build_tag('rights', escape_html(get_copyright())),
+      build_tag('subtitle', escape_html(get_description())),
+      build_tag('title', escape_html(get_site_name())),
+      build_tag('updated', escape_html("{}Z".format(datetime.datetime.fromtimestamp(apps[-1][1]).isoformat()) if apps else '')),
+      ''.join(build_tag('entry',
+        build_tag('category', term=filter_category(tuxapp.query_appfile(app, 'category'))),
+        build_tag('content', u"<![CDATA[{}{}]]>".format(
+          build_tag('img', src=build_app_image_url(app, media.get_app_image_path(app, media.query_app_info(app, 'image-url')))) if media.query_app_info(app, 'image-url') else '',
+          build_app_info(app),
+        ), type='html'),
+        build_tag('id', escape_html(build_absolute_url(get_app_url(app)))),
+        build_tag('link', href=get_app_url(app)),
+        build_tag('title', escape_html("{} - {}".format(filter_app_name(tuxapp.query_appfile(app, 'name')), tuxapp.query_appfile(app, 'title')))),
+        build_tag('updated', escape_html("{}Z".format(datetime.datetime.fromtimestamp(timestamp).isoformat()))),
+      ) for app, timestamp in apps),
+      xmlns="http://www.w3.org/2005/Atom",
+      **{'xml:base': build_absolute_url()}
+    )
+  )
+
 build_flag = lambda *children, **attributes: \
   join_elements(
     build_tag('style', """
@@ -344,7 +377,7 @@ build_footer = tuxapp.memoizes()(
       }
       """),
       build_tag(".footer-copyright",
-        build_tag('p', "&copy; 2017 {}".format(get_site_name())),
+        build_tag('p', get_copyright()),
         build_tag('p', "Linux&reg; is the registered trademark of Linus Torvalds in the U.S. and other countries."),
       ),
       build_tag('script', r"""
@@ -738,7 +771,13 @@ get_category_path = lambda category: "{}/categories/{}/index.html".format(get_bu
 
 get_category_url = lambda category: "{}/".format(os.path.relpath(os.path.dirname(get_category_path(category)), get_build_path()))
 
+get_copyright = lambda: u"\N{COPYRIGHT SIGN} 2017 {}".format(get_site_name())
+
 get_description = lambda: u"An open catalog of easily installable and up-to-date Linux\N{REGISTERED SIGN} applications"
+
+get_feed_path = lambda: "{}/feed.xml".format(get_build_path())
+
+get_feed_url = lambda: "{}".format(os.path.relpath(get_feed_path(), get_build_path()))
 
 get_format_name = lambda format: \
   {
@@ -782,6 +821,19 @@ get_logo_path = lambda: "{}/logo.png".format(get_build_path())
 
 get_logo_url = lambda: os.path.relpath(get_logo_path(), get_build_path())
 
+get_recent_apps = tuxapp.memoizes()(
+  lambda limit=100: \
+    tuple((app, timestamp) for timestamp, apps in functools.reduce(
+      lambda apps, app: (apps.setdefault(int(app), []) or apps if app.isdigit() and len(app) == 10 else os.path.isfile(tuxapp.get_appfile_path(app)) and apps[max(apps)].append(app)) or apps,
+      tuxapp.read_process(r"""
+      git -C {} log --name-status --pretty=format:%ct ./apps | \
+      grep -Po "(^\d+|(?<=^A\tapps/)[^.].+)" | \
+      head -{}
+      """.format(tuxapp.quote_argument(os.path.dirname(__file__)), limit)).splitlines(),
+      {},
+    ).items() if apps for app in apps)
+)
+
 get_site_name = lambda: "TuxApp"
 
 get_style_comparison_value = lambda styles: "{:03d}{}".format(":{}.#".format(string.letters).find(styles[0]), styles)
@@ -821,6 +873,7 @@ main = \
       write_apps(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*'))) and \
       (arguments or write_categories(tuxapp.extract_app(path) for path in sorted(glob.iglob(tuxapp.get_appfile_path('*'))))) and \
       (arguments or write_groups(tuxapp.extract_app(path) for path in sorted(glob.iglob(tuxapp.get_appfile_path('*'))))) and \
+      (arguments or write_feed()) and \
       (arguments or write_index())
   )))
 
@@ -854,6 +907,8 @@ update_lightbox = lambda html, urls: \
 write_app = lambda app: tuxapp.write_file(get_app_path(app), filter_html(build_app(app)))
 
 write_categories = lambda apps: write_lists(apps, 'category', get_category_path, build_category)
+
+write_feed = lambda: tuxapp.write_file(get_feed_path(), build_feed(get_recent_apps()))
 
 write_groups = lambda apps: write_lists(apps, 'group', get_group_path, build_group)
 
