@@ -304,6 +304,7 @@ build_category = lambda category: \
   join_elements(
     build_head(os.path.relpath(get_build_path(), os.path.dirname(get_category_path(category))), filter_category(category)),
     build_header(),
+    build_breadcrumbs(build_tag('h1', escape_html(filter_category(category)))),
   )
 
 build_flag = lambda *children, **attributes: \
@@ -391,6 +392,7 @@ build_group = lambda group: \
   join_elements(
     build_head(os.path.relpath(get_build_path(), os.path.dirname(get_group_path(group))), filter_group(group)),
     build_header(),
+    build_breadcrumbs(build_tag('h1', escape_html(filter_group(group)))),
   )
 
 build_head = lambda base_url, title, overrides={}: \
