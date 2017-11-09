@@ -122,7 +122,7 @@ build_app_gallery = lambda app: \
     """),
     build_tag(".app-gallery",
       ''.join(build_lightbox("Screenshot", build_app_image_url(app, media.get_app_screenshot_path(app, url))) for url in media.query_app_info(app, 'screenshot-urls').split()),
-      ''.join(build_lightbox("Video", build_app_image_url(app, media.get_app_video_thumbnail_path(app, url)), url, not os.path.isfile(media.get_app_video_thumbnail_path(app, url))) for url in media.query_app_info(app, 'video-urls').split()),
+      ''.join(build_lightbox("Video", build_app_image_url(app, media.get_app_video_thumbnail_path(app, thumbnail_url)), video_url, thumbnail_url == '-') for video_url, thumbnail_url in zip(media.query_app_info(app, 'video-urls').split(), media.query_app_info(app, 'video-thumbnail-urls').split())),
     ),
   )
 
