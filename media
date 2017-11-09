@@ -329,7 +329,7 @@ parse_screenshot_urls = lambda url: tuple(normalize_url(url, screenshot_url) for
 
 parse_screenshots_url = lambda url: normalize_url(url, parse_html(ScreenshotsURLParser, fetch_url_cached(url)))
 
-parse_video_poster_urls = lambda url: tuple((normalize_url(url, video_url), normalize_url(url, poster_url)) for poster_url, video_url in zip(parse_html(VideoPosterURLsParser, fetch_url_cached(url)), parse_html(VideoURLsParser, fetch_url_cached(url))) if normalize_url(url, poster_url))
+parse_video_poster_urls = lambda url: tuple(normalize_url(url, poster_url) or '-' for poster_url, video_url in zip(parse_html(VideoPosterURLsParser, fetch_url_cached(url)), parse_html(VideoURLsParser, fetch_url_cached(url))) if normalize_url(url, video_url))
 
 parse_video_src_urls = lambda url: tuple(normalize_url(url, video_url) for video_url in parse_html(VideoURLsParser, fetch_url_cached(url)) if normalize_url(url, video_url))
 
@@ -339,7 +339,7 @@ parse_video_urls = lambda url: parse_youtube_urls(url) + parse_video_src_urls(ur
 
 parse_youtube_ids = lambda url: tuple(set(re.findall(r"\b(?:youtu\.be/|youtube\.com/(?:(?:embed|v)/|watch\?v=))(\w+)", fetch_url_cached(url))))
 
-parse_youtube_thumbnail_urls = lambda url: tuple(("https://www.youtube.com/watch?v={}".format(id), "https://img.youtube.com/vi/{}/hqdefault.jpg".format(id)) for id in parse_youtube_ids(url))
+parse_youtube_thumbnail_urls = lambda url: tuple("https://img.youtube.com/vi/{}/hqdefault.jpg".format(id) for id in parse_youtube_ids(url))
 
 parse_youtube_urls = lambda url: tuple("https://www.youtube.com/watch?v={}".format(id) for id in parse_youtube_ids(url))
 
@@ -350,8 +350,8 @@ query_app_info = tuxapp.asserts(lambda app, key, *args, **kwargs: kwargs['result
 update_app_file = lambda app, get_path, url: update_app_files(app, get_path, (url,) if url else ())
 
 update_app_files = lambda app, get_path, urls: \
-  all(tuxapp.remove_file(path) for path in glob.iglob(get_path(app, '*')) if path not in tuple(get_path(app, url[0] if isinstance(url, tuple) else url) for url in urls)) and \
-  all(tuxapp.download_missing_file(url[1] if isinstance(url, tuple) else url, get_path(app, url[0] if isinstance(url, tuple) else url)) for url in urls)
+  all(tuxapp.remove_file(path) for path in glob.iglob(get_path(app, '*')) if path not in tuple(get_path(app, url) for url in urls)) and \
+  all(tuxapp.download_missing_file(url, get_path(app, url)) for url in urls)
 
 update_app_info = lambda app: \
   write_app_info(app, {
@@ -361,6 +361,7 @@ update_app_info = lambda app: \
     'github-repository': parse_github_repository(tuxapp.query_appfile(app, 'homepage-url')),
     'image-url': parse_image_url(tuxapp.query_appfile(app, 'homepage-url')),
     'screenshot-urls': ' '.join(parse_app_screenshot_urls(app, tuxapp.query_appfile(app, 'homepage-url'))),
+    'video-thumbnail-urls': ' '.join(parse_video_thumbnail_urls(tuxapp.query_appfile(app, 'homepage-url'))),
     'video-urls': ' '.join(parse_video_urls(tuxapp.query_appfile(app, 'homepage-url'))),
   })
 
@@ -369,7 +370,7 @@ update_app_media = lambda app: \
   update_app_file(app, get_app_icon_path, tuxapp.query_appfile(app, 'icon-url')) and \
   update_app_file(app, get_app_image_path, query_app_info(app, 'image-url')) and \
   update_app_files(app, get_app_screenshot_path, query_app_info(app, 'screenshot-urls').split()) and \
-  update_app_files(app, get_app_video_thumbnail_path, parse_video_thumbnail_urls(tuxapp.query_appfile(app, 'homepage-url')))
+  update_app_files(app, get_app_video_thumbnail_path, tuple(url for url in query_app_info(app, 'video-thumbnail-urls').split() if url != '-'))
 
 write_app_info = lambda app, info: tuxapp.write_file(get_app_info_path(app), ''.join("{}={}\n".format(key, info[key]) for key in sorted(info)))
 
