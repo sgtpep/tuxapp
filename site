@@ -59,7 +59,7 @@ build_app = lambda app: \
   join_elements(
     build_head(
       os.path.relpath(get_build_path(), os.path.dirname(get_app_path(app))),
-      "{} - {}".format(query_app_name(app), filter_category(tuxapp.query_appfile(app, 'category'))),
+      "{} - {}".format(filter_app_name(tuxapp.query_appfile(app, 'name')), filter_category(tuxapp.query_appfile(app, 'category'))),
       {
         'description': tuxapp.query_appfile(app, 'description') or tuxapp.query_appfile(app, 'title'),
         'image': build_app_og_image_url(app),
@@ -75,7 +75,7 @@ build_app = lambda app: \
     ),
     build_breadcrumbs(
       build_tag('a', escape_html(filter_category(tuxapp.query_appfile(app, 'category'))), href=get_category_url(tuxapp.query_appfile(app, 'category'))),
-      build_tag('h1', escape_html(query_app_name(app))),
+      build_tag('h1', escape_html(filter_app_name(tuxapp.query_appfile(app, 'name')))),
     ),
     build_app_card(app, None, True),
     build_app_image(app),
@@ -90,7 +90,7 @@ build_app = lambda app: \
 build_app_card = lambda app, url=None, is_heading=False: \
   build_card(
     build_app_image_url(app, media.get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url'))),
-    query_app_name(app),
+    filter_app_name(tuxapp.query_appfile(app, 'name')),
     tuxapp.query_appfile(app, 'title'),
     url,
     ("free license",) if tuxapp.query_appfile(app, 'free-license') else (),
@@ -685,6 +685,8 @@ escape_html = lambda html: cgi.escape(html, True)
 
 extract_tag_name = lambda selector: re.split(r"[#.]", selector, 1)[0] or 'div'
 
+filter_app_name = lambda name: name.lstrip('~')
+
 filter_category = lambda category: category.title()
 
 filter_group = lambda group: group.replace('-', ' ').title()
@@ -836,8 +838,6 @@ process_styles = lambda html: \
     build_tag('style', ''.join(sorted(set(re.sub(r"^\s+", '', styles, 0, re.M).replace('\n', '') for styles in re.findall(r"<style[^>]*>(.*?)</style>", html, re.S)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y))))),
     re.sub(r"<style>.*?</style>", '', html[html.find(get_styles_placeholder()) + len(get_styles_placeholder()):], 0, re.S),
   )
-
-query_app_name = lambda app: tuxapp.query_appfile(app, 'name').lstrip('~')
 
 update_lightbox = lambda html, urls: \
   functools.reduce(
