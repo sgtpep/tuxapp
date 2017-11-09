@@ -24,7 +24,6 @@ def detect_image_extension(path):
 def write_app_worker(app):
   return write_app(app)
 
-@tuxapp.silences
 def write_apps(apps):
   import contextlib
   import multiprocessing
@@ -812,6 +811,7 @@ join_elements = lambda *elements: ''.join(elements)
 main = \
   tuxapp.handles_exceptions(
   tuxapp.does(lambda arguments=tuple(sys.argv[1:]), *args, **kwargs: arguments and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.join_arguments(get_app_path(tuxapp.extract_app(argument)) for argument in arguments))))(
+  tuxapp.silences(
     lambda arguments=tuple(sys.argv[1:]): \
       (arguments or tuxapp.remove_directory(get_build_path())) and \
       tuxapp.copy_directory(get_assets_path(), get_build_path()) and \
@@ -819,7 +819,7 @@ main = \
       (arguments or write_categories(tuxapp.extract_app(path) for path in sorted(glob.iglob(tuxapp.get_appfile_path('*'))))) and \
       (arguments or write_groups(tuxapp.extract_app(path) for path in sorted(glob.iglob(tuxapp.get_appfile_path('*'))))) and \
       (arguments or write_index())
-  ))
+  )))
 
 process_lightbox = lambda html: update_lightbox(html, tuple(re.findall(r""" class="lightbox"[^"]* href="([^"]+)""", html)))
 
