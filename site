@@ -820,7 +820,7 @@ write_groups = lambda apps: write_lists(apps, 'group', get_group_path, build_gro
 write_index = lambda: True
 
 write_lists = lambda apps, key, get_path, build: \
-  all(tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build_app_card(app), True) if os.path.isfile(get_path(tuxapp.query_appfile(app, key))) else tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build(tuxapp.query_appfile(app, key))) for app in apps) and \
+  all((os.path.isfile(get_path(tuxapp.query_appfile(app, key))) or tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build(tuxapp.query_appfile(app, key)))) and tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build_app_card(app, get_app_url(app)), True) for app in apps) and \
   all(tuxapp.write_file(path, filter_html(u"{}{}".format(tuxapp.read_file(path), build_footer()))) for path in glob.iglob(get_path('*')))
 
 if __name__ == '__main__':
