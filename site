@@ -910,7 +910,7 @@ process_scripts = lambda html: \
 process_styles = lambda html: \
   u"{}{}{}".format(
     re.sub(r"<style>.*?</style>", '', html[:html.find(get_styles_placeholder())], 0, re.S),
-    build_style(''.join(sorted(set(re.sub(r"^\s+", '', styles, 0, re.M).replace('\n', '') for styles in re.findall(r"<style[^>]*>(.*?)</style>", html, re.S)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y))))),
+    build_style(''.join(sorted(set(re.sub(r"^\s+", '', style, 0, re.M).replace('\n', '') for style in re.findall(r"<style[^>]*>(.*?)</style>", html, re.S)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y))))),
     re.sub(r"<style>.*?</style>", '', html[html.find(get_styles_placeholder()) + len(get_styles_placeholder()):], 0, re.S),
   )
 
