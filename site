@@ -61,7 +61,7 @@ build_app = lambda app: \
   join_elements(
     build_head(
       os.path.relpath(get_build_path(), os.path.dirname(get_app_path(app))),
-      "{} - {}".format(filter_app_name(tuxapp.query_appfile(app, 'name')), filter_category(tuxapp.query_appfile(app, 'category'))),
+      "{} - {}".format(filter_app_name(tuxapp.query_appfile(app, 'name')), filter_category_name(tuxapp.query_appfile(app, 'category'))),
       {
         'description': tuxapp.query_appfile(app, 'description') or tuxapp.query_appfile(app, 'title'),
         'image': build_app_og_image_url(app),
@@ -76,7 +76,7 @@ build_app = lambda app: \
       build_tag('a', "Report issue", href=get_github_url("issues/new?title={}".format(app))),
     ),
     build_breadcrumbs(
-      build_tag('a', filter_category(tuxapp.query_appfile(app, 'category')), href=get_category_url(tuxapp.query_appfile(app, 'category'))),
+      build_tag('a', filter_category_name(tuxapp.query_appfile(app, 'category')), href=get_category_url(tuxapp.query_appfile(app, 'category'))),
       build_tag('h1', filter_app_name(tuxapp.query_appfile(app, 'name'))),
     ),
     build_app_card(app, False, True),
@@ -166,9 +166,9 @@ build_app_image_url = lambda app, path: \
 build_app_info = lambda app: \
   join_elements(
     build_tag('dt', "Category:"),
-    build_tag('dd', None, build_tag('a', filter_category(tuxapp.query_appfile(app, 'category')), href=get_category_url(tuxapp.query_appfile(app, 'category')))),
+    build_tag('dd', None, build_tag('a', filter_category_name(tuxapp.query_appfile(app, 'category')), href=get_category_url(tuxapp.query_appfile(app, 'category')))),
     build_tag('dt', "Group:"),
-    build_tag('dd', None, build_tag('a', filter_group(tuxapp.query_appfile(app, 'group')), href=get_group_url(tuxapp.query_appfile(app, 'group')))),
+    build_tag('dd', None, build_tag('a', filter_group_name(tuxapp.query_appfile(app, 'group')), href=get_group_url(tuxapp.query_appfile(app, 'group')))),
     build_tag('dt', "Free license:"),
     build_tag('dd', 'yes' if tuxapp.query_appfile(app, 'free-license') == 'yes' else 'no'),
     build_tag('dt', "Homepage:"),
@@ -314,9 +314,9 @@ build_card = lambda icon_url, name, title, url=None, tags=(), is_heading=False: 
 
 build_category = lambda category: \
   join_elements(
-    build_head(os.path.relpath(get_build_path(), os.path.dirname(get_category_path(category))), filter_category(category)),
+    build_head(os.path.relpath(get_build_path(), os.path.dirname(get_category_path(category))), filter_category_name(category)),
     build_header(),
-    build_breadcrumbs(build_tag('h1', filter_category(category))),
+    build_breadcrumbs(build_tag('h1', filter_category_name(category))),
     build_tag('p', "{}.".format(get_category_description(category))),
   )
 
@@ -363,7 +363,7 @@ build_feed = lambda apps: \
       build_tag('title', "{} - {}".format(get_feed_name(), get_site_name())),
       build_tag('updated', "{}Z".format(datetime.datetime.fromtimestamp(apps[-1][1]).isoformat()) if apps else ''),
       *(build_tag('entry', None,
-        build_tag('category', term=filter_category(tuxapp.query_appfile(app, 'category'))),
+        build_tag('category', term=filter_category_name(tuxapp.query_appfile(app, 'category'))),
         build_tag('content', None, u"<![CDATA[{}{}]]>".format(
           media.query_app_info(app, 'image-url') and build_tag('img', src=build_app_image_url(app, media.get_app_image_path(app, media.query_app_info(app, 'image-url')))),
           build_app_info(app),
@@ -461,9 +461,9 @@ build_footer = tuxapp.memoizes()(
 
 build_group = lambda group: \
   join_elements(
-    build_head(os.path.relpath(get_build_path(), os.path.dirname(get_group_path(group))), filter_group(group)),
+    build_head(os.path.relpath(get_build_path(), os.path.dirname(get_group_path(group))), filter_group_name(group)),
     build_header(),
-    build_breadcrumbs(build_tag('h1', filter_group(group))),
+    build_breadcrumbs(build_tag('h1', filter_group_name(group))),
   )
 
 build_head = lambda base_url, title=None, overrides={}: \
@@ -781,9 +781,9 @@ extract_tag_name = lambda selector: re.split(r"[#.]", selector, 1)[0] or 'div'
 
 filter_app_name = lambda name: name.lstrip('~')
 
-filter_category = lambda category: category.title()
+filter_category_name = lambda category: category.title()
 
-filter_group = lambda group: group.replace('-', ' ').title()
+filter_group_name = lambda group: group.replace('-', ' ').title()
 
 filter_html = lambda html: process_scripts(process_styles(process_lightbox(html)))
 
@@ -791,7 +791,7 @@ get_app_json_ld = lambda app: \
   {
     '@context': "http://schema.org",
     '@type': 'SoftwareApplication',
-    'applicationCategory': filter_category(tuxapp.query_appfile(app, 'category')),
+    'applicationCategory': filter_category_name(tuxapp.query_appfile(app, 'category')),
     'description': tuxapp.query_appfile(app, 'description') or tuxapp.query_appfile(app, 'title'),
     'image': build_absolute_url(build_app_og_image_url(app)),
     'installUrl': build_absolute_url(get_app_url(app)),
