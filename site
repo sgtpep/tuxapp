@@ -537,7 +537,7 @@ build_head = lambda base_url, title=None, overrides={}: \
       transition: opacity 0.2s;
     }
     a:hover {
-      opacity: 0.8;
+      opacity: 0.75;
     }
     body {
       color: """ + get_text_color() + """;
