@@ -963,8 +963,6 @@ get_recent_apps = tuxapp.memoizes()(
 
 get_site_name = lambda: "TuxApp"
 
-get_style_comparison_value = lambda style: style and "{:03d}{}".format(":{}.#".format(string.letters).find(style[0]), style)
-
 get_style_prefix = lambda: "<!-- <style>"
 
 get_style_regex = lambda: re.compile(r"{}(.*?){}".format(re.escape(get_style_prefix()), re.escape(get_style_suffix())), re.S)
@@ -1013,7 +1011,11 @@ process_lightbox = lambda html: update_lightbox(html, tuple(re.findall(r""" clas
 process_styles = lambda html: \
   get_style_regex().sub('', html).replace(
     build_combined_styles(),
-    build_tag('style', None, *sorted(set(get_style_regex().findall(html)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y)))),
+    build_tag('style', None, *functools.reduce(
+      lambda styles, style: styles if style in styles else styles + (style,),
+      get_style_regex().findall(html),
+      (),
+    )),
   )
 
 remove_whitespace = lambda string: re.sub(r"^\s+", '', string, 0, re.M).replace('\n', '')
