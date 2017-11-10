@@ -259,7 +259,7 @@ build_card = lambda icon_url, name, title, url=None, tags=(), is_heading=False: 
     """),
     build_flag(
       ".card{}{}".format(
-        ".is-category" if url.startswith(get_category_url('')) else '',
+        ".is-category" if url and url.startswith(get_category_url('')) else '',
         ".is-heading" if is_heading else '',
       ),
       url,
