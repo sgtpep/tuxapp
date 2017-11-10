@@ -320,6 +320,32 @@ build_category = lambda category: \
     build_tag('p', "{}.".format(get_category_description(category))),
   )
 
+build_columns = lambda children: \
+  join_elements(
+    # https://stackoverflow.com/q/7785374
+    build_style("""
+    @media (min-width: 40em) {
+      .columns {
+        -moz-column-count: 2;
+        -webkit-column-count: 2;
+        column-count: 2;
+      }
+      .columns > * {
+        -webkit-column-break-inside: avoid;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .columns > :first-child {
+        margin-top: 0;
+      }
+      .columns > :last-child {
+        margin-bottom: 0;
+      }
+    }
+    """),
+    build_tag(".columns", None, *children),
+  )
+
 build_feed = lambda apps: \
   join_elements(
     """<?xml version="1.0" encoding="utf-8"?>""",
@@ -679,6 +705,21 @@ build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
     ),
   )
 
+build_main = lambda: \
+  join_elements(
+    build_head(os.path.relpath(get_build_path(), os.path.dirname(get_main_path()))),
+    build_tag('link',
+      href=get_feed_url(),
+      rel='alternate',
+      title=get_feed_name(),
+      type="application/atom+xml",
+    ),
+    build_header(),
+    build_tag('h2', "Recent apps"),
+    build_columns(build_app_card(app, True) for app, _ in get_recent_apps(12)),
+    build_footer(),
+  )
+
 build_script = lambda script, type=None: build_tag('script', None, script, type=type)
 
 build_search = lambda: \
@@ -842,6 +883,8 @@ get_logo_path = lambda: "{}/logo.png".format(get_build_path())
 
 get_logo_url = lambda: os.path.relpath(get_logo_path(), get_build_path())
 
+get_main_path = lambda: "{}/index.html".format(get_build_path())
+
 get_recent_apps = tuxapp.memoizes()(
   lambda limit=10: \
     tuple(itertools.islice(((app, timestamp) for timestamp, apps in functools.reduce(
@@ -895,7 +938,7 @@ main = \
       (arguments or write_categories(tuxapp.extract_app(path) for path in sorted(glob.iglob(tuxapp.get_appfile_path('*'))))) and \
       (arguments or write_groups(tuxapp.extract_app(path) for path in sorted(glob.iglob(tuxapp.get_appfile_path('*'))))) and \
       (arguments or write_feed()) and \
-      (arguments or write_index())
+      (arguments or write_main())
   )))
 
 process_lightbox = lambda html: update_lightbox(html, tuple(re.findall(r""" class="lightbox"[^"]* href="([^"]+)""", html)))
@@ -933,11 +976,11 @@ write_feed = lambda: tuxapp.write_file(get_feed_path(), build_feed(get_recent_ap
 
 write_groups = lambda apps: write_lists(apps, 'group', get_group_path, build_group)
 
-write_index = lambda: True
-
 write_lists = lambda apps, key, get_path, build: \
   all((os.path.isfile(get_path(tuxapp.query_appfile(app, key))) or tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build(tuxapp.query_appfile(app, key)))) and tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build_app_card(app, True), True) for app in apps) and \
   all(tuxapp.write_file(path, filter_html(u"{}{}".format(tuxapp.read_file(path), build_footer()))) for path in glob.iglob(get_path('*')))
+
+write_main = lambda: tuxapp.write_file(get_main_path(), filter_html(build_main()))
 
 if __name__ == '__main__':
   main()
