@@ -389,7 +389,7 @@ build_feed = lambda apps: \
       *(build_tag('entry', None,
         build_tag('category', term=filter_category_name(tuxapp.query_appfile(app, 'category'))),
         build_tag('content', None, u"<![CDATA[{}{}]]>".format(
-          media.query_app_info(app, 'image-url') and build_tag('img', src=build_app_image_url(app, media.get_app_image_path(app, media.query_app_info(app, 'image-url')))),
+          build_tag('img', src=build_app_image_url(app, media.get_app_image_path(app, media.query_app_info(app, 'image-url')) if media.query_app_info(app, 'image-url') else media.get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url')))),
           build_app_info(app),
         ), type='html'),
         build_tag('id', build_absolute_url(get_app_url(app))),
