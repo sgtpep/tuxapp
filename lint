@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu -o pipefail
+
+exec pylint -d similarities $(grep -Flx "#!/usr/bin/env python" --exclude-dir=* "${0%/*}"/*)

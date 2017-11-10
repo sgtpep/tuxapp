@@ -5,10 +5,6 @@ import pylint.interfaces
 class OrderChecker(pylint.checkers.BaseChecker):
   __implements__ = (pylint.interfaces.IAstroidChecker,)
   name = 'order-checker'
-  previous_class = None
-  previous_decorator = None
-  previous_function = None
-  previous_lambda = None
 
   msgs = {
     'W0001': ("%s %s is misplaced", 'misplaced-item', ''),
@@ -43,6 +39,12 @@ class OrderChecker(pylint.checkers.BaseChecker):
         self.previous_function = node.name
         if self.previous_lambda:
           self.add_message('misplaced-item', args=("Function", node.name), node=node)
+
+  def visit_module(self, node):
+    self.previous_class = None
+    self.previous_decorator = None
+    self.previous_function = None
+    self.previous_lambda = None
 
 def register(linter):
   linter.register_checker(OrderChecker(linter))
