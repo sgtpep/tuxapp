@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import cgi
+import collections
 import datetime
 import functools
 import glob
@@ -255,20 +256,22 @@ build_card = lambda icon_url, name, title, url=None, tags=(), is_heading=False: 
     .card {
       margin: 1em 0;
     }
-    .card > :first-child {
-      min-width: 2em;
-    }
     """),
     build_flag(
-      ".card{}".format(".is-heading" if is_heading else ''),
+      ".card{}{}".format(
+        ".is-category" if url.startswith(get_category_url('')) else '',
+        ".is-heading" if is_heading else '',
+      ),
       url,
       build_style("""
       .card-icon {
         margin: auto;
         max-width: 100%;
+        min-width: 2em;
       }
+      .card.is-category .card-icon,
       .card.is-heading .card-icon {
-        max-height: 3em;
+        max-width: 3em;
       }
       """),
       build_tag('', None, build_tag("img.card-icon",
@@ -722,8 +725,20 @@ build_main = lambda: \
       type="application/atom+xml",
     ),
     build_header(),
+    build_tag('h2', "Categories"),
+    build_columns(build_card(
+      get_category_icon_url(category),
+      filter_category_name(category),
+      get_category_description(category),
+      get_category_url(category),
+    ) for category, count in get_categories()),
+    build_tag('h2', "Groups"),
+    build_columns(build_tag('', None,
+      build_tag('a', filter_group_name(group), href=get_group_url(group)),
+      build_tag('span', " ({})".format(count)),
+    ) for group, count in get_groups()),
     build_tag('h2', "Recent apps"),
-    build_columns(build_app_card(app, True) for app, _ in get_recent_apps(12)),
+    build_columns(build_app_card(app, True) for app, _ in get_recent_apps(16)),
     build_footer(),
   )
 
@@ -814,9 +829,13 @@ get_app_path = lambda app: "{}/apps/{}/index.html".format(get_build_path(), app)
 
 get_app_url = lambda app: "{}/".format(os.path.relpath(os.path.dirname(get_app_path(app)), get_build_path()))
 
+get_apps = lambda: (tuxapp.extract_app(path) for path in glob.iglob(tuxapp.get_appfile_path('*')))
+
 get_assets_path = lambda: "{}/assets".format(os.path.dirname(__file__))
 
 get_build_path = lambda: "{}/build".format(os.path.dirname(__file__))
+
+get_categories = lambda: tuple(sorted(collections.Counter(tuxapp.query_appfile(app, 'category') for app in get_apps()).items()))
 
 get_category_description = lambda category: \
   {
@@ -833,6 +852,10 @@ get_category_description = lambda category: \
     'utility': "Small utility applications",
     'video': "Applications for presenting, creating, or processing video",
   }[category]
+
+get_category_icon_path = lambda category: "{}/categories/{}.png".format(get_build_path(), category)
+
+get_category_icon_url = lambda category: os.path.relpath(get_category_icon_path(category), get_build_path())
 
 get_category_path = lambda category: "{}/categories/{}/index.html".format(get_build_path(), category)
 
@@ -863,6 +886,8 @@ get_github_url = lambda url='': "https://github.com/{}{}".format(tuxapp.get_gith
 get_group_path = lambda group: "{}/groups/{}/index.html".format(get_build_path(), group)
 
 get_group_url = lambda group: "{}/".format(os.path.relpath(os.path.dirname(get_group_path(group)), get_build_path()))
+
+get_groups = lambda: tuple(sorted(collections.Counter(tuxapp.query_appfile(app, 'group') for app in get_apps()).items()))
 
 get_json_ld = lambda: \
   [
@@ -942,8 +967,8 @@ main = \
       (arguments or tuxapp.remove_directory(get_build_path())) and \
       tuxapp.copy_directory(get_assets_path(), get_build_path()) and \
       write_apps(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*'))) and \
-      (arguments or write_categories(tuxapp.extract_app(path) for path in sorted(glob.iglob(tuxapp.get_appfile_path('*'))))) and \
-      (arguments or write_groups(tuxapp.extract_app(path) for path in sorted(glob.iglob(tuxapp.get_appfile_path('*'))))) and \
+      (arguments or write_categories(sorted(get_apps()))) and \
+      (arguments or write_groups(sorted(get_apps()))) and \
       (arguments or write_feed()) and \
       (arguments or write_main())
   )))
