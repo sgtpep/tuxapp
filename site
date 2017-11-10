@@ -440,7 +440,7 @@ build_group = lambda group: \
     build_breadcrumbs(build_tag('h1', filter_group(group))),
   )
 
-build_head = lambda base_url, title, overrides={}: \
+build_head = lambda base_url, title=None, overrides={}: \
   join_elements(
     "<!DOCTYPE html>",
     """<html lang="en">""",
