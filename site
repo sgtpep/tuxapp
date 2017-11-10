@@ -39,7 +39,7 @@ build_absolute_url = lambda url='': "https://tuxapp.org/{}".format(url)
 
 build_actions = lambda *children: \
   join_elements(
-    build_tag('style', """
+    build_style("""
     @media (min-width: 30em) {
       .actions {
         float: right;
@@ -53,7 +53,7 @@ build_actions = lambda *children: \
       margin-right: 0;
     }
     """),
-    build_tag("p.actions", *children),
+    build_tag("p.actions", None, *children),
   )
 
 build_app = lambda app: \
@@ -75,13 +75,13 @@ build_app = lambda app: \
       build_tag('a', "Report issue", href=get_github_url("issues/new?title={}".format(app))),
     ),
     build_breadcrumbs(
-      build_tag('a', escape_html(filter_category(tuxapp.query_appfile(app, 'category'))), href=get_category_url(tuxapp.query_appfile(app, 'category'))),
-      build_tag('h1', escape_html(filter_app_name(tuxapp.query_appfile(app, 'name')))),
+      build_tag('a', filter_category(tuxapp.query_appfile(app, 'category')), href=get_category_url(tuxapp.query_appfile(app, 'category'))),
+      build_tag('h1', filter_app_name(tuxapp.query_appfile(app, 'name'))),
     ),
     build_app_card(app, None, True),
     build_app_image(app),
-    tuxapp.query_appfile(app, 'description') and build_tag('p', escape_html(tuxapp.query_appfile(app, 'description'))),
-    tuxapp.query_appfile(app, 'note') and build_tag('p', escape_html(tuxapp.query_appfile(app, 'note'))),
+    tuxapp.query_appfile(app, 'description') and build_tag('p', tuxapp.query_appfile(app, 'description')),
+    tuxapp.query_appfile(app, 'note') and build_tag('p', tuxapp.query_appfile(app, 'note')),
     build_app_info(app),
     build_app_gallery(app),
     build_app_instructions(app),
@@ -100,7 +100,7 @@ build_app_card = lambda app, url=None, is_heading=False: \
 
 build_app_gallery = lambda app: \
   join_elements(
-    build_tag('style', """
+    build_style("""
     .app-gallery {
       margin: 1em 0;
     }
@@ -122,15 +122,15 @@ build_app_gallery = lambda app: \
       }
     }
     """),
-    build_tag(".app-gallery",
-      ''.join(build_lightbox("Screenshot", build_app_image_url(app, media.get_app_screenshot_path(app, url))) for url in media.query_app_info(app, 'screenshot-urls').split()),
-      ''.join(build_lightbox("Video", build_app_image_url(app, media.get_app_video_thumbnail_path(app, thumbnail_url)), video_url, thumbnail_url == '-') for video_url, thumbnail_url in zip(media.query_app_info(app, 'video-urls').split(), media.query_app_info(app, 'video-thumbnail-urls').split())),
+    build_tag(".app-gallery", None, *(
+      tuple(build_lightbox("Screenshot", build_app_image_url(app, media.get_app_screenshot_path(app, url))) for url in media.query_app_info(app, 'screenshot-urls').split()) + \
+      tuple(build_lightbox("Video", build_app_image_url(app, media.get_app_video_thumbnail_path(app, thumbnail_url)), video_url, thumbnail_url == '-') for video_url, thumbnail_url in zip(media.query_app_info(app, 'video-urls').split(), media.query_app_info(app, 'video-thumbnail-urls').split())))
     ),
   )
 
 build_app_image = lambda app: \
   join_elements(
-    build_tag('style', """
+    build_style("""
     .app-image {
       display: block;
       margin: 1em 0;
@@ -152,7 +152,7 @@ build_app_image = lambda app: \
       max-width: 100%;
     }
     """),
-    media.query_app_info(app, 'image-url') and build_tag(".app-image", build_lightbox("Image", build_app_image_url(app, media.get_app_image_path(app, media.query_app_info(app, 'image-url'))))),
+    media.query_app_info(app, 'image-url') and build_tag(".app-image", None, build_lightbox("Image", build_app_image_url(app, media.get_app_image_path(app, media.query_app_info(app, 'image-url'))))),
   )
 
 build_app_image_url = lambda app, path: \
@@ -165,33 +165,30 @@ build_app_image_url = lambda app, path: \
 build_app_info = lambda app: \
   join_elements(
     build_tag('dt', "Category:"),
-    build_tag('dd', build_tag('a', escape_html(filter_category(tuxapp.query_appfile(app, 'category'))), href=get_category_url(tuxapp.query_appfile(app, 'category')))),
+    build_tag('dd', None, build_tag('a', filter_category(tuxapp.query_appfile(app, 'category')), href=get_category_url(tuxapp.query_appfile(app, 'category')))),
     build_tag('dt', "Group:"),
-    build_tag('dd', build_tag('a', escape_html(filter_group(tuxapp.query_appfile(app, 'group'))), href=get_group_url(tuxapp.query_appfile(app, 'group')))),
+    build_tag('dd', None, build_tag('a', filter_group(tuxapp.query_appfile(app, 'group')), href=get_group_url(tuxapp.query_appfile(app, 'group')))),
     build_tag('dt', "Free license:"),
     build_tag('dd', 'yes' if tuxapp.query_appfile(app, 'free-license') == 'yes' else 'no'),
     build_tag('dt', "Homepage:"),
-    build_tag('dd', build_tag('a', escape_html(tuxapp.query_appfile(app, 'homepage-url')), href=tuxapp.query_appfile(app, 'homepage-url'))),
+    build_tag('dd', None, build_tag('a', tuxapp.query_appfile(app, 'homepage-url'), href=tuxapp.query_appfile(app, 'homepage-url'))),
     join_elements(
       build_tag('dt', "GitHub repository:"),
-      build_tag('dd', build_tag('a', escape_html(media.query_app_info(app, 'github-repository')), href="https://github.com/{}".format(media.query_app_info(app, 'github-repository')))),
+      build_tag('dd', None, build_tag('a', media.query_app_info(app, 'github-repository'), href="https://github.com/{}".format(media.query_app_info(app, 'github-repository')))),
     ) if media.query_app_info(app, 'github-repository') else '',
     build_tag('dt', "Version:"),
-    build_tag('dd',
-      escape_html(tuxapp.fetch_app_version(app)),
-      media.query_app_info(app, 'changelog-url') and " ({})".format(build_tag('a', "changelog", href=media.query_app_info(app, 'changelog-url'))),
-    ),
+    build_tag('dd', tuxapp.fetch_app_version(app), media.query_app_info(app, 'changelog-url') and " ({})".format(build_tag('a', "changelog", href=media.query_app_info(app, 'changelog-url')))),
     build_tag('dt', "Downloads:"),
-    build_tag('dd',
-      build_tag('a', escape_html(media.query_app_info(app, 'downloads-url')), href=media.query_app_info(app, 'downloads-url')) \
+    build_tag('dd', None,
+      build_tag('a', media.query_app_info(app, 'downloads-url'), href=media.query_app_info(app, 'downloads-url')) \
         if media.query_app_info(app, 'downloads-url') else \
-      build_tag('a', escape_html(tuxapp.query_appfile(app, 'homepage-url')), href=tuxapp.query_appfile(app, 'homepage-url')),
-      " ({})".format(escape_html(", ".join(re.findall(r"^download-(.+)-url=", tuxapp.read_appfile(app), re.M)))),
+      build_tag('a', tuxapp.query_appfile(app, 'homepage-url'), href=tuxapp.query_appfile(app, 'homepage-url')),
+      escape_html(" ({})".format(", ".join(re.findall(r"^download-(.+)-url=", tuxapp.read_appfile(app), re.M)))),
     ),
     join_elements(
       build_tag('dt', "Distribution formats:"),
-      build_tag('dd',
-        build_tag('span', "&asymp; ", title="Detected automatically, may be inaccurate"),
+      build_tag('dd', None,
+        build_tag('span', u"\N{ALMOST EQUAL TO} ", title="Detected automatically, may be inaccurate"),
         escape_html(", ".join(get_format_name(format) for format in media.query_app_info(app, 'download-formats').split())),
       ),
     ) if media.query_app_info(app, 'download-formats') else '',
@@ -200,22 +197,36 @@ build_app_info = lambda app: \
 build_app_instructions = lambda app: \
   join_elements(
     build_tag('h2', "How to install"),
-    build_tag('p', """Run this command from the terminal to install <code>{}</code> using the <code>tuxapp</code> script hosted on <a href="{}">GitHub</a>:""".format(app, get_github_url("blob/master/tuxapp"))),
-    build_tag('style', """
+    build_tag('p', None, "Run this command from the terminal to install {} using the {} script hosted on {}:".format(
+      build_tag('code', app),
+      build_tag('code', tuxapp.__name__),
+      build_tag('a', "GitHub", href=get_github_url("blob/master/tuxapp"))),
+    ),
+    build_style("""
     .instructions-code {
       user-select: all;
       white-space: pre-wrap;
     }
     """),
-    build_tag('pre', build_tag("code.instructions-code", r"python <(url=https://raw.githubusercontent.com/{}/master/tuxapp; wget -O - $url || curl $url) {}".format(tuxapp.get_github_repository(), app))),
-    build_tag('p', "Alternatively, you may also download the <code>tuxapp</code> script and run it locally to install <code>{}</code>:".format(app)),
-    build_tag('pre', '\n'.join(build_tag("code.instructions-code", command) for command in (
-      r"url=https://raw.githubusercontent.com/{}/master/tuxapp; wget $url || curl -o tuxapp $url".format(tuxapp.get_github_repository()),
-      r"chmod +x ./tuxapp",
-      r"./tuxapp {}".format(app),
+    build_tag('pre', None, build_tag("code.instructions-code", r"python <(url=https://raw.githubusercontent.com/{}/master/{}; wget -O - $url || curl $url) {}".format(
+      tuxapp.get_github_repository(),
+      tuxapp.__name__,
+      app,
     ))),
-    build_tag('p', """To make apps run sandboxed (isolated from your system and sensitive files) install <a href="https://firejail.wordpress.com/">Firejail</a> using your package manager. For example, on Debian/Ubuntu use this command:"""),
-    build_tag('pre', build_tag("code.instructions-code", r"sudo apt install firejail")),
+    build_tag('p', None, "Alternatively, you may also download the {} script and run it locally to install {}:".format(
+      build_tag('code', tuxapp.__name__),
+      build_tag('code', app),
+    )),
+    build_tag('pre', None, '\n'.join(build_tag("code.instructions-code", command) for command in (
+      r"url=https://raw.githubusercontent.com/{0}/master/{1}; wget $url || curl -o {1} $url".format(
+        tuxapp.get_github_repository(),
+        tuxapp.__name__,
+      ),
+      r"chmod +x ./{}".format(tuxapp.__name__),
+      r"./{} {}".format(tuxapp.__name__, app),
+    ))),
+    build_tag('p', None, "To make apps run sandboxed (isolated from your system and sensitive files) install {} using your package manager. For example, on Debian/Ubuntu use this command:".format(build_tag('a', "Firejail", href="https://firejail.wordpress.com/"))),
+    build_tag('pre', None, build_tag("code.instructions-code", r"sudo apt install firejail")),
   )
 
 build_app_og_image_url = lambda app: \
@@ -225,7 +236,7 @@ build_app_og_image_url = lambda app: \
 
 build_breadcrumbs = lambda *children: \
   join_elements(
-    build_tag('style', """
+    build_style("""
     .breadcrumbs {
       margin: 1em 0;
     }
@@ -234,12 +245,12 @@ build_breadcrumbs = lambda *children: \
       font-size: medium;
     }
     """),
-    build_tag(".breadcrumbs", " &gt; ".join((build_tag("a", "Home", href='.'),) + children)),
+    build_tag(".breadcrumbs", None, escape_html(" > ").join((build_tag("a", "Home", href='.'),) + children)),
   )
 
 build_card = lambda icon_url, name, title, url=None, tags=(), is_heading=False: \
   join_elements(
-    build_tag('style', """
+    build_style("""
     .card {
       margin: 1em 0;
     }
@@ -247,8 +258,10 @@ build_card = lambda icon_url, name, title, url=None, tags=(), is_heading=False: 
       min-width: 2em;
     }
     """),
-    build_tag("{}.flag.card{}".format('a' if url else '', ".is-heading" if is_heading else ''),
-      build_tag('style', """
+    build_flag(
+      ".card{}".format(".is-heading" if is_heading else ''),
+      url,
+      build_style("""
       .card-icon {
         margin: auto;
         max-width: 100%;
@@ -257,12 +270,12 @@ build_card = lambda icon_url, name, title, url=None, tags=(), is_heading=False: 
         max-height: 3em;
       }
       """),
-      build_tag('', build_tag("img.card-icon",
+      build_tag('', None, build_tag("img.card-icon",
         alt="Icon",
         src=icon_url,
       )),
-      build_tag('',
-        build_tag('style', """
+      build_tag('', None,
+        build_style("""
         .card-name {
           font-size: larger;
           font-weight: bold;
@@ -271,8 +284,8 @@ build_card = lambda icon_url, name, title, url=None, tags=(), is_heading=False: 
           font-size: x-large;
         }
         """),
-        build_tag(".card-name", escape_html(name)),
-        build_tag('style', """
+        build_tag(".card-name", name),
+        build_style("""
         .card-title {
           display: inline-block;
         }
@@ -283,8 +296,8 @@ build_card = lambda icon_url, name, title, url=None, tags=(), is_heading=False: 
           font-weight: bold;
         }
         """),
-        build_tag(".card-title", escape_html(title)),
-        build_tag('style', """
+        build_tag(".card-title", title),
+        build_style("""
         .card-tag {
           color: grey;
           display: inline-block;
@@ -292,9 +305,8 @@ build_card = lambda icon_url, name, title, url=None, tags=(), is_heading=False: 
           margin-left: 0.5em;
         }
         """),
-        ''.join(build_tag("span.card-tag", escape_html(tag)) for tag in tags),
+        *(build_tag("span.card-tag", tag) for tag in tags)
       ),
-      href=url,
     ),
   )
 
@@ -302,45 +314,45 @@ build_category = lambda category: \
   join_elements(
     build_head(os.path.relpath(get_build_path(), os.path.dirname(get_category_path(category))), filter_category(category)),
     build_header(),
-    build_breadcrumbs(build_tag('h1', escape_html(filter_category(category)))),
-    build_tag('p', escape_html("{}.".format(get_category_description(category)))),
+    build_breadcrumbs(build_tag('h1', filter_category(category))),
+    build_tag('p', "{}.".format(get_category_description(category))),
   )
 
 build_feed = lambda apps: \
   join_elements(
     """<?xml version="1.0" encoding="utf-8"?>""",
-    build_tag('feed',
-      build_tag('icon', escape_html(get_logo_url())),
-      build_tag('id', escape_html(build_absolute_url())),
-      build_tag('link', href=build_absolute_url()),
+    build_tag('feed', None,
+      build_tag('icon', get_logo_url()),
+      build_tag('id', build_absolute_url()),
+      build_tag('link', href='.'),
       build_tag('link',
         href=get_feed_url(),
         rel='self',
       ),
-      build_tag('logo', escape_html(get_logo_url())),
-      build_tag('rights', escape_html(get_copyright())),
-      build_tag('subtitle', escape_html(get_description())),
-      build_tag('title', escape_html(get_site_name())),
-      build_tag('updated', escape_html("{}Z".format(datetime.datetime.fromtimestamp(apps[-1][1]).isoformat()) if apps else '')),
-      ''.join(build_tag('entry',
+      build_tag('logo', get_logo_url()),
+      build_tag('rights', get_copyright()),
+      build_tag('subtitle', get_description()),
+      build_tag('title', get_site_name()),
+      build_tag('updated', "{}Z".format(datetime.datetime.fromtimestamp(apps[-1][1]).isoformat()) if apps else ''),
+      *(build_tag('entry', None,
         build_tag('category', term=filter_category(tuxapp.query_appfile(app, 'category'))),
-        build_tag('content', u"<![CDATA[{}{}]]>".format(
-          build_tag('img', src=build_app_image_url(app, media.get_app_image_path(app, media.query_app_info(app, 'image-url')))) if media.query_app_info(app, 'image-url') else '',
+        build_tag('content', None, u"<![CDATA[{}{}]]>".format(
+          media.query_app_info(app, 'image-url') and build_tag('img', src=build_app_image_url(app, media.get_app_image_path(app, media.query_app_info(app, 'image-url')))),
           build_app_info(app),
         ), type='html'),
-        build_tag('id', escape_html(build_absolute_url(get_app_url(app)))),
+        build_tag('id', build_absolute_url(get_app_url(app))),
         build_tag('link', href=get_app_url(app)),
-        build_tag('title', escape_html("{} - {}".format(filter_app_name(tuxapp.query_appfile(app, 'name')), tuxapp.query_appfile(app, 'title')))),
-        build_tag('updated', escape_html("{}Z".format(datetime.datetime.fromtimestamp(timestamp).isoformat()))),
+        build_tag('title', "{} - {}".format(filter_app_name(tuxapp.query_appfile(app, 'name')), tuxapp.query_appfile(app, 'title'))),
+        build_tag('updated', "{}Z".format(datetime.datetime.fromtimestamp(timestamp).isoformat())),
       ) for app, timestamp in apps),
       xmlns="http://www.w3.org/2005/Atom",
       **{'xml:base': build_absolute_url()}
     )
   )
 
-build_flag = lambda *children, **attributes: \
+build_flag = lambda selector, url, *children: \
   join_elements(
-    build_tag('style', """
+    build_style("""
     .flag {
       display: block;
       width: 100%;
@@ -359,7 +371,7 @@ build_flag = lambda *children, **attributes: \
       width: 100%;
     }
     """),
-    build_tag(".flag", *children, **attributes),
+    build_tag("{}.flag{}".format('a' if url else '', selector or ''), None, *children, href=url),
   )
 
 build_footer = tuxapp.memoizes()(
@@ -370,17 +382,17 @@ build_footer = tuxapp.memoizes()(
         build_tag('a', "Source code", href=get_github_url()),
         build_tag('a', "Issues", href=get_github_url("issues")),
       ),
-      build_tag('style', """
+      build_style("""
       .footer-copyright {
         color: grey;
         font-size: smaller;
       }
       """),
-      build_tag(".footer-copyright",
+      build_tag(".footer-copyright", None,
         build_tag('p', get_copyright()),
-        build_tag('p', "Linux&reg; is the registered trademark of Linus Torvalds in the U.S. and other countries."),
+        build_tag('p', u"Linux\N{REGISTERED SIGN} is the registered trademark of Linus Torvalds in the U.S. and other countries."),
       ),
-      build_tag('script', r"""
+      build_script(r"""
       if (location.protocol == "file:") {
         Array.prototype.forEach.call(document.querySelectorAll('a'), function(anchor) {
           if (~anchor.href.indexOf("file:///")) {
@@ -423,7 +435,7 @@ build_group = lambda group: \
   join_elements(
     build_head(os.path.relpath(get_build_path(), os.path.dirname(get_group_path(group))), filter_group(group)),
     build_header(),
-    build_breadcrumbs(build_tag('h1', escape_html(filter_group(group)))),
+    build_breadcrumbs(build_tag('h1', filter_group(group))),
   )
 
 build_head = lambda base_url, title, overrides={}: \
@@ -472,10 +484,10 @@ build_head = lambda base_url, title, overrides={}: \
       href=get_logo_url(),
       rel='icon',
     ),
-    build_tag('title', "{} - {}".format(escape_html(title), get_site_name()) if title else get_site_name()),
+    build_tag('title', "{} - {}".format(title, get_site_name()) if title else get_site_name()),
     build_json_ld(get_json_ld()),
     get_styles_placeholder(),
-    build_tag('style', """
+    build_style("""
     :link {
       color: mediumblue;
     }
@@ -490,7 +502,7 @@ build_head = lambda base_url, title, overrides={}: \
       transition: opacity 0.2s;
     }
     a:hover {
-      opacity: 0.7;
+      opacity: 0.8;
     }
     body {
       color: """ + get_text_color() + """;
@@ -506,9 +518,9 @@ build_head = lambda base_url, title, overrides={}: \
 build_header = tuxapp.memoizes()(
   lambda: \
     join_elements(
-      build_flag(
-        build_tag('a',
-          build_tag('style', """
+      build_flag(None, None,
+        build_tag('a', None,
+          build_style("""
           .header-logo {
             max-width: 3.5em;
           }
@@ -520,8 +532,8 @@ build_header = tuxapp.memoizes()(
           href='.',
           title="Home",
         ),
-        build_tag('',
-          build_tag('style', """
+        build_tag('', None,
+          build_style("""
           .header-top > :last-child {
             display: block;
           }
@@ -532,8 +544,8 @@ build_header = tuxapp.memoizes()(
             }
           }
           """),
-          build_tag(".flag.header-top",
-            build_tag('style', """
+          build_flag(".header-top", None,
+            build_style("""
             .header-name {
               color: inherit;
               font-family: serif;
@@ -548,7 +560,7 @@ build_header = tuxapp.memoizes()(
             ),
             build_search(),
           ),
-          build_tag('style', """
+          build_style("""
           .header-description {
             color: grey;
             font-style: italic;
@@ -561,11 +573,11 @@ build_header = tuxapp.memoizes()(
     )
 )
 
-build_json_ld = lambda data: build_tag('script', json.dumps(data, ensure_ascii=False, separators=(',', ':'), sort_keys=True), type="application/ld+json")
+build_json_ld = lambda data: build_script(json.dumps(data, ensure_ascii=False, separators=(',', ':'), sort_keys=True), "application/ld+json")
 
 build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
   join_elements(
-    build_tag("a.lightbox",
+    build_tag("a.lightbox", None,
       build_tag('video',
         preload='metadata',
         src=video_url,
@@ -577,7 +589,7 @@ build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
       ),
       href="{}/#{}".format(os.path.dirname(image_url), os.path.basename(image_url).rsplit('.', 1)[0]),
     ),
-    build_tag('style', """
+    build_style("""
     .lightbox-overlay {
       background: rgba(0, 0, 0, 0.75);
       bottom: 0;
@@ -605,7 +617,7 @@ build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
       border: none;
     }
     """),
-    build_tag("#{}.lightbox-overlay".format(os.path.basename(image_url).rsplit('.', 1)[0]),
+    build_tag("#{}.lightbox-overlay".format(os.path.basename(image_url).rsplit('.', 1)[0]), None,
       build_tag('iframe',
         allowfullscreen=True,
         height='480',
@@ -623,7 +635,7 @@ build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
         alt=text,
         src=image_url,
       ),
-      build_tag('style', """
+      build_style("""
       .lightbox-action {
         color: white;
         font-size: 2.5em;
@@ -633,17 +645,17 @@ build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
         width: 1.2em;
       }
       """),
-      build_tag('style', """
+      build_style("""
       .lightbox-action.is-close {
         right: 0;
         top: 0;
       }
       """),
-      build_tag("a.lightbox-action.is-close", "&times;",
+      build_tag("a.lightbox-action.is-close", u"\N{MULTIPLICATION SIGN}",
         href="{}/#".format(os.path.dirname(image_url)),
         title="Close",
       ),
-      build_tag('style', """
+      build_style("""
       .lightbox-action.is-next,
       .lightbox-action.is-previous {
         margin-top: -0.6em;
@@ -660,20 +672,22 @@ build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
         left: 0;
       }
       """),
-      build_tag("a.lightbox-action.is-next", "&#9656;", title="Next"),
-      build_tag("a.lightbox-action.is-previous", "&#9666;", title="Previous"),
+      build_tag("a.lightbox-action.is-next", u"\N{BLACK RIGHT-POINTING SMALL TRIANGLE}", title="Next"),
+      build_tag("a.lightbox-action.is-previous", u"\N{BLACK LEFT-POINTING SMALL TRIANGLE}", title="Previous"),
     ),
   )
 
+build_script = lambda script, type=None: build_tag('script', None, script, type=type)
+
 build_search = lambda: \
   join_elements(
-    build_tag('style', """
+    build_style("""
     .header-search.is-hidden {
       display: none;
     }
     """),
-    build_tag("form.header-search.is-hidden",
-      build_tag('script', r"""document.querySelector(".header-search").className = document.querySelector(".header-search").className.replace(" is-hidden", '');"""),
+    build_tag("form.header-search.is-hidden", None,
+      build_script(r"""document.querySelector(".header-search").className = document.querySelector(".header-search").className.replace(" is-hidden", '');"""),
       build_tag('input',
         name='query',
         placeholder="Search",
@@ -685,7 +699,7 @@ build_search = lambda: \
 
 build_separator = lambda: \
   join_elements(
-    build_tag('style', """
+    build_style("""
     .separator {
       background: lightgrey;
       border: none;
@@ -697,17 +711,20 @@ build_separator = lambda: \
     build_tag("hr.separator"),
   )
 
-build_tag = lambda selector, *children, **attributes: \
-  u"""<{}{}{}>{}{}""".format(
+build_style = lambda style: build_tag('style', None, style)
+
+build_tag = lambda selector, text=None, *children, **attributes: \
+  u"""<{}{}{}>{}{}{}""".format(
     extract_tag_name(selector),
-    u" {}".format(build_tag_attributes(selector, attributes)) if attributes or '#' in selector or '.' in selector else '',
+    build_tag_attributes(selector, attributes) if attributes or '#' in selector or '.' in selector else '',
     '' if children or extract_tag_name(selector) not in get_void_elements() else '/',
+    escape_html(text) if text else '',
     ''.join(children),
     "</{}>".format(extract_tag_name(selector)) if children or extract_tag_name(selector) not in get_void_elements() else '',
   )
 
 build_tag_attributes = lambda selector, attributes: \
-  ' '.join(u"{}{}".format(
+  ''.join(u" {}{}".format(
     name,
     '' if value is True else u"=\"{}\"".format(escape_html(value)),
   ) for name, value in sorted(dict(attributes, **{
@@ -889,7 +906,7 @@ process_scripts = lambda html: \
 process_styles = lambda html: \
   u"{}{}{}".format(
     re.sub(r"<style>.*?</style>", '', html[:html.find(get_styles_placeholder())], 0, re.S),
-    build_tag('style', ''.join(sorted(set(re.sub(r"^\s+", '', styles, 0, re.M).replace('\n', '') for styles in re.findall(r"<style[^>]*>(.*?)</style>", html, re.S)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y))))),
+    build_style(''.join(sorted(set(re.sub(r"^\s+", '', styles, 0, re.M).replace('\n', '') for styles in re.findall(r"<style[^>]*>(.*?)</style>", html, re.S)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y))))),
     re.sub(r"<style>.*?</style>", '', html[html.find(get_styles_placeholder()) + len(get_styles_placeholder()):], 0, re.S),
   )
 
