@@ -5,6 +5,7 @@ import datetime
 import functools
 import glob
 import imp
+import itertools
 import json
 import os
 import re
@@ -839,16 +840,16 @@ get_logo_path = lambda: "{}/logo.png".format(get_build_path())
 get_logo_url = lambda: os.path.relpath(get_logo_path(), get_build_path())
 
 get_recent_apps = tuxapp.memoizes()(
-  lambda limit=100: \
-    tuple((app, timestamp) for timestamp, apps in functools.reduce(
+  lambda limit=10: \
+    tuple(itertools.islice(((app, timestamp) for timestamp, apps in functools.reduce(
       lambda apps, app: (apps.setdefault(int(app), []) or apps if app.isdigit() and len(app) == 10 else os.path.isfile(tuxapp.get_appfile_path(app)) and apps[max(apps)].append(app)) or apps,
       tuxapp.read_process(r"""
       git -C {} log --name-status --pretty=format:%ct ./apps | \
       grep -Po "(^\d+|(?<=^A\tapps/)[^.].+)" | \
-      head -{}
-      """.format(tuxapp.quote_argument(os.path.dirname(__file__)), limit)).splitlines(),
+      head -1000
+      """.format(tuxapp.quote_argument(os.path.dirname(__file__)))).splitlines(),
       {},
-    ).items() if apps for app in apps)
+    ).items() if apps for app in apps), limit))
 )
 
 get_site_name = lambda: "TuxApp"
@@ -925,7 +926,7 @@ write_app = lambda app: tuxapp.write_file(get_app_path(app), filter_html(build_a
 
 write_categories = lambda apps: write_lists(apps, 'category', get_category_path, build_category)
 
-write_feed = lambda: tuxapp.write_file(get_feed_path(), build_feed(get_recent_apps()))
+write_feed = lambda: tuxapp.write_file(get_feed_path(), build_feed(get_recent_apps(100)))
 
 write_groups = lambda apps: write_lists(apps, 'group', get_group_path, build_group)
 
