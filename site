@@ -310,14 +310,17 @@ build_card = lambda icon_url, name, title, url=None, count=None, tags=(), is_hea
         .card.is-heading .card-title {
           font-weight: bold;
         }
+        .card-title > * {
+          margin-right: 0.5em;
+        }
         """),
-        build_tag(".card-title", title,
+        build_tag(".card-title", None,
+          build_tag('span', title),
           build_style("""
           .card-tag {
             color: grey;
             display: inline-block;
             font-size: smaller;
-            margin-left: 0.5em;
           }
           """),
           *(build_tag("span.card-tag", tag) for tag in tags)
