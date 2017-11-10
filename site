@@ -96,6 +96,7 @@ build_app_card = lambda app, is_anchor=False, is_heading=False: \
     filter_app_name(tuxapp.query_appfile(app, 'name')),
     tuxapp.query_appfile(app, 'title'),
     is_anchor and get_app_url(app),
+    None,
     ("free license",) if tuxapp.query_appfile(app, 'free-license') else (),
     is_heading,
   )
@@ -250,7 +251,7 @@ build_breadcrumbs = lambda *children: \
     build_tag(".breadcrumbs", None, escape_html(" > ").join((build_tag("a", "Home", href='.'),) + children)),
   )
 
-build_card = lambda icon_url, name, title, url=None, tags=(), is_heading=False: \
+build_card = lambda icon_url, name, title, url=None, count=None, tags=(), is_heading=False: \
   join_elements(
     build_style("""
     .card {
@@ -288,7 +289,17 @@ build_card = lambda icon_url, name, title, url=None, tags=(), is_heading=False: 
           font-size: x-large;
         }
         """),
-        build_tag(".card-name", name),
+        build_tag(".card-name", name,
+          build_style("""
+          .card-count {
+            color: """ + get_text_color() + """;
+            display: inline-block;
+            font-weight: normal;
+            margin-left: 0.25em;
+          }
+          """),
+          build_tag("span.card-count", "({})".format(count)) if count else '',
+        ),
         build_style("""
         .card-title {
           display: inline-block;
@@ -732,6 +743,7 @@ build_main = lambda: \
       filter_category_name(category),
       get_category_description(category),
       get_category_url(category),
+      count,
     ) for category, count in get_categories()),
     build_tag('h2', "Groups"),
     build_columns(build_tag('', None,
