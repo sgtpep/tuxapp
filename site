@@ -79,7 +79,7 @@ build_app = lambda app: \
       build_tag('a', filter_category(tuxapp.query_appfile(app, 'category')), href=get_category_url(tuxapp.query_appfile(app, 'category'))),
       build_tag('h1', filter_app_name(tuxapp.query_appfile(app, 'name'))),
     ),
-    build_app_card(app, None, True),
+    build_app_card(app, False, True),
     build_app_image(app),
     tuxapp.query_appfile(app, 'description') and build_tag('p', tuxapp.query_appfile(app, 'description')),
     tuxapp.query_appfile(app, 'note') and build_tag('p', tuxapp.query_appfile(app, 'note')),
@@ -89,12 +89,12 @@ build_app = lambda app: \
     build_footer(),
   )
 
-build_app_card = lambda app, url=None, is_heading=False: \
+build_app_card = lambda app, is_anchor=False, is_heading=False: \
   build_card(
     build_app_image_url(app, media.get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url'))),
     filter_app_name(tuxapp.query_appfile(app, 'name')),
     tuxapp.query_appfile(app, 'title'),
-    url,
+    is_anchor and get_app_url(app),
     ("free license",) if tuxapp.query_appfile(app, 'free-license') else (),
     is_heading,
   )
@@ -933,7 +933,7 @@ write_groups = lambda apps: write_lists(apps, 'group', get_group_path, build_gro
 write_index = lambda: True
 
 write_lists = lambda apps, key, get_path, build: \
-  all((os.path.isfile(get_path(tuxapp.query_appfile(app, key))) or tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build(tuxapp.query_appfile(app, key)))) and tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build_app_card(app, get_app_url(app)), True) for app in apps) and \
+  all((os.path.isfile(get_path(tuxapp.query_appfile(app, key))) or tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build(tuxapp.query_appfile(app, key)))) and tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build_app_card(app, True), True) for app in apps) and \
   all(tuxapp.write_file(path, filter_html(u"{}{}".format(tuxapp.read_file(path), build_footer()))) for path in glob.iglob(get_path('*')))
 
 if __name__ == '__main__':
