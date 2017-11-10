@@ -370,6 +370,8 @@ build_columns = lambda children: \
     build_tag(".columns", None, *children),
   )
 
+build_combined_styles = lambda: build_tag('combined-styles')
+
 build_feed = lambda apps: \
   join_elements(
     """<?xml version="1.0" encoding="utf-8"?>""",
@@ -539,7 +541,7 @@ build_head = lambda base_url, title=None, overrides={}: \
     ),
     build_tag('title', "{} - {}".format(title, get_site_name()) if title else get_site_name()),
     build_json_ld(get_json_ld()),
-    get_styles_placeholder(),
+    build_combined_styles(),
     build_style("""
     :link {
       color: mediumblue;
@@ -758,7 +760,7 @@ build_main = lambda: \
     build_footer(),
   )
 
-build_script = lambda script, type=None: build_tag('script', None, script, type=type)
+build_script = lambda script, type=None: build_tag('script', None, remove_whitespace(script), type=type)
 
 build_search = lambda: \
   join_elements(
@@ -792,7 +794,12 @@ build_separator = lambda: \
     build_tag("hr.separator"),
   )
 
-build_style = lambda style: build_tag('style', None, style)
+build_style = lambda style: \
+  "{}{}{}".format(
+    get_style_prefix(),
+    remove_whitespace(style),
+    get_style_suffix(),
+  )
 
 build_tag = lambda selector, text=None, *children, **attributes: \
   u"""<{}{}{}>{}{}{}""".format(
@@ -823,7 +830,7 @@ filter_category_name = lambda category: category.title()
 
 filter_group_name = lambda group: group.replace('-', ' ').title()
 
-filter_html = lambda html: process_scripts(process_styles(process_lightbox(html)))
+filter_html = lambda html: process_styles(process_lightbox(html))
 
 get_app_json_ld = lambda app: \
   {
@@ -950,7 +957,11 @@ get_site_name = lambda: "TuxApp"
 
 get_style_comparison_value = lambda style: style and "{:03d}{}".format(":{}.#".format(string.letters).find(style[0]), style)
 
-get_styles_placeholder = lambda: "<!-- styles -->"
+get_style_prefix = lambda: "<!-- <style>"
+
+get_style_regex = lambda: re.compile(r"{}(.*?){}".format(re.escape(get_style_prefix()), re.escape(get_style_suffix())), re.S)
+
+get_style_suffix = lambda: "</style> -->"
 
 get_text_color = lambda: "#222"
 
@@ -991,19 +1002,13 @@ main = \
 
 process_lightbox = lambda html: update_lightbox(html, tuple(re.findall(r""" class="lightbox"[^"]* href="([^"]+)""", html)))
 
-process_scripts = lambda html: \
-  re.sub(r"(<script>)(.*?)(</script>)", lambda match: u"{}{}{}".format(
-    match.group(1),
-    re.sub(r"^\s+", '', match.group(2), 0, re.M).replace('\n', ''),
-    match.group(3),
-  ), html, 0, re.S)
-
 process_styles = lambda html: \
-  u"{}{}{}".format(
-    re.sub(r"<style>.*?</style>", '', html[:html.find(get_styles_placeholder())], 0, re.S),
-    build_style(''.join(sorted(set(re.sub(r"^\s+", '', style, 0, re.M).replace('\n', '') for style in re.findall(r"<style[^>]*>(.*?)</style>", html, re.S)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y))))),
-    re.sub(r"<style>.*?</style>", '', html[html.find(get_styles_placeholder()) + len(get_styles_placeholder()):], 0, re.S),
+  get_style_regex().sub('', html).replace(
+    build_combined_styles(),
+    build_tag('style', None, *sorted(set(get_style_regex().findall(html)), lambda x, y: cmp(get_style_comparison_value(x), get_style_comparison_value(y)))),
   )
+
+remove_whitespace = lambda string: re.sub(r"^\s+", '', string, 0, re.M).replace('\n', '')
 
 update_lightbox = lambda html, urls: \
   functools.reduce(
