@@ -419,6 +419,7 @@ build_footer = tuxapp.memoizes()(
       build_actions(
         build_tag('a', "Source code", href=get_github_url()),
         build_tag('a', "Issues", href=get_github_url("issues")),
+        build_tag('a', "Feed", href=get_feed_url()),
       ),
       build_style("""
       .footer-copyright {
@@ -433,7 +434,7 @@ build_footer = tuxapp.memoizes()(
       build_script(r"""
       if (location.protocol == "file:") {
         Array.prototype.forEach.call(document.querySelectorAll('a'), function(anchor) {
-          if (~anchor.href.indexOf("file:///")) {
+          if (~anchor.href.indexOf("file:///") && anchor.href.slice(-1) == '/') {
             if (~anchor.href.indexOf('#')) anchor.href = anchor.href.replace('#', "index.html#", 1);
             else anchor.href += "index.html";
           }
