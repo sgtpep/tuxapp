@@ -266,16 +266,20 @@ build_card = lambda icon_url, name, title, url=None, count=None, tags=(), is_hea
       url,
       build_style("""
       .card-icon {
-        margin: auto;
-        max-width: 100%;
+        height: 2em;
         min-width: 2em;
       }
       .card.is-category .card-icon,
       .card.is-heading .card-icon {
-        max-width: 3em;
+        height: 3em;
+        min-width: 3em;
+      }
+      .card-icon img {
+        margin: 0 auto;
+        max-width: 100%;
       }
       """),
-      build_tag('', None, build_tag("img.card-icon",
+      build_tag(".card-icon", None, build_tag('img',
         alt="Icon",
         src=icon_url,
       )),
@@ -574,13 +578,17 @@ build_header = tuxapp.memoizes()(
   lambda: \
     join_elements(
       build_flag(None, None,
-        build_tag('a', None,
-          build_style("""
-          .header-logo {
-            max-width: 3.5em;
-          }
-          """),
-          build_tag("img.header-logo",
+        build_style("""
+        .header-logo {
+          height: 3.5em;
+          min-width: 3.5em;
+        }
+        .header-logo img {
+          max-width: 100%;
+        }
+        """),
+        build_tag("a.header-logo", None,
+          build_tag('img',
             alt="Logo",
             src=get_logo_url(),
           ),
