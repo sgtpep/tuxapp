@@ -334,7 +334,7 @@ build_feed = lambda apps: \
       build_tag('logo', get_logo_url()),
       build_tag('rights', get_copyright()),
       build_tag('subtitle', get_description()),
-      build_tag('title', get_site_name()),
+      build_tag('title', "{} - {}".format(get_feed_name(), get_site_name())),
       build_tag('updated', "{}Z".format(datetime.datetime.fromtimestamp(apps[-1][1]).isoformat()) if apps else ''),
       *(build_tag('entry', None,
         build_tag('category', term=filter_category(tuxapp.query_appfile(app, 'category'))),
@@ -793,6 +793,8 @@ get_category_url = lambda category: "{}/".format(os.path.relpath(os.path.dirname
 get_copyright = lambda: u"\N{COPYRIGHT SIGN} 2017 {}".format(get_site_name())
 
 get_description = lambda: u"An open catalog of easily installable and up-to-date Linux\N{REGISTERED SIGN} applications"
+
+get_feed_name = lambda: "Recent apps"
 
 get_feed_path = lambda: "{}/feed.xml".format(get_build_path())
 
