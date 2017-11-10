@@ -857,7 +857,7 @@ get_recent_apps = tuxapp.memoizes()(
 
 get_site_name = lambda: "TuxApp"
 
-get_style_comparison_value = lambda styles: "{:03d}{}".format(":{}.#".format(string.letters).find(styles[0]), styles)
+get_style_comparison_value = lambda style: style and "{:03d}{}".format(":{}.#".format(string.letters).find(style[0]), style)
 
 get_styles_placeholder = lambda: "<!-- styles -->"
 
