@@ -139,13 +139,40 @@ build_app_gallery = lambda app: \
       tuple(build_lightbox("Screenshot", build_app_image_url(app, media.get_app_screenshot_path(app, url))) for url in media.query_app_info(app, 'screenshot-urls').split()) + \
       tuple(build_lightbox("Video", build_app_image_url(app, media.get_app_video_thumbnail_path(app, thumbnail_url)), video_url, thumbnail_url == '-') for video_url, thumbnail_url in zip(media.query_app_info(app, 'video-urls').split(), media.query_app_info(app, 'video-thumbnail-urls').split())))
     ),
+    build_script(r"""
+    (function() {
+    var scrollTop = 0;
+    function getElement(selector, url) {
+      return (document.getElementById((url || location.hash).split('#', 2)[1]) || { querySelector: function() {} }).querySelector(selector);
+    }
+    addEventListener('hashchange', function(event) {
+      scrollTo(0, scrollTop);
+      if (/#$/.test(event.newURL)) history.replaceState({}, '', location.href.slice(0, -1));
+      if (/#video-.+$/.test(event.oldURL)) {
+        if (getElement('video', event.oldURL)) getElement('video', event.oldURL).pause();
+        else if (getElement('iframe', event.oldURL)) getElement('iframe', event.oldURL).contentWindow.postMessage('{ "event": "command", "func": "pauseVideo", "args": "" }', '*');
+      }
+    });
+    addEventListener('keydown', function(event) {
+      if (location.hash && getElement(".lightbox-action")) {
+        if (event.keyCode == 27) location.hash = getElement(".lightbox-action.is-close").hash;
+        else if (event.keyCode == 37 && getElement(".lightbox-action.is-previous").hash) location.hash = getElement(".lightbox-action.is-previous").hash;
+        else if (event.keyCode == 39 && getElement(".lightbox-action.is-next").hash) location.hash = getElement(".lightbox-action.is-next").hash;
+        else var isDefault = true;
+        if (!isDefault) event.preventDefault();
+      }
+    });
+    addEventListener('scroll', function(event) {
+      scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+    });
+    })();
+    """),
   )
 
 build_app_image = lambda app: \
   join_elements(
     build_style("""
     .app-image {
-      display: block;
       margin: 1em 0;
     }
     @media (min-width: 40em) {
@@ -470,32 +497,6 @@ build_footer = tuxapp.memoizes()(
           }
         });
       }
-      (function() {
-      var scrollTop = 0;
-      function getElement(selector, url) {
-        return (document.getElementById((url || location.hash).split('#', 2)[1]) || { querySelector: function() {} }).querySelector(selector);
-      }
-      addEventListener('hashchange', function(event) {
-        scrollTo(0, scrollTop);
-        if (/#$/.test(event.newURL)) history.replaceState({}, '', location.href.slice(0, -1));
-        if (/#video-.+$/.test(event.oldURL)) {
-          if (getElement('video', event.oldURL)) getElement('video', event.oldURL).pause();
-          else if (getElement('iframe', event.oldURL)) getElement('iframe', event.oldURL).contentWindow.postMessage('{ "event": "command", "func": "pauseVideo", "args": "" }', '*');
-        }
-      });
-      addEventListener('keydown', function(event) {
-        if (location.hash && getElement(".lightbox-action")) {
-          if (event.keyCode == 27) location.hash = getElement(".lightbox-action.is-close").hash;
-          else if (event.keyCode == 37 && getElement(".lightbox-action.is-previous").hash) location.hash = getElement(".lightbox-action.is-previous").hash;
-          else if (event.keyCode == 39 && getElement(".lightbox-action.is-next").hash) location.hash = getElement(".lightbox-action.is-next").hash;
-          else var isDefault = true;
-          if (!isDefault) event.preventDefault();
-        }
-      });
-      addEventListener('scroll', function(event) {
-        scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-      });
-      })();
       """),
     )
 )
