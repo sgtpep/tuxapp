@@ -59,7 +59,7 @@ build_actions = lambda *children: \
   )
 
 build_app = lambda app: \
-  join_elements(
+  process_lightbox(join_elements(
     build_head(
       os.path.relpath(get_build_path(), os.path.dirname(get_app_path(app))),
       "{} - {}".format(filter_app_name(tuxapp.query_appfile(app, 'name')), filter_category_name(tuxapp.query_appfile(app, 'category'))),
@@ -88,7 +88,7 @@ build_app = lambda app: \
     build_app_gallery(app),
     build_app_instructions(app),
     build_footer(),
-  )
+  ))
 
 build_app_card = lambda app, is_anchor=False, is_heading=False: \
   build_card(
@@ -838,8 +838,6 @@ filter_category_name = lambda category: category.title()
 
 filter_group_name = lambda group: group.replace('-', ' ').title()
 
-filter_html = lambda html: process_styles(process_lightbox(html))
-
 get_app_json_ld = lambda app: \
   {
     '@context': "http://schema.org",
@@ -1031,7 +1029,7 @@ update_lightbox = lambda html, urls: \
     ),
   )
 
-write_app = lambda app: tuxapp.write_file(get_app_path(app), filter_html(build_app(app)))
+write_app = lambda app: tuxapp.write_file(get_app_path(app), process_styles(build_app(app)))
 
 write_categories = lambda apps: write_lists(apps, 'category', get_category_path, build_category)
 
@@ -1041,9 +1039,9 @@ write_groups = lambda apps: write_lists(apps, 'group', get_group_path, build_gro
 
 write_lists = lambda apps, key, get_path, build: \
   all((os.path.isfile(get_path(tuxapp.query_appfile(app, key))) or tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build(tuxapp.query_appfile(app, key)))) and tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build_app_card(app, True), True) for app in apps) and \
-  all(tuxapp.write_file(path, filter_html(u"{}{}".format(tuxapp.read_file(path), build_footer()))) for path in glob.iglob(get_path('*')))
+  all(tuxapp.write_file(path, process_styles(u"{}{}".format(tuxapp.read_file(path), build_footer()))) for path in glob.iglob(get_path('*')))
 
-write_main = lambda: tuxapp.write_file(get_main_path(), filter_html(build_main()))
+write_main = lambda: tuxapp.write_file(get_main_path(), process_styles(build_main()))
 
 if __name__ == '__main__':
   main()
