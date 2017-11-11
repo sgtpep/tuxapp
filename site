@@ -134,6 +134,10 @@ build_app_gallery = lambda app: \
       display: block;
       max-width: 100%;
     }
+    .app-gallery .lightbox.is-video img,
+    .app-gallery .lightbox.is-video video {
+      border-radius: 0.75em;
+    }
     """),
     build_tag(".app-gallery", None, *(
       tuple(build_lightbox("Screenshot", build_app_image_url(app, media.get_app_screenshot_path(app, url))) for url in media.query_app_info(app, 'screenshot-urls').split()) + \
@@ -651,7 +655,7 @@ build_json_ld = lambda data: build_script(json.dumps(data, ensure_ascii=False, s
 
 build_lightbox = lambda text, image_url, video_url=None, is_video_thumbnail=False: \
   join_elements(
-    build_tag("a.lightbox", None,
+    build_tag("a.lightbox.{}".format('is-video' if video_url else 'is-screenshot'), None,
       build_tag('video',
         preload='metadata',
         src=video_url,
