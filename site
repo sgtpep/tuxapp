@@ -112,21 +112,21 @@ build_app_gallery = lambda app: \
       display: inline-block;
       padding: 0.125em;
       vertical-align: top;
-      width: 100%;
-    }
-    @media (min-width: 20em) {
-      .app-gallery .lightbox {
-        width: 50%;
-      }
+      width: 50%;
     }
     @media (min-width: 30em) {
       .app-gallery .lightbox {
         width: 33.3%;
       }
     }
-    @media (min-width: 48em) {
+    @media (min-width: 40em) {
       .app-gallery .lightbox {
         width: 25%;
+      }
+    }
+    @media (min-width: 48em) {
+      .app-gallery .lightbox {
+        width: 20%;
       }
     }
     .app-gallery .lightbox img,
