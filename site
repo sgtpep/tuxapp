@@ -491,7 +491,7 @@ build_footer = tuxapp.memoizes()(
       build_script(r"""
       if (location.protocol == "file:") {
         Array.prototype.forEach.call(document.querySelectorAll('a'), function(anchor) {
-          if (~anchor.href.indexOf("file:///") && anchor.href.slice(-1) == '/') {
+          if (~anchor.href.indexOf("file:///") && anchor.pathname.slice(-1) == '/') {
             if (~anchor.href.indexOf('#')) anchor.href = anchor.href.replace('#', "index.html#", 1);
             else anchor.href += "index.html";
           }
