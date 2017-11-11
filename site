@@ -105,24 +105,34 @@ build_app_gallery = lambda app: \
   join_elements(
     build_style("""
     .app-gallery {
-      margin: 1em 0;
+      margin: 1em -0.125em;
     }
     .app-gallery .lightbox {
+      box-sizing: border-box;
       display: inline-block;
-      margin-right: 0.25em;
+      padding: 0.125em;
+      vertical-align: top;
+      width: 100%;
+    }
+    @media (min-width: 20em) {
+      .app-gallery .lightbox {
+        width: 50%;
+      }
+    }
+    @media (min-width: 30em) {
+      .app-gallery .lightbox {
+        width: 33.3%;
+      }
+    }
+    @media (min-width: 48em) {
+      .app-gallery .lightbox {
+        width: 25%;
+      }
     }
     .app-gallery .lightbox img,
     .app-gallery .lightbox video {
       display: block;
-      max-height: 5em;
-      max-width: 10em;
-    }
-    @media (min-width: 40em) {
-      .app-gallery .lightbox img,
-      .app-gallery .lightbox video {
-        max-height: 7.5em;
-        max-width: 15em;
-      }
+      max-width: 100%;
     }
     """),
     build_tag(".app-gallery", None, *(
