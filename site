@@ -649,14 +649,14 @@ build_header = tuxapp.memoizes()(
 
 build_json_ld = lambda data: build_script(json.dumps(data, ensure_ascii=False, separators=(',', ':'), sort_keys=True), "application/ld+json")
 
-build_lightbox = lambda text, image_url, video_url=None, is_video=False: \
+build_lightbox = lambda text, image_url, video_url=None, is_video_thumbnail=False: \
   join_elements(
     build_tag("a.lightbox", None,
       build_tag('video',
         preload='metadata',
         src=video_url,
       ) \
-        if is_video else \
+        if is_video_thumbnail else \
       build_tag('img',
         alt=text,
         src=image_url,
