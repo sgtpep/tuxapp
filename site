@@ -282,7 +282,7 @@ build_breadcrumbs = lambda *children: \
     }
     .breadcrumbs h1 {
       display: inline;
-      font-size: medium;
+      font-size: inherit;
     }
     """),
     build_tag(".breadcrumbs", None, escape_html(" > ").join((build_tag("a", "Home", href='.'),) + children)),
