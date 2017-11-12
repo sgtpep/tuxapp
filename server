@@ -1,0 +1,111 @@
+#!/bin/bash
+set -eu -o pipefail
+
+hostname=tuxapp.org
+
+encrypted_netrc="-----BEGIN PGP MESSAGE-----
+
+hQIMAyeE+8FzL4OJARAAl8dr0Spz833O9LY7YbaNyTZ16g7u6bJHylK2U+NmNLwa
+SCvrverA/ziFOKsgyBMXwxH1iP+W+zUOcIQGfh93Zy58tmPSGqoZX6V4PI5GyuGM
+Ozfeh+LDhSFm4zfytWzyciwCl6L3fqDK1HDo8w/7rNc0xmuxpwB/W/ffwI/kEQis
+lgqLtP0hihm0/MVLt9qO7VTJEqvB5tS72zlEZx62HHZIAphrQpRvmmGze4644aAt
+JrVJwF1Yf9snsTRHXx+8r5O2beWKuXvZcjjqJiV2JKOwdSW66BFd3bkcTFeB2HwC
+HznCQ4Ps9I3v6u6gXzHgrqHCll18SIrBgrAP0MaC4gyTZJBE1lXF0EHNGtIWWf2w
+XD432qc5RrCrSPMiY7ffPzH8a7rfgru5I7Wn7f17VKN3mucWasIihJaLbTWU9suU
+gfBVUXUolupo3lkUEE6XJaa0WTa/CPEbxB3fWR8cg4e5+VM37/pQjemcz8eyOcCw
+0evBVBS2MhhgHWljyXtaJNOE8RBr3sFDqO8x6yIANkH3DKKDTWyLbeyBJ1uYw1Ms
+kE1gnrY5VHTCsc13fXCv4hY8W/Mpz6f/h0UEinJAgoa5+h6s9ICySLdOQTi5khw0
+9vRtb2H1WBE2XDnJ2weh7D71nX1BDNHETDCVbU5Cxd6UzeBnm/KYtXfUUtv9vcDS
+hwEkrTWRbiAdii7PCOtk5FP5yoOSyAhwJ5mmARTxWiYwR97cENaSkfE1H0mfAqC8
+CMmobWQtiZbo+Puj9GUF9JLO28iLdcGyk5/ODkt/6wJsmXlPKyHG5g0NTgYemgtW
+UxJuLRgUJTm3GeH4DWoBreciF1EUQ68vdpCTBQmBfCiBuylqMGI/Gw==
+=IeOj
+-----END PGP MESSAGE-----"
+
+netrc=$(ssh root@"$hostname" test -f /etc/netrc || gpg -d <(echo "$encrypted_netrc"))
+password=$(ssh root@"$hostname" grep -q "^$USER:[^!]" /etc/shadow || sudo grep -Po "(?<=^$USER:)[^:]+" /etc/shadow)
+ssh root@"$hostname" bash -$- -o pipefail << SSH
+! grep -q "^debian:" /etc/passwd || userdel -r debian
+grep -q "^$USER:" /etc/passwd || useradd -m -G sudo -s /bin/bash "$USER"
+grep -q "^$USER:[^!]" /etc/shadow || chpasswd -e <<< '$USER:$password'
+
+[[ -f /etc/netrc ]] || echo "$netrc" > /etc/netrc
+chmod o-r /etc/netrc
+chown "$USER": /etc/netrc
+read _ smtp_hostname _ email _ < /etc/netrc
+
+cp -r ~/.ssh /home/"$USER"
+chown -R "$USER": /home/"$USER"/.ssh
+
+sed -i "s/^mesg /#\0/" ~/.profile
+
+cat > /etc/apt/sources.list << \EOF
+deb http://deb.debian.org/debian stretch main
+deb http://security.debian.org/ stretch/updates main
+EOF
+
+if [[ ! \$(zgrep " dist-upgrade\>" /var/log/apt/history.log* || :) ]]; then
+  apt update
+  APT_LISTCHANGES_FRONTEND=none DEBIAN_FRONTEND=noninteractive apt -o Dpkg::Options::=--force-confnew dist-upgrade -y
+  apt autoremove -y --purge
+fi
+
+packages=(
+  certbot
+  msmtp-mta
+  nginx-light
+  unattended-upgrades
+)
+dpkg -s "\${packages[@]}" &> /dev/null || DEBIAN_FRONTEND=noninteractive apt install -y "\${packages[@]}"
+
+echo "default: \$email" > /etc/aliases
+
+sed -i "s/^[\/ ]*\(Unattended-Upgrade::Automatic-Reboot\) .*/\1 \"true\";/" /etc/apt/apt.conf.d/50unattended-upgrades
+
+[[ -d /etc/letsencrypt/live ]] || certbot certonly -d "$hostname" -m "\$email" -w /var/www/html --agree-tos --webroot
+
+cat > /etc/msmtprc << EOF
+account default
+  aliases /etc/aliases
+  auth on
+  from \$email
+  host \$smtp_hostname
+  port 587
+  tls on
+  tls_trust_file /etc/ssl/certs/ca-certificates.crt
+  user \$email
+EOF
+chmod o-r /etc/msmtprc
+chown "$USER": /etc/msmtprc
+
+md5=\$(md5sum /etc/nginx/sites-enabled/default)
+cat > /etc/nginx/sites-enabled/default << \EOF
+server {
+  listen 80 default_server;
+  listen [::]:80 default_server;
+  return 301 https://\$host\$request_uri;
+}
+
+server {
+  add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload";
+  gzip on;
+  listen 443 ssl default_server;
+  listen [::]:443 ssl default_server;
+  root /var/www/html;
+  ssl_certificate /etc/letsencrypt/live/$hostname/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/$hostname/privkey.pem;
+
+  location = /favicon.ico {
+    access_log off;
+    log_not_found off;
+  }
+}
+EOF
+md5sum -c --status <<< \$md5 || systemctl restart nginx
+
+rm -f /var/www/html/index.nginx-debian.html
+
+[[ ! -f /run/reboot-required ]] || reboot
+SSH
+
+#rsync -Oavz "${0%/*}" root@"$hostname":"$HOME"/tuxapp
