@@ -831,8 +831,7 @@ function build_command_arguments {
     cd "$distribution_path"
     result_command_arguments+=("${executable_arguments[@]}")
   else
-    result_command_arguments+=("$distribution_path"/"${executable_arguments[0]}")
-    result_command_arguments+=("${executable_arguments[@]:1}")
+    result_command_arguments+=("$distribution_path"/"${executable_arguments[0]}" "${executable_arguments[@]:1}")
   fi
 
   readonly result_command_arguments
