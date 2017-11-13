@@ -212,21 +212,15 @@ def update_app_info_worker(app):
     raise
 
 @tuxapp.silences
-def update_apps(apps):
+def update_apps_info(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
-    return \
-      functools.reduce(
-        lambda result, app_result: result and app_result,
-        pool.imap_unordered(update_app_info_worker, apps),
-        True,
-      ) and \
-      functools.reduce(
-        lambda result, app: result and update_all_app_files(app),
-        apps,
-        True,
-      )
+    return functools.reduce(
+      lambda result, app_result: result and app_result,
+      pool.imap_unordered(update_app_info_worker, apps),
+      True,
+    )
 
 are_app_debian_screenshots_ignored = lambda app: \
   app in (
@@ -275,13 +269,21 @@ get_app_screenshot_path = lambda app, url: "{}/screenshot-{}".format(get_app_pat
 
 get_app_video_thumbnail_path = lambda app, url: "{}/video-{}".format(get_app_path(app), url if url == '*' else tuxapp.hash_md5(url))
 
+get_apps = lambda arguments: (tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
+
 is_screenshot_url_ignored = lambda url, screenshot_url: \
   bool(re.search({
     "https://code.visualstudio.com/": r"\.svg$",
   }.get(url, r"^$"), screenshot_url))
 
 main = tuxapp.handles_exceptions(
-  lambda arguments=tuple(sys.argv[1:]): update_apps(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
+  lambda arguments=tuple(sys.argv[1:]): \
+    update_apps_info(get_apps(arguments)) and \
+    functools.reduce(
+      lambda result, app: result and update_all_app_files(app),
+      get_apps(arguments),
+      True,
+    )
 )
 
 normalize_url = lambda page_url, url, base_url=None: \
