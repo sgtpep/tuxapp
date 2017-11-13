@@ -23,21 +23,21 @@ def detect_image_extension(path):
     imghdr.tests.append(lambda header, file: header[:4] == b"\0\0\1\0" and 'ico')
   return sys.modules['imghdr'].what(path) or ''
 
-def write_app_worker(app):
+def write_app_page_worker(app):
   try:
-    return write_app(app)
+    return write_app_page(app)
   except:
     import traceback
     traceback.print_exc()
     raise
 
-def write_apps(apps):
+def write_app_pages(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
     return functools.reduce(
       lambda result, app_result: result and app_result,
-      pool.imap_unordered(write_app_worker, apps),
+      pool.imap_unordered(write_app_page_worker, apps),
       True,
     )
 
@@ -62,7 +62,7 @@ build_actions = lambda *children: \
     build_tag("p.actions", None, *children),
   )
 
-build_app = lambda app: \
+build_app_page = lambda app: \
   process_lightbox(join_elements(
     build_head(
       os.path.relpath(get_build_path(), os.path.dirname(get_app_path(app))),
@@ -378,7 +378,7 @@ build_card = lambda icon_url, name, title, url=None, count=None, tags=(), is_hea
     ),
   )
 
-build_category = lambda category: \
+build_category_page = lambda category: \
   join_elements(
     build_head(os.path.relpath(get_build_path(), os.path.dirname(get_category_path(category))), filter_category_name(category)),
     build_header(),
@@ -509,7 +509,7 @@ build_footer = tuxapp.memoizes()(
     )
 )
 
-build_group = lambda group: \
+build_group_page = lambda group: \
   join_elements(
     build_head(os.path.relpath(get_build_path(), os.path.dirname(get_group_path(group))), filter_group_name(group)),
     build_header(),
@@ -759,7 +759,7 @@ build_lightbox = lambda text, image_url, video_url=None, is_video_thumbnail=Fals
     ),
   )
 
-build_main = lambda: \
+build_main_page = lambda: \
   join_elements(
     build_head(os.path.relpath(get_build_path(), os.path.dirname(get_main_path()))),
     build_tag('link',
@@ -1048,19 +1048,21 @@ update_lightbox = lambda html, urls: \
     ),
   )
 
-write_app = lambda app: tuxapp.write_file(get_app_path(app), process_styles(build_app(app)))
+write_app_page = lambda app: tuxapp.write_file(get_app_path(app), process_styles(build_app_page(app)))
 
-write_categories = lambda apps: write_lists(apps, 'category', get_category_path, build_category)
+write_category_pages = lambda apps: write_list_pages(apps, 'category', get_category_path, build_category_page)
 
 write_feed = lambda: tuxapp.write_file(get_feed_path(), build_feed(get_recent_apps(100)))
 
-write_groups = lambda apps: write_lists(apps, 'group', get_group_path, build_group)
+write_group_pages = lambda apps: write_list_pages(apps, 'group', get_group_path, build_group_page)
 
-write_lists = lambda apps, key, get_path, build: \
+write_list_pages = lambda apps, key, get_path, build: \
   all((os.path.isfile(get_path(tuxapp.query_appfile(app, key))) or tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build(tuxapp.query_appfile(app, key)))) and tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build_app_card(app, True), True) for app in apps) and \
   all(tuxapp.write_file(path, process_styles(u"{}{}".format(tuxapp.read_file(path), build_footer()))) for path in glob.iglob(get_path('*')))
 
-write_main = lambda: tuxapp.write_file(get_main_path(), process_styles(build_main()))
+write_main_page = lambda: tuxapp.write_file(get_main_path(), process_styles(build_main_page()))
+
+write_search_page = lambda: tuxapp.write_file(get_search_path(), process_styles(build_search_page()))
 
 if __name__ == '__main__':
   main()
