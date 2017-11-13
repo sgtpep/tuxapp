@@ -830,7 +830,7 @@ build_search_page = lambda: \
     var xhr = new XMLHttpRequest();
     xhr.addEventListener('load', function(event) {
       var response = JSON.parse(event.target.responseText);
-      document.querySelector(".search-stats").textContent = "Found " + (!response.total_count ? "no" : response.total_count) + " result" + (response.total_count == 1 ? '' : 's') + " for \"" + document.querySelector(".header-search").query.value + "\".";
+      document.querySelector(".search-stats").textContent = (!response.total_count ? "no" : response.total_count) + " result" + (response.total_count == 1 ? '' : 's') + " for \"" + document.querySelector(".header-search").query.value + '"';
       response.items.forEach(function(item) {
         var snippet = "... " + item.text_matches.map(function(textMatch) {
           var fragment = '';
