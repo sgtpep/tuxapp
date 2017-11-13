@@ -229,6 +229,11 @@ def copy_directory(path, destination_path):
   distutils.dir_util.copy_tree(path, destination_path, update=True)
   return destination_path
 
+def copy_file(path, destination_path):
+  import shutil
+  shutil.copy(path, destination_path)
+  return destination_path
+
 def make_directories(path):
   if not os.path.isdir(path):
     os.makedirs(path)
