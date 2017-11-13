@@ -66,6 +66,7 @@ packages=(
   goaccess
   haveged
   htop
+  imagemagick
   msmtp-mta
   nginx-light
   rsync
