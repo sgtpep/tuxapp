@@ -1,6 +1,7 @@
 #!/bin/bash
 set -eu -o pipefail
 
+github_repository=sgtpep/tuxapp
 hostname=tuxapp.org
 
 encrypted_netrc="-----BEGIN PGP MESSAGE-----
@@ -52,6 +53,8 @@ fi
 
 packages=(
   certbot
+  git
+  htop
   msmtp-mta
   nginx-light
   unattended-upgrades
@@ -103,7 +106,10 @@ server {
 EOF
 md5sum -c --status <<< \$md5 || systemctl restart nginx
 
-rm -f /var/www/html/index.nginx-debian.html
+[[ -d /home/"$USER"/"${github_repository##*/}" ]] || sudo -u "$USER" git -C /home/"$USER" clone https://github.com/"$github_repository".git
+
+chown "$USER": /var/www/html
+rm -fr /var/www/html/{.well-known,index.nginx-debian.html}
 
 [[ ! -f /run/reboot-required ]] || reboot
 SSH
