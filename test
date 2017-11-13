@@ -160,7 +160,8 @@ get_bwrap_ro_bind_paths = lambda: \
     "/usr/share/alsa",
   ) if os.path.isdir(path)) + \
   tuple(glob.iglob("/usr/lib/*-linux-gnu/alsa-lib")) + \
-  tuple(glob.iglob("/usr/lib/*-linux-gnu/pulseaudio"))
+  tuple(glob.iglob("/usr/lib/*-linux-gnu/pulseaudio")) + \
+  (get_xauthority_path(),) if tuxapp.is_command_exist('xvfb-run') else ()
 
 get_container_cache_path = lambda distribution: "{}/{}".format(tuxapp.get_cache_path(), distribution)
 
@@ -178,6 +179,8 @@ get_debian_package_url = lambda package: \
   )
 
 get_test_distributions = lambda: ('debian', 'arch')
+
+get_xauthority_path = lambda: os.path.expanduser("~/.Xauthority")
 
 install_arch_container = lambda: \
   tuxapp.unpack_tarball(tuxapp.download_missing_cache_file(fetch_arch_container_url()), get_container_path('arch'), ("--strip-components=1",)) and \
@@ -258,7 +261,7 @@ try_app_process = tuxapp.logs("Trying {1} on {0}")(
     kill -9 $(echo "$output" | grep -Po "(?<= Process )\d+") 2> /dev/null
     echo "$output"
     """.format(
-      "xvfb-run " if tuxapp.is_command_exist('xvfb-run') else '',
+      "xvfb-run -f {} ".format(tuxapp.quote_argument(get_xauthority_path())) if tuxapp.is_command_exist('xvfb-run') else '',
       tuxapp.join_arguments(build_bwrap_arguments(install_missing_container(distribution), tuxapp.check_app_installed(app))).replace(" bash ", " strace -f -e none bash ", 1),
     ), stderr=subprocess.STDOUT)
 )
