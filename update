@@ -5,3 +5,5 @@ cd ~/tuxapp
 git pull -q
 ./validate
 ./test
+./parse
+./generate
