@@ -24,7 +24,12 @@ def detect_image_extension(path):
   return sys.modules['imghdr'].what(path) or ''
 
 def write_app_worker(app):
-  return write_app(app)
+  try:
+    return write_app(app)
+  except:
+    import traceback
+    traceback.print_exc()
+    raise
 
 def write_apps(apps):
   import contextlib

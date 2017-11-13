@@ -37,8 +37,13 @@ def check_url(url):
   except (BadStatusLine, URLError, ssl.CertificateError):
     return False
 
-def validate_appfile_worker(app):
-  return validate_appfile(app)
+def validate_appfile_worker(app, list_paths):
+  try:
+    return validate_appfile(app, list_paths)
+  except:
+    import traceback
+    traceback.print_exc()
+    raise
 
 @tuxapp.silences
 def validate_appfiles(apps):

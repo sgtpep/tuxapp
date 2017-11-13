@@ -204,7 +204,12 @@ def parse_html(parser, html):
     return exception.args[0] if exception.args else ''
 
 def update_app_media_worker(app):
-  return update_app_media(app)
+  try:
+    return update_app_media(app)
+  except:
+    import traceback
+    traceback.print_exc()
+    raise
 
 @tuxapp.silences
 def update_apps_media(apps):
