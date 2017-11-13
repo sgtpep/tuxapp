@@ -2,7 +2,7 @@
 set -eu -o pipefail
 
 diff_path=~/tuxapp.diff
-html_path=/var/www/html
+root_path=/var/www/html
 
 cd ~/tuxapp
 git pull -q
@@ -10,6 +10,6 @@ git pull -q
 ./test
 ./parse
 ./generate
-git diff --word-diff ./build "$html_path" > "$diff_path"
+git diff --word-diff ./build "$root_path" > "$diff_path"
 head -1000 "$diff_path"
-rsync -a ./build/ "$html_path"
+rsync -a ./build/ "$root_path"
