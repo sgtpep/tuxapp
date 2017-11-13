@@ -112,8 +112,8 @@ md5sum -c --status <<< \$md5 || systemctl restart nginx
 
 [[ -d /home/"$USER"/"${github_repository##*/}" ]] || sudo -u "$USER" git -C /home/"$USER" clone https://github.com/"$github_repository".git
 
-chown "$USER": /var/www/html
-rm -fr /var/www/html/{.well-known,index.nginx-debian.html}
+rm -fr /var/www/html
+ln -fs /home/"$USER"/"${github_repository##*/}"/build /var/www/html
 
 [[ ! -f /run/reboot-required ]] || reboot
 SSH
