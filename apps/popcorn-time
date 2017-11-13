@@ -1,7 +1,7 @@
 category=video
 description=Skip the downloads. Watch the best movies and TV shows on Popcorn Time instantly in HD, with subtitles, for free.
-download-x86-64-url=https://get.popcorntime.sh/build/Popcorn-Time-{version}-Linux-64.tar.xz
-download-x86-url=https://get.popcorntime.sh/build/Popcorn-Time-{version}-Linux-32.tar.xz
+download-x86-64-url=http://mirror01.popcorntime.sh/build/Popcorn-Time-{version}-Linux-64.tar.xz
+download-x86-url=http://mirror01.popcorntime.sh/build/Popcorn-Time-{version}-Linux-32.tar.xz
 executable=
 firejail=
 free-license=yes
