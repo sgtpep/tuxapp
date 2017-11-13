@@ -111,7 +111,10 @@ deb http://security.debian.org/ {0}/updates main
   )
   DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
   """) and \
-  all(tuxapp.remove_file(path) for filename in ("libSM.so", "libXt.so") for path in glob.iglob("{}/usr/lib/*-linux-gnu/{}*".format(get_container_path('debian'), filename)))
+  all(tuxapp.remove_file(path) for filename in (
+    "libSM.so",
+    "libXt.so",
+  ) for path in glob.iglob("{}/usr/lib/*-linux-gnu/{}*".format(get_container_path('debian'), filename)))
 
 detect_missing_app_libraries = tuxapp.does(lambda distribution, app, *args, **kwargs: \
   kwargs['result'] and print("Missing libraries for {} on {}: {}".format(
