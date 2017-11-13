@@ -113,7 +113,7 @@ server {
   ssl_certificate /etc/letsencrypt/live/$hostname/fullchain.pem;
   ssl_certificate_key /etc/letsencrypt/live/$hostname/privkey.pem;
 
-  location = /favicon.ico {
+  location ~ ^/(favicon\.ico|robots\.txt)$ {
     access_log off;
     log_not_found off;
   }
