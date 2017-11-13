@@ -436,14 +436,14 @@ build_feed = lambda apps: \
   join_elements(
     """<?xml version="1.0" encoding="utf-8"?>""",
     build_tag('feed', None,
-      build_tag('icon', get_logo_url()),
+      build_tag('icon', build_logo_url()),
       build_tag('id', build_absolute_url()),
       build_tag('link', href='.'),
       build_tag('link',
         href=get_feed_url(),
         rel='self',
       ),
-      build_tag('logo', get_logo_url()),
+      build_tag('logo', build_logo_url()),
       build_tag('rights', get_copyright()),
       build_tag('subtitle', get_description()),
       build_tag('title', "{} - {}".format(get_feed_name(), get_site_name())),
@@ -551,7 +551,7 @@ build_head = lambda base_url, title=None, overrides={}: \
       property='og:description',
     ),
     build_tag('meta',
-      content=build_absolute_url(overrides.get('image', get_logo_url())),
+      content=build_absolute_url(overrides.get('image', build_logo_url())),
       property='og:image',
     ),
     build_tag('meta',
@@ -785,6 +785,8 @@ build_lightbox = lambda text, image_url, video_url=None, is_video_thumbnail=Fals
     ),
   )
 
+build_logo_url = lambda: os.path.relpath(copy_missing_file(get_logo_path(), get_logo_build_path()), get_build_path())
+
 build_main_page = lambda: \
   join_elements(
     build_head(os.path.relpath(get_build_path(), os.path.dirname(get_main_page_path()))),
@@ -899,6 +901,8 @@ build_tag_attributes = lambda selector, attributes: \
     'id': ' '.join(re.findall(r"(?<=#)[\w-]+", selector)),
   }).items()) if value)
 
+copy_missing_file = lambda path, destination_path: destination_path if os.path.isfile(destination_path) else tuxapp.copy_file(path, destination_path)
+
 escape_html = lambda html: cgi.escape(html, True)
 
 extract_tag_name = lambda selector: re.split(r"[#.]", selector, 1)[0] or 'div'
@@ -993,7 +997,7 @@ get_json_ld = lambda: \
       '@context': "http://schema.org",
       '@type': 'WebSite',
       'description': get_description(),
-      'image': build_absolute_url(get_logo_url()),
+      'image': build_absolute_url(build_logo_url()),
       'name': get_site_name(),
       'url': build_absolute_url(),
     },
@@ -1001,7 +1005,7 @@ get_json_ld = lambda: \
       '@context': "http://schema.org",
       '@type': 'SoftwareApplication',
       'description': tuxapp.get_description(),
-      'image': build_absolute_url(get_logo_url()),
+      'image': build_absolute_url(build_logo_url()),
       'name': tuxapp.__name__,
       'operatingSystem': 'Linux',
       'softwareVersion': tuxapp.__version__,
@@ -1009,9 +1013,9 @@ get_json_ld = lambda: \
     },
   ]
 
-get_logo_path = lambda: "{}/logo.png".format(get_build_path())
+get_logo_build_path = lambda: os.path.join(get_build_path(), os.path.basename(get_logo_path()))
 
-get_logo_url = lambda: os.path.relpath(get_logo_path(), get_build_path())
+get_logo_path = lambda: "{}/logo.png".format(get_assets_path())
 
 get_main_page_path = lambda: "{}/index.html".format(get_build_path())
 
@@ -1076,7 +1080,6 @@ main = \
         write_main_page() and \
         write_search_page()
       )) and \
-      tuxapp.copy_file("{}/logo.png".format(get_assets_path()), get_logo_path()) and \
       write_app_pages(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
   )))
 
