@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
+import base64
 import cgi
 import collections
 import datetime
@@ -8,11 +9,13 @@ import glob
 import imp
 import itertools
 import json
+import mimetypes
 import os
 import re
 import sys
 
 parse = imp.load_source('parse', os.path.join(os.path.dirname(__file__), 'parse'))
+test = imp.load_source('test', os.path.join(os.path.dirname(__file__), 'test'))
 tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
 
 @tuxapp.asserts(lambda path, *args, **kwargs: "Unknown image format: {}".format(os.path.basename(path)))
@@ -96,7 +99,7 @@ build_app_page = lambda app: \
 
 build_app_card = lambda app, is_anchor=False, is_heading=False: \
   build_card(
-    build_app_image_url(app, parse.get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url'))),
+    build_data_uri(parse.get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url')), 96 if is_heading else 64),
     filter_app_name(tuxapp.query_appfile(app, 'name')),
     tuxapp.query_appfile(app, 'title'),
     is_anchor and get_app_url(app),
@@ -421,6 +424,14 @@ build_columns = lambda children: \
 
 build_combined_styles = lambda: build_tag('combined-styles')
 
+build_data_uri = lambda path, width=None: \
+  "data:{};base64,{}".format(
+    mimetypes.guess_type("_.{}".format(detect_image_extension(path)))[0],
+    base64.b64encode(resize_image(path, width) if width and detect_image_extension(path) != 'svg' else tuxapp.read_file(path, True)),
+  ) \
+    if os.path.isfile(path) else \
+  ''
+
 build_feed = lambda apps: \
   join_elements(
     """<?xml version="1.0" encoding="utf-8"?>""",
@@ -566,7 +577,7 @@ build_head = lambda base_url, title=None, overrides={}: \
       type="application/atom+xml",
     ),
     build_tag('link',
-      href=get_logo_url(),
+      href=build_data_uri(get_logo_path()),
       rel='icon',
     ),
     build_tag('title', "{} - {}".format(title, get_site_name()) if title else get_site_name()),
@@ -616,7 +627,7 @@ build_header = tuxapp.memoizes()(
         build_tag("a.header-logo", None,
           build_tag('img',
             alt="Logo",
-            src=get_logo_url(),
+            src=build_data_uri(get_logo_path(), 112),
           ),
           href='.',
           title="Home",
@@ -780,7 +791,7 @@ build_main_page = lambda: \
     build_header(),
     build_tag('h2', "Categories"),
     build_columns(build_card(
-      get_category_icon_url(category),
+      build_data_uri(get_category_icon_path(category)),
       filter_category_name(category),
       get_category_description(category),
       get_category_url(category),
@@ -945,9 +956,7 @@ get_category_description = lambda category: \
     'video': "Applications for presenting, creating, or processing video",
   }[category]
 
-get_category_icon_path = lambda category: "{}/categories/{}.png".format(get_build_path(), category)
-
-get_category_icon_url = lambda category: os.path.relpath(get_category_icon_path(category), get_build_path())
+get_category_icon_path = lambda category: "{}/categories/{}.png".format(get_assets_path(), category)
 
 get_category_path = lambda category: "{}/categories/{}/index.html".format(get_build_path(), category)
 
@@ -1062,16 +1071,16 @@ main = \
   tuxapp.does(lambda arguments=tuple(sys.argv[1:]), *args, **kwargs: arguments and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.join_arguments(get_app_path(tuxapp.extract_app(argument)) for argument in arguments))))(
   tuxapp.silences(
     lambda arguments=tuple(sys.argv[1:]): \
-      (arguments or tuxapp.remove_directory(get_build_path())) and \
-      tuxapp.copy_directory(get_assets_path(), get_build_path()) and \
-      write_app_pages(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*'))) and \
       (arguments or (
+        tuxapp.remove_directory(get_build_path()) and \
+        tuxapp.copy_file("{}/logo.png".format(get_assets_path()), get_build_path()) and \
         write_category_pages(sorted(get_apps())) and \
         write_feed() and \
         write_group_pages(sorted(get_apps())) and \
         write_main_page() and \
         write_search_page()
-      ))
+      )) and \
+      write_app_pages(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
   )))
 
 process_lightbox = lambda html: update_lightbox(html, tuple(re.findall(r""" class="lightbox[" ].*? href="([^"]+)""", html)))
@@ -1087,6 +1096,10 @@ process_styles = lambda html: \
   )
 
 remove_whitespace = lambda string: re.sub(r"^\s+", '', string, 0, re.M).replace('\n', '')
+
+resize_image = lambda path, width: \
+  test.install_missing_package('imagemagick', 'convert') and \
+  tuxapp.read_process_raw(('convert', '-resize', "{}>".format(width), "{}:{}".format(detect_image_extension(path), path), '-'))
 
 update_lightbox = lambda html, urls: \
   functools.reduce(
