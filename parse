@@ -203,24 +203,30 @@ def parse_html(parser, html):
   except ResultException as exception:
     return exception.args[0] if exception.args else ''
 
-def update_app_media_worker(app):
+def update_app_info_worker(app):
   try:
-    return update_app_media(app)
+    return update_app_info(app)
   except:
     import traceback
     traceback.print_exc()
     raise
 
 @tuxapp.silences
-def update_apps_media(apps):
+def update_apps(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
-    return functools.reduce(
-      lambda result, app_result: result and app_result,
-      pool.imap_unordered(update_app_media_worker, apps),
-      True,
-    )
+    return \
+      functools.reduce(
+        lambda result, app_result: result and app_result,
+        pool.imap_unordered(update_app_info_worker, apps),
+        True,
+      ) and \
+      functools.reduce(
+        lambda result, app: result and update_all_app_files(app),
+        apps,
+        True,
+      )
 
 are_app_debian_screenshots_ignored = lambda app: \
   app in (
@@ -257,17 +263,17 @@ filter_downloads_url = lambda url, downloads_url: \
     "https://www.mozilla.org/en-US/thunderbird/": r"/firefox/",
   }.get(url, r"^$"), downloads_url) else downloads_url
 
-get_app_icon_path = lambda app, url: "{}/icon-{}".format(get_app_media_path(app), url if url == '*' else tuxapp.hash_md5(url))
+get_app_icon_path = lambda app, url: "{}/icon-{}".format(get_app_path(app), url if url == '*' else tuxapp.hash_md5(url))
 
-get_app_image_path = lambda app, url: "{}/image-{}".format(get_app_media_path(app), url if url == '*' else tuxapp.hash_md5(url))
+get_app_image_path = lambda app, url: "{}/image-{}".format(get_app_path(app), url if url == '*' else tuxapp.hash_md5(url))
 
-get_app_info_path = lambda app: "{}/info".format(get_app_media_path(app))
+get_app_info_path = lambda app: "{}/info".format(get_app_path(app))
 
-get_app_media_path = lambda app: "{}/tuxapp-media/{}".format(tuxapp.get_xdg_cache_path(), app)
+get_app_path = lambda app: "{}/tuxapp-parse/{}".format(tuxapp.get_xdg_cache_path(), app)
 
-get_app_screenshot_path = lambda app, url: "{}/screenshot-{}".format(get_app_media_path(app), url if url == '*' else tuxapp.hash_md5(url))
+get_app_screenshot_path = lambda app, url: "{}/screenshot-{}".format(get_app_path(app), url if url == '*' else tuxapp.hash_md5(url))
 
-get_app_video_thumbnail_path = lambda app, url: "{}/video-{}".format(get_app_media_path(app), url if url == '*' else tuxapp.hash_md5(url))
+get_app_video_thumbnail_path = lambda app, url: "{}/video-{}".format(get_app_path(app), url if url == '*' else tuxapp.hash_md5(url))
 
 is_screenshot_url_ignored = lambda url, screenshot_url: \
   bool(re.search({
@@ -275,7 +281,7 @@ is_screenshot_url_ignored = lambda url, screenshot_url: \
   }.get(url, r"^$"), screenshot_url))
 
 main = tuxapp.handles_exceptions(
-  lambda arguments=tuple(sys.argv[1:]): update_apps_media(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
+  lambda arguments=tuple(sys.argv[1:]): update_apps(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
 )
 
 normalize_url = lambda page_url, url, base_url=None: \
@@ -352,6 +358,12 @@ query_app_info = tuxapp.asserts(lambda app, key, *args, **kwargs: kwargs['result
   lambda app, key: tuxapp.search(r"(?<=^{}=).*$".format(re.escape(key)), tuxapp.read_file(get_app_info_path(app)), re.M)
 )
 
+update_all_app_files = lambda app: \
+  update_app_file(app, get_app_icon_path, tuxapp.query_appfile(app, 'icon-url')) and \
+  update_app_file(app, get_app_image_path, query_app_info(app, 'image-url')) and \
+  update_app_files(app, get_app_screenshot_path, query_app_info(app, 'screenshot-urls').split()) and \
+  update_app_files(app, get_app_video_thumbnail_path, tuple(url for url in query_app_info(app, 'video-thumbnail-urls').split() if url != '-'))
+
 update_app_file = lambda app, get_path, url: update_app_files(app, get_path, (url,) if url else ())
 
 update_app_files = lambda app, get_path, urls: \
@@ -369,13 +381,6 @@ update_app_info = lambda app: \
     'video-thumbnail-urls': ' '.join(parse_video_thumbnail_urls(tuxapp.query_appfile(app, 'homepage-url'))),
     'video-urls': ' '.join(parse_video_urls(tuxapp.query_appfile(app, 'homepage-url'))),
   })
-
-update_app_media = lambda app: \
-  update_app_info(app) and \
-  update_app_file(app, get_app_icon_path, tuxapp.query_appfile(app, 'icon-url')) and \
-  update_app_file(app, get_app_image_path, query_app_info(app, 'image-url')) and \
-  update_app_files(app, get_app_screenshot_path, query_app_info(app, 'screenshot-urls').split()) and \
-  update_app_files(app, get_app_video_thumbnail_path, tuple(url for url in query_app_info(app, 'video-thumbnail-urls').split() if url != '-'))
 
 write_app_info = lambda app, info: tuxapp.write_file(get_app_info_path(app), ''.join("{}={}\n".format(key, info[key]) for key in sorted(info)))
 
