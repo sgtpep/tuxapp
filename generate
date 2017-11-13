@@ -559,6 +559,12 @@ build_head = lambda base_url, title=None, overrides={}: \
       property='og:url',
     ),
     build_tag('link',
+      href=get_feed_url(),
+      rel='alternate',
+      title=get_feed_name(),
+      type="application/atom+xml",
+    ),
+    build_tag('link',
       href=get_logo_url(),
       rel='icon',
     ),
@@ -762,12 +768,6 @@ build_lightbox = lambda text, image_url, video_url=None, is_video_thumbnail=Fals
 build_main_page = lambda: \
   join_elements(
     build_head(os.path.relpath(get_build_path(), os.path.dirname(get_main_path()))),
-    build_tag('link',
-      href=get_feed_url(),
-      rel='alternate',
-      title=get_feed_name(),
-      type="application/atom+xml",
-    ),
     build_header(),
     build_tag('h2', "Categories"),
     build_columns(build_card(
