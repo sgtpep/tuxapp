@@ -4,7 +4,6 @@ import functools
 import glob
 import imp
 import os
-import re
 import stat
 import subprocess
 import sys
