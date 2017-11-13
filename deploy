@@ -63,6 +63,7 @@ packages=(
   bubblewrap
   certbot
   git
+  goaccess
   haveged
   htop
   msmtp-mta
