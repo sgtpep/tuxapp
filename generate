@@ -498,10 +498,11 @@ build_footer = tuxapp.memoizes()(
       ),
       build_script(r"""
       if (location.protocol == "file:") {
-        Array.prototype.forEach.call(document.querySelectorAll('a'), function(anchor) {
-          if (~anchor.href.indexOf("file:///") && anchor.pathname.slice(-1) == '/') {
-            if (~anchor.href.indexOf('#')) anchor.href = anchor.href.replace('#', "index.html#", 1);
-            else anchor.href += "index.html";
+        Array.prototype.forEach.call(document.querySelectorAll("a, form"), function(element) {
+          if (element.action && ~element.action.indexOf("file:///") && element.action.slice(-1) == '/') element.action += "index.html";
+          else if (element.href && ~element.href.indexOf("file:///") && element.pathname.slice(-1) == '/') {
+            if (~element.href.indexOf('#')) element.href = element.href.replace('#', "index.html#", 1);
+            else element.href += "index.html";
           }
         });
       }
@@ -646,7 +647,15 @@ build_header = tuxapp.memoizes()(
               href='.',
               title="Home",
             ),
-            build_search(),
+            build_tag("form.header-search", None,
+              build_tag('input',
+                name='query',
+                placeholder="Search",
+                type='search',
+              ),
+              build_script(r"""document.querySelector(".header-search").query.value = decodeURIComponent((location.search.match(/\bquery=([^&]+)/) || ['', ''])[1].replace(/\+/g, ' '));"""),
+              action=get_search_url(),
+            ),
           ),
           build_style("""
           .header-description {
@@ -787,25 +796,60 @@ build_main_page = lambda: \
     build_footer(),
   )
 
-build_script = lambda script, type=None: build_tag('script', None, remove_whitespace(script), type=type)
-
-build_search = lambda: \
+build_search_page = lambda: \
   join_elements(
+    build_head(os.path.relpath(get_build_path(), os.path.dirname(get_search_path())), "Search results"),
+    build_header(),
+    build_breadcrumbs(build_tag('h1', "Search results")),
+    build_tag("p.search-stats", None, build_tag('noscript', "Search requires JavaScript to be enabled in your browser.")),
+    build_tag(".search-results"),
     build_style("""
-    .header-search.is-hidden {
-      display: none;
+    .search-highlight {
+      background: gold;
+      padding: 2px;
+    }
+    .search-link {
+      font-weight: bold;
     }
     """),
-    build_tag("form.header-search.is-hidden", None,
-      build_script(r"""document.querySelector(".header-search").className = document.querySelector(".header-search").className.replace(" is-hidden", '');"""),
-      build_tag('input',
-        name='query',
-        placeholder="Search",
-        type='search',
-      ),
-      onsubmit="""location = "https://www.google.ru/search?q=" + encodeURIComponent("site:" + location.host + ' ' + this.query.value); return false;""",
-    ),
+    build_script(r"""
+    document.querySelector(".search-stats").textContent = "Searching...";
+    document.querySelector(".search-results").textContent = '';
+    var xhr = new XMLHttpRequest();
+    xhr.addEventListener('load', function(event) {
+      var response = JSON.parse(event.target.responseText);
+      document.querySelector(".search-stats").textContent = "Found " + (!response.total_count ? "no" : response.total_count) + " result" + (response.total_count == 1 ? '' : 's') + " for \"" + document.querySelector(".header-search").query.value + "\".";
+      response.items.forEach(function(item) {
+        var snippet = "... " + item.text_matches.map(function(textMatch) {
+          var fragment = '';
+          var index = 0;
+          textMatch.matches.forEach(function(match) {
+            fragment += textMatch.fragment.slice(index, match.indices[0]) + "[MATCH]" + textMatch.fragment.slice(match.indices[0], match.indices[1]) + "[/MATCH]";
+            index = match.indices[1];
+          });
+          fragment += textMatch.fragment.slice(index);
+          return fragment.split('\n').map(function(line) {
+            if (!~line.indexOf('=')) return line;
+            else if (~[
+              '',
+              'description',
+              'name',
+              'title',
+            ].indexOf(line.split('=', 1)[0])) return line.replace(/^[^=]*=/, '');
+          }).filter(Boolean).join(" ... ");
+        }).filter(Boolean).join(" ... ") + " ...";
+
+        document.querySelector(".search-results").innerHTML += '<div><a class="search-link" href="apps/' + encodeURIComponent(item.name) + '/">' + new Option(item.name).innerHTML + '</a><p>' + new Option(snippet).innerHTML.replace(/\[MATCH\]/g, '<span class="search-highlight">').replace(/\[\/MATCH\]/g, "</span>") + '</p></div>';
+      });
+    });
+    xhr.open('GET', "https://api.github.com/search/code?q=repo:" + encodeURIComponent('""" + tuxapp.get_github_repository() + r"""') + "+path:apps+" + encodeURIComponent(document.querySelector(".header-search").query.value));
+    xhr.setRequestHeader('Accept', "application/vnd.github.v3.text-match+json");
+    xhr.send();
+    """),
+    build_footer(),
   )
+
+build_script = lambda script, type=None: build_tag('script', None, remove_whitespace(script), type=type)
 
 build_separator = lambda: \
   join_elements(
@@ -978,6 +1022,10 @@ get_recent_apps = tuxapp.memoizes()(
     ).items() if apps for app in apps), limit))
 )
 
+get_search_path = lambda: "{}/search/index.html".format(get_build_path())
+
+get_search_url = lambda: "{}/".format(os.path.relpath(os.path.dirname(get_search_path()), get_build_path()))
+
 get_site_name = lambda: "TuxApp"
 
 get_style_prefix = lambda: "<!-- <style>"
@@ -1021,7 +1069,8 @@ main = \
         write_category_pages(sorted(get_apps())) and \
         write_feed() and \
         write_group_pages(sorted(get_apps())) and \
-        write_main_page()
+        write_main_page() and \
+        write_search_page()
       ))
   )))
 
