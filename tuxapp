@@ -1136,7 +1136,9 @@ read_app_version = lambda app: read_file(get_app_version_path(app)).rstrip()
 
 read_appfile = lambda app: read_file(get_appfile_path(app)) or fetch_appfile(app)
 
-read_process = lambda arguments, *args, **kwargs: subprocess.Popen(arguments, *args, shell=is_string(arguments), stdout=subprocess.PIPE, **kwargs).communicate()[0].decode('utf-8', 'replace')
+read_process = lambda arguments, *args, **kwargs: read_process_raw(arguments, *args, **kwargs).decode('utf-8', 'replace')
+
+read_process_raw = lambda arguments, *args, **kwargs: subprocess.Popen(arguments, *args, shell=is_string(arguments), stdout=subprocess.PIPE, **kwargs).communicate()[0]
 
 remove_app = \
   logs_after("Removed {}")(
