@@ -204,7 +204,18 @@ def check_app_firejail(app):
       print(get_message('firejail-missing'), file=sys.stderr)
   return True
 
-def copy_content(file, destination_file, offset=0, size=None, chunk_size=65536):
+def copy_directory(path, destination_path):
+  import distutils.dir_util # pylint: disable=redefined-outer-name
+  distutils.dir_util._path_created = {} # pylint: disable=protected-access
+  distutils.dir_util.copy_tree(path, destination_path, update=True)
+  return destination_path
+
+def copy_file(path, destination_path):
+  import shutil
+  shutil.copyfile(path, make_file_directories(destination_path))
+  return destination_path
+
+def copy_file_content(file, destination_file, offset=0, size=None, chunk_size=65536):
   with file, destination_file:
     file.seek(offset)
     try:
@@ -222,17 +233,6 @@ def copy_content(file, destination_file, offset=0, size=None, chunk_size=65536):
       return True
     except IOError:
       return False
-
-def copy_directory(path, destination_path):
-  import distutils.dir_util # pylint: disable=redefined-outer-name
-  distutils.dir_util._path_created = {} # pylint: disable=protected-access
-  distutils.dir_util.copy_tree(path, destination_path, update=True)
-  return destination_path
-
-def copy_file(path, destination_path):
-  import shutil
-  shutil.copy(path, destination_path)
-  return destination_path
 
 def make_directories(path):
   if not os.path.isdir(path):
@@ -1097,7 +1097,7 @@ parse_package_lists = \
   ))
 
 pipe_process = lambda file, process, offset=0, size=None: \
-  copy_content(file, process.stdin, offset, size) and \
+  copy_file_content(file, process.stdin, offset, size) and \
   process.wait() == 0
 
 purge_cache = \
