@@ -227,9 +227,9 @@ install_package = \
   ))
 
 is_library_text = lambda string: \
-  re.search(r"\.so\b| could not find or load the Qt platform plugin \"xcb\"", string) and \
   "/nacl_helper:" not in string and \
-  not re.search(r"\blibasound_module_conf_pulse\.so\b", string)
+  extract_library(string) and \
+  extract_library(string) != "libasound_module_conf_pulse.so"
 
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): \
