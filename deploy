@@ -23,29 +23,37 @@ UxJuLRgUJTm3GeH4DWoBreciF1EUQ68vdpCTBQmBfCiBuylqMGI/Gw==
 =IeOj
 -----END PGP MESSAGE-----"
 
-netrc=$(ssh root@"$hostname" test -f /etc/netrc || gpg -d <(echo "$encrypted_netrc"))
-password=$(ssh root@"$hostname" grep -q "^$USER:[^!]" /etc/shadow || sudo grep -Po "(?<=^$USER:)[^:]+" /etc/shadow)
-ssh root@"$hostname" bash -$- -o pipefail << SSH
+( cat << SSH; cat << \SSH ) | ssh root@"$hostname" bash -$- -o pipefail
+github_repository="$github_repository"
+home_path=/home/"$USER"
+hostname="$hostname"
+netrc="$(ssh root@"$hostname" test -f /etc/netrc || gpg -d <(echo "$encrypted_netrc"))"
+password='$(ssh root@"$hostname" grep -q "^$USER:[^!]" /etc/shadow || sudo grep -Po "(?<=^$USER:)[^:]+" /etc/shadow)'
+repository_path=/home/"$USER"/"${github_repository##*/}"
+root_path=/var/www/html
+username="$USER"
+SSH
+
 ! grep -q "^debian:" /etc/passwd || userdel -r debian
-grep -q "^$USER:" /etc/passwd || useradd -m -G sudo -s /bin/bash "$USER"
-grep -q "^$USER:[^!]" /etc/shadow || chpasswd -e <<< '$USER:$password'
+grep -q "^$username:" /etc/passwd || useradd -m -G sudo -s /bin/bash "$username"
+grep -q "^$username:[^!]" /etc/shadow || chpasswd -e <<< "$username:$password"
 
 [[ -f /etc/netrc ]] || echo "$netrc" > /etc/netrc
 chmod o-r /etc/netrc
-chown "$USER": /etc/netrc
+chown "$username": /etc/netrc
 read _ smtp_hostname _ email _ < /etc/netrc
 
-cp -r ~/.ssh /home/"$USER"
-chown -R "$USER": /home/"$USER"/.ssh
-
 sed -i "s/^mesg /#\0/" ~/.profile
+
+cp -r ~/.ssh "$home_path"
+chown -R "$username": "$home_path"/.ssh
 
 cat > /etc/apt/sources.list << \EOF
 deb http://deb.debian.org/debian stretch main
 deb http://security.debian.org/ stretch/updates main
 EOF
 
-if [[ ! \$(zgrep " dist-upgrade\>" /var/log/apt/history.log* || :) ]]; then
+if [[ ! $(zgrep " dist-upgrade\>" /var/log/apt/history.log* || :) ]]; then
   apt update
   APT_LISTCHANGES_FRONTEND=none DEBIAN_FRONTEND=noninteractive apt -o Dpkg::Options::=--force-confnew dist-upgrade -y
   apt autoremove -y --purge
@@ -64,30 +72,32 @@ packages=(
   unattended-upgrades
   xvfb
 )
-dpkg -s "\${packages[@]}" &> /dev/null || DEBIAN_FRONTEND=noninteractive apt install -y "\${packages[@]}"
+dpkg -s "${packages[@]}" &> /dev/null || DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
 
-echo "default: \$email" > /etc/aliases
+echo "default: $email" > /etc/aliases
 
 sed -i "s/^[\/ ]*\(Unattended-Upgrade::Automatic-Reboot\) .*/\1 \"true\";/" /etc/apt/apt.conf.d/50unattended-upgrades
 
-[[ -d /etc/letsencrypt/live ]] || certbot certonly -d "$hostname" -m "\$email" -w /var/www/html --agree-tos --webroot
+echo "30 * * * * $username $repository_path/update" > /etc/cron.d/update
+
+[[ -d /etc/letsencrypt/live ]] || certbot certonly -d "$hostname" -m "$email" -w "$root_path" --agree-tos --webroot
 
 cat > /etc/msmtprc << EOF
 account default
   aliases /etc/aliases
   auth on
-  from \$email
-  host \$smtp_hostname
+  from $email
+  host $smtp_hostname
   port 587
   tls on
   tls_trust_file /etc/ssl/certs/ca-certificates.crt
-  user \$email
+  user $email
 EOF
 chmod o-r /etc/msmtprc
-chown "$USER": /etc/msmtprc
+chown "$username": /etc/msmtprc
 
-md5=\$(md5sum /etc/nginx/sites-enabled/default)
-cat > /etc/nginx/sites-enabled/default << \EOF
+md5=$(md5sum /etc/nginx/sites-enabled/default)
+cat > /etc/nginx/sites-enabled/default << EOF
 server {
   listen 80 default_server;
   listen [::]:80 default_server;
@@ -99,7 +109,7 @@ server {
   gzip on;
   listen 443 ssl default_server;
   listen [::]:443 ssl default_server;
-  root /var/www/html;
+  root $root_path;
   ssl_certificate /etc/letsencrypt/live/$hostname/fullchain.pem;
   ssl_certificate_key /etc/letsencrypt/live/$hostname/privkey.pem;
 
@@ -109,12 +119,12 @@ server {
   }
 }
 EOF
-md5sum -c --status <<< \$md5 || systemctl restart nginx
+md5sum -c --status <<< $md5 || systemctl restart nginx
 
-[[ -d /home/"$USER"/"${github_repository##*/}" ]] || sudo -u "$USER" git -C /home/"$USER" clone https://github.com/"$github_repository".git
+[[ -d $repository_path ]] || sudo -u "$username" git -C "$home_path" clone https://github.com/"$github_repository".git
 
-chown "$USER": /var/www/html
-rm -fr /var/www/html/{.well-known,index.nginx-debian.html}
+chown "$username": "$root_path"
+rm -fr "$root_path"/{.well-known,index.nginx-debian.html}
 
 [[ ! -f /run/reboot-required ]] || reboot
 SSH
