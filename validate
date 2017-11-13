@@ -42,7 +42,6 @@ def validate_appfile_worker(app, list_paths):
     traceback.print_exc()
     raise
 
-@tuxapp.silences
 def validate_appfiles(apps):
   import contextlib
   import multiprocessing
@@ -130,9 +129,11 @@ get_punctuation = lambda: ('.', '!', '?')
 
 is_url_valid = lambda url: not re.search(r"\s", url) and tuxapp.parse_url(url).scheme in ('http', 'https') and bool(tuxapp.parse_url(url).netloc)
 
-main = tuxapp.handles_exceptions(
-  lambda arguments=tuple(sys.argv[1:]): validate_appfiles(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
-)
+main = \
+  tuxapp.handles_exceptions(
+  tuxapp.silences(
+    lambda arguments=tuple(sys.argv[1:]): validate_appfiles(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
+  ))
 
 parse_appfile = lambda app: tuple(line.split('=', 1) for line in tuxapp.read_appfile(app).splitlines())
 

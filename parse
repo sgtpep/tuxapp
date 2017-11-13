@@ -211,7 +211,6 @@ def update_app_info_worker(app):
     traceback.print_exc()
     raise
 
-@tuxapp.silences
 def update_apps_info(apps):
   import contextlib
   import multiprocessing
@@ -276,15 +275,17 @@ is_screenshot_url_ignored = lambda url, screenshot_url: \
     "https://code.visualstudio.com/": r"\.svg$",
   }.get(url, r"^$"), screenshot_url))
 
-main = tuxapp.handles_exceptions(
-  lambda arguments=tuple(sys.argv[1:]): \
-    update_apps_info(get_apps(arguments)) and \
-    functools.reduce(
-      lambda result, app: result and update_all_app_files(app),
-      get_apps(arguments),
-      True,
-    )
-)
+main = \
+  tuxapp.handles_exceptions(
+  tuxapp.silences(
+    lambda arguments=tuple(sys.argv[1:]): \
+      update_apps_info(get_apps(arguments)) and \
+      functools.reduce(
+        lambda result, app: result and update_all_app_files(app),
+        get_apps(arguments),
+        True,
+      )
+  ))
 
 normalize_url = lambda page_url, url, base_url=None: \
   url \
