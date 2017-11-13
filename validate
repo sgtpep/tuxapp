@@ -33,8 +33,8 @@ def check_url(url):
     from httplib import BadStatusLine
     from urllib2 import Request, URLError, urlopen
   try:
-    return urlopen(Request(url, headers={'User-Agent': tuxapp.get_user_agent()})).getcode() == 200
-  except (BadStatusLine, URLError, ssl.CertificateError):
+    return urlopen(Request(url, headers={'User-Agent': tuxapp.get_user_agent()}), timeout=10).getcode() == 200
+  except (BadStatusLine, URLError, ssl.CertificateError, ssl.SSLError):
     return False
 
 def validate_appfile_worker(app, list_paths):
