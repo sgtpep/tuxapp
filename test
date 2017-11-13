@@ -254,10 +254,13 @@ try_app_process = tuxapp.logs("Trying {1} on {0}")(
   lambda distribution, app: \
     install_missing_package('strace') and \
     tuxapp.read_process(r"""
-    output=$(timeout -k 3 3 {} 2>&1)
+    output=$({}timeout -k 3 3 {} 2>&1)
     kill $(echo "$output" | grep -Po "(?<= Process )\d+") 2> /dev/null
     echo "$output"
-    """.format(tuxapp.join_arguments(build_bwrap_arguments(install_missing_container(distribution), tuxapp.check_app_installed(app))).replace(" bash ", " strace -f -e none bash ", 1)), stderr=subprocess.STDOUT)
+    """.format(
+      "xvfb-run " if tuxapp.is_command_exist('xvfb-run') else '',
+      tuxapp.join_arguments(build_bwrap_arguments(install_missing_container(distribution), tuxapp.check_app_installed(app))).replace(" bash ", " strace -f -e none bash ", 1),
+    ), stderr=subprocess.STDOUT)
 )
 
 if __name__ == '__main__':

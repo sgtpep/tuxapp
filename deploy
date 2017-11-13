@@ -61,6 +61,7 @@ packages=(
   nginx-light
   strace
   unattended-upgrades
+  xvfb
 )
 dpkg -s "\${packages[@]}" &> /dev/null || DEBIAN_FRONTEND=noninteractive apt install -y "\${packages[@]}"
 
