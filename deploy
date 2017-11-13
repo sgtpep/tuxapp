@@ -59,6 +59,7 @@ packages=(
   htop
   msmtp-mta
   nginx-light
+  rsync
   strace
   unattended-upgrades
   xvfb
