@@ -1025,7 +1025,7 @@ is_zipfile_nested = lambda path: is_file_list_nested(read_process(('zipinfo', '-
 join_arguments = lambda arguments: ' '.join(quote_argument(argument) for argument in arguments)
 
 list_all_apps = outputs(lambda *args, **kwargs: '\n'.join(kwargs['result']))(
-  lambda: tuple(fetch_grep_url("https://api.github.com/repos/{}/contents/apps".format(get_github_repository()), ('-Po', "(?<=\"name\": \")[^\"]+")).splitlines())
+  lambda: tuple(fetch_grep_url("https://api.github.com/repos/{}/contents/apps".format(get_github_repository()), ('-Po', "(?<=\"name\": \")(?!\.)[^\"]+")).splitlines())
 )
 
 list_app_distribution = lambda app: ("{}/{}".format(path, filename) for path, _, filenames in os.walk(get_app_distribution_path(app)) if "/node_modules/" not in path for filename in filenames)
