@@ -12,4 +12,4 @@ git pull -q
 ./generate
 git diff --word-diff ./build "$root_path" > "$diff_path"
 head -1000 "$diff_path"
-rsync -a ./build/ "$root_path"
+rsync -a --delete ./build/ "$root_path"
