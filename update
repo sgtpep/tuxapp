@@ -4,6 +4,13 @@ set -eu -o pipefail
 diff_path=~/tuxapp.diff
 root_path=/var/www/html
 
+function on-exit {
+  local status=$?
+  [[ $status == 0 ]] || echo "Exit status: $status" >&2
+  exit $status
+}
+trap on-exit EXIT
+
 cd ~/tuxapp
 git pull -q
 ./validate
