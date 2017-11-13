@@ -819,7 +819,7 @@ build_search_page = lambda: \
     build_style("""
     .search-highlight {
       background: gold;
-      padding: 2px;
+      padding: 1px;
     }
     .search-link {
       font-weight: bold;
