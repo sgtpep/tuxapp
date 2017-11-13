@@ -81,7 +81,7 @@ echo "default: $email" > /etc/aliases
 
 sed -i "s/^[\/ ]*\(Unattended-Upgrade::Automatic-Reboot\) .*/\1 \"true\";/" /etc/apt/apt.conf.d/50unattended-upgrades
 
-echo "0 6 * * * $username $repository_path/update" > /etc/cron.d/update
+echo "0 6,18 * * * $username $repository_path/update" > /etc/cron.d/update
 
 [[ -d /etc/letsencrypt/live ]] || certbot certonly -d "$hostname" -m "$email" -w "$root_path" --agree-tos --webroot
 
