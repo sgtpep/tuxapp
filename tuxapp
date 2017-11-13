@@ -1068,7 +1068,7 @@ move_directory = lambda path, destination_path: \
 parse_package_lists = \
   memoizes()(
   asserts("Unknown package: {}")(
-    lambda package: read_process(('grep', '-Fh', '-C', '1', '-m', '1', r"/{}_".format(package)) + update_package_lists()).rstrip('\n').split("\n--\n", 1)[0]
+    lambda package, paths=None: read_process(('grep', '-Fh', '-C', '1', '-m', '1', r"/{}_".format(package)) + (paths or update_package_lists())).rstrip('\n').split("\n--\n", 1)[0]
   ))
 
 pipe_process = lambda file, process, offset=0, size=None: \

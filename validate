@@ -52,7 +52,7 @@ def validate_appfiles(apps):
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
     return functools.reduce(
       lambda result, app_result: result and app_result,
-      pool.imap_unordered(validate_appfile_worker, apps),
+      pool.imap_unordered(functools.partial(validate_appfile_worker, list_paths=tuxapp.update_package_lists()), apps),
       True,
     )
 
@@ -147,17 +147,17 @@ validate_app = lambda app: \
   tuxapp.asserts("Edge dash")(lambda app: not app.startswith('-') and not app.endswith('-'))(app) and \
   tuxapp.asserts("Continuous dashes")(lambda app: not re.search(r"-{2}", app))(app)
 
-validate_appfile = lambda app: \
+validate_appfile = lambda app, list_paths=None: \
   reasserts("{}: {message}")(validate_app)(app) and \
   reasserts("{}: {message}")(validate_appfile_keys)(app) and \
   all(reasserts(u"{}.{}: {{message}}{}".format(
     app,
     key,
     u" ({})".format(value.replace('{', "{{").replace('}', "}}")) if value else '',
-  ))(validate_appfile_item)(app, key, value) for key, value in parse_appfile(app))
+  ))(validate_appfile_item)(app, key, value, list_paths) for key, value in parse_appfile(app))
 
 validate_appfile_item = tuxapp.asserts("Unknown key")(
-  lambda app, key, value: \
+  lambda app, key, value, list_paths=None: \
     validate_category(value) \
       if key == 'category' else \
     validate_description(app, value) \
@@ -180,7 +180,7 @@ validate_appfile_item = tuxapp.asserts("Unknown key")(
       if key == 'name' else \
     validate_note(value) \
       if key == 'note' else \
-    validate_packages(value) \
+    validate_packages(value, list_paths) \
       if key == 'packages' else \
     validate_title(app, value) \
       if key == 'title' else \
@@ -269,14 +269,14 @@ validate_note = lambda note: \
   validate_capitalized(note) and \
   validate_terminal_punctuation(note)
 
-validate_packages = lambda packages: \
+validate_packages = lambda packages, list_paths=None: \
   not packages or \
   validate_text(packages) and \
   tuxapp.asserts("Not sorted")(lambda packages: packages.split() == sorted(packages.split()))(packages) and \
   tuxapp.asserts("Unknown group")(lambda packages: all(package in tuxapp.get_package_groups() for package in packages.split() if package.startswith('group-')))(packages) and \
   tuxapp.asserts("Duplicated items")(lambda packages: sorted(set(packages.split())) == sorted(packages.split()))(packages) and \
   tuxapp.asserts("Group already contains a package")(lambda packages: not set(packages.split()) & set(tuxapp.expand_packages(package for package in packages.split() if package.startswith('group-'))))(packages) and \
-  all(tuxapp.parse_package_lists(package) for package in packages.split() if not package.startswith('group-'))
+  all(tuxapp.parse_package_lists(package, list_paths) for package in packages.split() if not package.startswith('group-'))
 
 validate_terminal_punctuation = tuxapp.asserts(lambda string, is_inverted=False, *args, **kwargs: "Terminal punctuation" if is_inverted else "No terminal punctuation")(
   lambda string, is_inverted=False: (string[-1] in get_punctuation()) ^ is_inverted
