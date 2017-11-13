@@ -6,7 +6,7 @@ import os
 import re
 import sys
 
-media = imp.load_source('media', os.path.join(os.path.dirname(__file__), 'media'))
+parse = imp.load_source('parse', os.path.join(os.path.dirname(__file__), 'parse'))
 test = imp.load_source('test', os.path.join(os.path.dirname(__file__), 'test'))
 tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
 validate = imp.load_source('validate', os.path.join(os.path.dirname(__file__), 'validate'))
@@ -30,7 +30,7 @@ def validates(validate_function):
     return wrapper
   return decorator
 
-class DescriptionParser(media.BaseParser):
+class DescriptionParser(parse.BaseParser):
   priority = (
     'description',
     'og-description',
@@ -57,7 +57,7 @@ class DescriptionParser(media.BaseParser):
       elif attributes.get('property') == 'og:description':
         self.add_result((self.priority.index('og-description'), attributes['content']))
 
-class IconURLParser(media.BaseParser):
+class IconURLParser(parse.BaseParser):
   is_head = True
 
   rels = (
@@ -75,7 +75,7 @@ class IconURLParser(media.BaseParser):
         attributes['href'],
       ))
 
-class NameParser(media.BaseParser):
+class NameParser(parse.BaseParser):
   priority = (
     'heading-anchor',
     'og-site-name',
@@ -109,7 +109,7 @@ class NameParser(media.BaseParser):
       elif attributes.get('property') == 'og:site_name':
         self.add_result((self.priority.index('og-site-name'), attributes['content']))
 
-class TitleParser(media.BaseParser):
+class TitleParser(parse.BaseParser):
   is_head = True
 
   priority = (
@@ -387,16 +387,16 @@ list_app_executables = lambda app: \
 
 open_url = tuxapp.does(lambda url, *args, **kwargs: url and input_boolean("Open {} in the browser?".format(url)) and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.quote_argument(url))))(lambda url: url)
 
-parse_description = lambda url: media.parse_html(DescriptionParser, media.fetch_url_cached(url))
+parse_description = lambda url: parse.parse_html(DescriptionParser, parse.fetch_url_cached(url))
 
-parse_icon_url = lambda url: media.normalize_url(url, media.parse_html(IconURLParser, media.fetch_url_cached(url)) or "/favicon.ico")
+parse_icon_url = lambda url: parse.normalize_url(url, parse.parse_html(IconURLParser, parse.fetch_url_cached(url)) or "/favicon.ico")
 
 parse_name = lambda url: \
   check_name(url, tuxapp.parse_url(url).path.lstrip('/').split('/', 1)[0]) \
     if ".github.io/" in url and tuxapp.parse_url(url).path.lstrip('/') else \
-  media.parse_html(NameParser, media.fetch_url_cached(url)) or check_name(url, extract_url_name(url))
+  parse.parse_html(NameParser, parse.fetch_url_cached(url)) or check_name(url, extract_url_name(url))
 
-parse_title = lambda url: media.parse_html(TitleParser, media.fetch_url_cached(url))
+parse_title = lambda url: parse.parse_html(TitleParser, parse.fetch_url_cached(url))
 
 strip_bin_path = lambda command: re.sub(r"^usr/bin/", '', command)
 
@@ -438,7 +438,7 @@ update_appfile_packages = lambda appfile: update_appfile(appfile, 'packages', in
 
 update_appfile_title = lambda appfile: update_appfile(appfile, 'title', input_title(appfile['app'], appfile['title'] if 'title' in appfile else filter_title(parse_title(appfile['homepage-url']))))
 
-update_appfile_version_regex = lambda appfile: update_appfile(appfile, 'version-regex', input_version_regex(appfile['app'], appfile['version-regex'] if 'version-regex' in appfile else detect_version_regex(media.fetch_url_cached(appfile.get('version-url') or appfile['homepage-url']))))
+update_appfile_version_regex = lambda appfile: update_appfile(appfile, 'version-regex', input_version_regex(appfile['app'], appfile['version-regex'] if 'version-regex' in appfile else detect_version_regex(parse.fetch_url_cached(appfile.get('version-url') or appfile['homepage-url']))))
 
 update_appfile_version_url = lambda appfile: update_appfile(appfile, 'version-url', input_version_url(appfile['homepage-url'], appfile.get('version-url', '')))
 
