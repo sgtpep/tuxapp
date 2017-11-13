@@ -817,10 +817,7 @@ build_search_page = lambda: \
     build_tag("p.search-stats", None, build_tag('noscript', "Search requires JavaScript to be enabled in your browser.")),
     build_tag(".search-results"),
     build_style("""
-    .search-highlight {
-      background: gold;
-      padding: 1px;
-    }
+    .search-highlight,
     .search-link {
       font-weight: bold;
     }
