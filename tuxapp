@@ -1032,7 +1032,7 @@ is_zipfile_nested = lambda path: is_file_list_nested(read_process(('zipinfo', '-
 join_arguments = lambda arguments: ' '.join(quote_argument(argument) for argument in arguments)
 
 list_all_apps = outputs(lambda *args, **kwargs: '\n'.join(kwargs['result']))(
-  lambda: tuple(fetch_grep_url("https://api.github.com/repos/{}/contents/apps".format(get_github_repository()), ('-Po', "(?<=\"name\": \")(?!\.)[^\"]+")).splitlines())
+  lambda: tuple(fetch_grep_url("https://api.github.com/repos/{}/contents/apps".format(get_github_repository()), ('-Po', r"(?<=\"name\": \")(?!\.)[^\"]+")).splitlines())
 )
 
 list_app_distribution = lambda app: ("{}/{}".format(path, filename) for path, _, filenames in os.walk(get_app_distribution_path(app)) if "/node_modules/" not in path for filename in filenames)
@@ -1068,7 +1068,7 @@ move_directory = lambda path, destination_path: \
 parse_package_lists = \
   memoizes()(
   asserts("Unknown package: {}")(
-    lambda package: read_process(('grep', '-Fh', '-C', '1', '-m', '1', "/{}_".format(package)) + update_package_lists()).rstrip('\n').split("\n--\n", 1)[0]
+    lambda package: read_process(('grep', '-Fh', '-C', '1', '-m', '1', r"/{}_".format(package)) + update_package_lists()).rstrip('\n').split("\n--\n", 1)[0]
   ))
 
 pipe_process = lambda file, process, offset=0, size=None: \
