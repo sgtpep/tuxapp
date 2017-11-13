@@ -4,3 +4,4 @@ set -eu -o pipefail
 cd ~/tuxapp
 git pull -q
 ./validate
+./test
