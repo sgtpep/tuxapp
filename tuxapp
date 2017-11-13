@@ -12,6 +12,7 @@ import stat
 import subprocess
 import sys
 import time
+import zipfile
 
 try:
   from shlex import quote as quote_argument
@@ -327,6 +328,18 @@ def touch_file(path, timestamp=None):
     timestamp and (timestamp, timestamp),
   )
   return path
+
+@asserts(lambda path, *args, **kwargs: "Failed to unpack {}".format(os.path.basename(path)))
+@logs(lambda path, *args, **kwargs: "Unpacking {}".format(os.path.basename(path)))
+def unpack_zipfile(path, output_path):
+  try:
+    with zipfile.ZipFile(path) as file:
+      for info in file.infolist():
+        file.extract(info.filename, make_directories(output_path))
+        os.chmod(os.path.join(output_path, info.filename), info.external_attr >> 16)
+      return output_path
+  except Exception as exception: # pylint: disable=broad-except
+    print(exception, file=sys.stderr)
 
 def write_file(path, content='', is_append=False):
   import io
@@ -1027,7 +1040,7 @@ is_string = lambda value: isinstance(value, (''.__class__, u''.__class__))
 
 is_tarball_nested = lambda path: is_file_list_nested(read_process(('tar', '-t', '-f', path)).splitlines())
 
-is_zipfile_nested = lambda path: is_file_list_nested(read_process(('zipinfo', '-1', path)).splitlines())
+is_zipfile_nested = lambda path: is_file_list_nested(zipfile.ZipFile(path).namelist())
 
 join_arguments = lambda arguments: ' '.join(quote_argument(argument) for argument in arguments)
 
@@ -1235,14 +1248,6 @@ unpack_tarball = \
       call_process(('tar', '-x', '-C', make_directories(output_path), '-f', path) + get_tar_progress_options() + options) and \
       output_path
   )))
-
-unpack_zipfile = \
-  asserts(lambda path, *args, **kwargs: "Failed to unpack {}".format(os.path.basename(path)))(
-  logs(lambda path, *args, **kwargs: "Unpacking {}".format(os.path.basename(path)))(
-    lambda path, output_path: \
-      call_process(('unzip', '-oq', '-d', make_directories(output_path), path)) and \
-      output_path
-  ))
 
 update_package_list = lambda url: \
   call_process(r"""
