@@ -1023,7 +1023,7 @@ main = \
       (arguments or write_main())
   )))
 
-process_lightbox = lambda html: update_lightbox(html, tuple(re.findall(r""" class="lightbox"[^"]* href="([^"]+)""", html)))
+process_lightbox = lambda html: update_lightbox(html, tuple(re.findall(r""" class="lightbox[" ].*? href="([^"]+)""", html)))
 
 process_styles = lambda html: \
   get_style_regex().sub('', html).replace(
