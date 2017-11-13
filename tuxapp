@@ -352,7 +352,10 @@ are_app_packages_updated = lambda app, packages: all(is_app_package_updated(app,
 build_app_bsdtar_arguments = lambda app: \
   ('bsdtar',) \
     if is_command_exist('bsdtar') else \
-  install_app_packages(app, ('libarchive-tools',)) and \
+  install_app_packages(app, (
+    'libarchive-tools',
+    'liblzo2-2',
+  )) and \
   (
     ('firejail', '--quiet', "--env=LD_LIBRARY_PATH={}".format(get_app_library_path(app))) \
       if is_command_exist('firejail') else \
