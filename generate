@@ -1073,7 +1073,7 @@ main = \
     lambda arguments=tuple(sys.argv[1:]): \
       (arguments or (
         tuxapp.remove_directory(get_build_path()) and \
-        tuxapp.copy_file("{}/logo.png".format(get_assets_path()), get_build_path()) and \
+        tuxapp.copy_file("{}/logo.png".format(get_assets_path()), get_logo_path()) and \
         write_category_pages(sorted(get_apps())) and \
         write_feed() and \
         write_group_pages(sorted(get_apps())) and \
