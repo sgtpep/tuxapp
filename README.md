@@ -1,6 +1,6 @@
 # tuxapp
 
-`tuxapp` downloads and installs the latest official releases of Linux© applications including dependencies without root permissions and allows to run them sandboxed.
+Downloads and installs the latest official releases of Linux© applications including dependencies without root permissions and allows to run them sandboxed.
 
 ## Usage of `tuxapp`
 

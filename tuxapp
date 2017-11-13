@@ -240,7 +240,7 @@ def make_file_directories(path):
 def parse_arguments(arguments):
   import argparse
   parser = argparse.ArgumentParser(
-    description=get_description().format("%(prog)s"),
+    description=get_description(),
     epilog="MIT License, (c) 2017 Danil Semelenov, https://github.com/{}".format(get_github_repository()),
   )
   parser.add_argument('-a', '--all', action='store_true', help="list apps available for installation")
@@ -600,7 +600,7 @@ get_debian_release = lambda: 'stretch'
 
 get_debian_url = lambda: "https://cdn-aws.deb.debian.org/"
 
-get_description = lambda: u"{} downloads and installs the latest official releases of Linux\N{COPYRIGHT SIGN} applications including dependencies without root permissions and allows to run them sandboxed."
+get_description = lambda: u"Downloads and installs the latest official releases of Linux\N{COPYRIGHT SIGN} applications including dependencies without root permissions and allows to run them sandboxed."
 
 get_download_cache_path = lambda url: get_download_path(url, get_cache_path())
 
