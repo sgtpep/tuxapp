@@ -65,38 +65,6 @@ build_actions = lambda *children: \
     build_tag("p.actions", None, *children),
   )
 
-build_app_page = lambda app: \
-  process_lightbox(join_elements(
-    build_head(
-      os.path.relpath(get_build_path(), os.path.dirname(get_app_path(app))),
-      "{} - {}".format(filter_app_name(tuxapp.query_appfile(app, 'name')), filter_category_name(tuxapp.query_appfile(app, 'category'))),
-      {
-        'description': tuxapp.query_appfile(app, 'description') or tuxapp.query_appfile(app, 'title'),
-        'image': build_app_og_image_url(app),
-        'title': "Install {} with {}".format(tuxapp.query_appfile(app, 'name'), get_site_name()),
-        'url': get_app_url(app),
-      },
-    ),
-    build_header(),
-    build_json_ld(get_app_json_ld(app)),
-    build_actions(
-      build_tag('a', "Edit appfile", href=get_github_url("edit/master/apps/{}".format(app))),
-      build_tag('a', "Report issue", href=get_github_url("issues/new?title={}".format(app))),
-    ),
-    build_breadcrumbs(
-      build_tag('a', filter_category_name(tuxapp.query_appfile(app, 'category')), href=get_category_url(tuxapp.query_appfile(app, 'category'))),
-      build_tag('h1', filter_app_name(tuxapp.query_appfile(app, 'name'))),
-    ),
-    build_app_card(app, False, True),
-    build_app_image(app),
-    tuxapp.query_appfile(app, 'description') and build_tag('p', tuxapp.query_appfile(app, 'description')),
-    tuxapp.query_appfile(app, 'note') and build_tag('p', tuxapp.query_appfile(app, 'note')),
-    build_app_info(app),
-    build_app_gallery(app),
-    build_app_instructions(app),
-    build_footer(),
-  ))
-
 build_app_card = lambda app, is_anchor=False, is_heading=False: \
   build_card(
     build_data_uri(parse.get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url')), 96 if is_heading else 64),
@@ -284,6 +252,38 @@ build_app_og_image_url = lambda app: \
   build_app_image_url(app, parse.get_app_image_path(app, parse.query_app_info(app, 'image-url'))) \
     if parse.query_app_info(app, 'image-url') else \
   build_app_image_url(app, parse.get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url')))
+
+build_app_page = lambda app: \
+  process_lightbox(join_elements(
+    build_head(
+      os.path.relpath(get_build_path(), os.path.dirname(get_app_path(app))),
+      "{} - {}".format(filter_app_name(tuxapp.query_appfile(app, 'name')), filter_category_name(tuxapp.query_appfile(app, 'category'))),
+      {
+        'description': tuxapp.query_appfile(app, 'description') or tuxapp.query_appfile(app, 'title'),
+        'image': build_app_og_image_url(app),
+        'title': "Install {} with {}".format(tuxapp.query_appfile(app, 'name'), get_site_name()),
+        'url': get_app_url(app),
+      },
+    ),
+    build_header(),
+    build_json_ld(get_app_json_ld(app)),
+    build_actions(
+      build_tag('a', "Edit appfile", href=get_github_url("edit/master/apps/{}".format(app))),
+      build_tag('a', "Report issue", href=get_github_url("issues/new?title={}".format(app))),
+    ),
+    build_breadcrumbs(
+      build_tag('a', filter_category_name(tuxapp.query_appfile(app, 'category')), href=get_category_url(tuxapp.query_appfile(app, 'category'))),
+      build_tag('h1', filter_app_name(tuxapp.query_appfile(app, 'name'))),
+    ),
+    build_app_card(app, False, True),
+    build_app_image(app),
+    tuxapp.query_appfile(app, 'description') and build_tag('p', tuxapp.query_appfile(app, 'description')),
+    tuxapp.query_appfile(app, 'note') and build_tag('p', tuxapp.query_appfile(app, 'note')),
+    build_app_info(app),
+    build_app_gallery(app),
+    build_app_instructions(app),
+    build_footer(),
+  ))
 
 build_breadcrumbs = lambda *children: \
   join_elements(
@@ -807,6 +807,8 @@ build_main_page = lambda: \
     build_footer(),
   )
 
+build_script = lambda script, type=None: build_tag('script', None, remove_whitespace(script), type=type)
+
 build_search_page = lambda: \
   join_elements(
     build_head(os.path.relpath(get_build_path(), os.path.dirname(get_search_path())), "Search results"),
@@ -859,8 +861,6 @@ build_search_page = lambda: \
     """),
     build_footer(),
   )
-
-build_script = lambda script, type=None: build_tag('script', None, remove_whitespace(script), type=type)
 
 build_separator = lambda: \
   join_elements(
