@@ -405,6 +405,8 @@ check_apps_updated = outputs(
   lambda apps: tuple(check_app_updated(app) for app in apps)
 )
 
+copy_missing_file = lambda path, destination_path: destination_path if os.path.isfile(destination_path) else copy_file(path, destination_path)
+
 detect_app_executable = asserts("Failed to detect the executable file of {}")(
   lambda app: \
     'AppRun' \
