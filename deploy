@@ -107,5 +107,3 @@ rm -f /var/www/html/index.nginx-debian.html
 
 [[ ! -f /run/reboot-required ]] || reboot
 SSH
-
-#rsync -Oavz "${0%/*}" root@"$hostname":"$HOME"/tuxapp
