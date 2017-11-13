@@ -25,16 +25,13 @@ def reasserts(message):
 @tuxapp.memoizes()
 @tuxapp.logs("Checking {}")
 def check_url(url):
-  import ssl
   try:
-    from http.client import BadStatusLine
-    from urllib.request import Request, URLError, urlopen
+    from urllib.request import Request, urlopen
   except ImportError:
-    from httplib import BadStatusLine
-    from urllib2 import Request, URLError, urlopen
+    from urllib2 import Request, urlopen
   try:
     return urlopen(Request(url, headers={'User-Agent': tuxapp.get_user_agent()}), timeout=10).getcode() == 200
-  except (BadStatusLine, URLError, ssl.CertificateError, ssl.SSLError):
+  except: # pylint: disable=bare-except
     return False
 
 def validate_appfile_worker(app, list_paths):
