@@ -229,7 +229,10 @@ install_package = \
 is_library_text = lambda string: \
   "/nacl_helper:" not in string and \
   extract_library(string) and \
-  extract_library(string) != "libasound_module_conf_pulse.so"
+  extract_library(string) not in (
+    "libGLESv2.so",
+    "libasound_module_conf_pulse.so",
+  )
 
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): \
