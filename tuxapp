@@ -594,7 +594,11 @@ get_app_firejail_options_path = lambda app: "{}/firejail".format(get_app_path(ap
 
 get_app_icon_path = lambda app: "{}/icon".format(get_app_path(app))
 
-get_app_library_path = lambda app: next(glob.iglob("{}/usr/lib/*-linux-gnu".format(get_app_root_path(app))), '')
+get_app_library_path = lambda app: \
+  ':'.join(
+    glob.glob("{}/lib/*-linux-gnu".format(get_app_root_path(app))) + \
+    glob.glob("{}/usr/lib/*-linux-gnu".format(get_app_root_path(app)))
+  )
 
 get_app_package_version_path = lambda app, package: "{}/var/lib/packages/{}".format(get_app_root_path(app), package)
 
