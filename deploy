@@ -69,6 +69,7 @@ packages=(
   imagemagick
   msmtp-mta
   nginx-light
+  ranger
   rsync
   strace
   unattended-upgrades
