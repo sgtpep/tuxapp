@@ -52,11 +52,14 @@ if [[ ! \$(zgrep " dist-upgrade\>" /var/log/apt/history.log* || :) ]]; then
 fi
 
 packages=(
+  bubblewrap
   certbot
   git
+  haveged
   htop
   msmtp-mta
   nginx-light
+  strace
   unattended-upgrades
 )
 dpkg -s "\${packages[@]}" &> /dev/null || DEBIAN_FRONTEND=noninteractive apt install -y "\${packages[@]}"
