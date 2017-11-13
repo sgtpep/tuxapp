@@ -53,7 +53,7 @@ build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_trace=Fa
     '--setenv', 'TUXAPP_TEST', '1',
     '--tmpfs', "/tmp",
   ) + \
-  tuple(option for path in get_bwrap_bind_paths() if os.path.isdir(path) for option in ('--ro-bind', path, path)) + \
+  tuple(option for path in get_bwrap_ro_bind_paths() for option in ('--ro-bind', path, path)) + \
   (('--setenv', 'TUXAPP_TRACE', '1') if is_trace else ()) + \
   (
     ('--bind', tuxapp.get_app_path(app), tuxapp.get_app_path(app)) \
@@ -154,11 +154,11 @@ get_arch_package_url = lambda package: get_arch_url("{}/os/x86_64/".format('extr
 
 get_arch_url = lambda path='': "https://mirrors.kernel.org/archlinux/{}".format(path)
 
-get_bwrap_bind_paths = lambda: \
-  (
+get_bwrap_ro_bind_paths = lambda: \
+  tuple(path for path in (
     "/usr/lib/locale",
     "/usr/share/alsa",
-  ) + \
+  ) if os.path.isdir(path)) + \
   tuple(glob.iglob("/usr/lib/*-linux-gnu/alsa-lib")) + \
   tuple(glob.iglob("/usr/lib/*-linux-gnu/pulseaudio"))
 
