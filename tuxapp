@@ -475,12 +475,19 @@ extract_package_name = lambda path: os.path.basename(path).split('_', 1)[0]
 
 extract_package_version = lambda path: path.split('_', 2)[1]
 
-fetch_app_version = \
+fetch_app_version = lambda app, pattern=None: \
+  fetch_app_version_memoized(
+    app,
+    query_appfile_version_url(app),
+    pattern or query_appfile(app, 'version-regex'),
+  )
+
+fetch_app_version_memoized = \
   memoizes(True)(
-  asserts(lambda app, *args, **kwargs: "Failed to fetch the version number of {} on {}".format(app, query_appfile_version_url(app)))(
-  logs(lambda app, *args, **kwargs: "Fetching the version number of {} on {}".format(app, query_appfile_version_url(app)))(
-    lambda app, pattern=None: \
-      (search(pattern or query_appfile(app, 'version-regex'), re.sub(r"\n.*$", '', read_process(r"""
+  asserts(lambda app, url, *args, **kwargs: "Failed to fetch the version number of {} on {}".format(app, url))(
+  logs(lambda app, url, *args, **kwargs: "Fetching the version number of {} on {}".format(app, url))(
+    lambda app, url, pattern: \
+      (search(pattern, re.sub(r"\n.*$", '', read_process(r"""
       (
         {} | \
         gzip -df 2> /dev/null
@@ -489,10 +496,10 @@ fetch_app_version = \
       grep -Pao -m 1 -- {} 2> /dev/null
       """.format(
         join_arguments(build_request_arguments(
-          ('-Ss', '-D', "/dev/stderr", '-H', "Accept-Encoding: gzip", query_appfile_version_url(app)),
-          ('-Sq', '-O', '-', '--header', "Accept-Encoding: gzip", query_appfile_version_url(app)),
+          ('-Ss', '-D', "/dev/stderr", '-H', "Accept-Encoding: gzip", url),
+          ('-Sq', '-O', '-', '--header', "Accept-Encoding: gzip", url),
         )),
-        quote_argument(pattern or query_appfile(app, 'version-regex')),
+        quote_argument(pattern),
       )), flags=re.S), 0, 1) or '').replace('/', '-')
   )))
 
