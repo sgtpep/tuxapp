@@ -1,0 +1,17 @@
+category=system
+description=JumpFm is a minimalistic dual panel file manager for Linux that lets you navigate your file system very efficiently. It is highly configurable and extendible and it comes with some builtin super-powers.
+desktop-entry=
+download-x86-64-url=https://github.com/JumpFm/jumpfm/releases/download/v{version}/jumpfm-{version}-x86_64.AppImage
+download-x86-url=
+executable=
+firejail=
+free-license=
+group=file-managers
+homepage-url=https://jumpfm.org/
+icon-url=https://jumpfm.org/favicon.ico
+name=JumpFm
+note=
+packages=group-electron
+title=A file manager with super powers
+version-regex=/download/v([^/]+)
+version-url=https://github.com/JumpFm/jumpfm/releases/latest
