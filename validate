@@ -116,6 +116,7 @@ get_groups = lambda: \
     'content-management',
     'ebook-utilities',
     'email-clients',
+    'file-managers',
     'instant-messengers',
     'note-taking',
     'office-suits',
