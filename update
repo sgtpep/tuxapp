@@ -2,7 +2,7 @@
 set -eu -o pipefail
 
 diff_path=~/tuxapp.diff
-project_path=~/tuxapp
+project_path=${0%/*}
 root_path=/var/www/html
 
 function on-exit {
