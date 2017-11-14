@@ -4,3 +4,4 @@
 
 - **Ring** https://ring.cx/: the daemon executable needs to be launched before the graphical one.
 - **Steam** http://store.steampowered.com/: the launcher script has some hardcoded absolute paths; the application requires x86 libraries on the x86-64 architecuture.
+- **k2pdfopt** http://www.willus.com/k2pdfopt/: download requires solving a CAPTCHA.
