@@ -86,6 +86,7 @@ build_app_gallery = lambda app: \
       box-sizing: border-box;
       display: inline-block;
       padding: 0.125em;
+      text-align: center;
       vertical-align: top;
       width: 50%;
     }
@@ -107,6 +108,7 @@ build_app_gallery = lambda app: \
     .app-gallery .lightbox img,
     .app-gallery .lightbox video {
       display: block;
+      max-height: 10em;
       max-width: 100%;
     }
     .app-gallery .lightbox.is-video img,
