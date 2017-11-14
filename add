@@ -396,7 +396,7 @@ open_url = tuxapp.does(lambda url, *args, **kwargs: url and input_boolean("Open 
 
 parse_description = lambda url: parse.parse_html(DescriptionParser, parse.fetch_url_cached(url))
 
-parse_icon_url = lambda url: parse.normalize_url(url, filter_url_accessibility(parse.parse_html(IconURLParser, parse.fetch_url_cached(url)) or "/favicon.ico"))
+parse_icon_url = lambda url: filter_url_accessibility(parse.normalize_url(url, parse.parse_html(IconURLParser, parse.fetch_url_cached(url)) or "/favicon.ico"))
 
 parse_name = lambda url: \
   check_name(url, tuxapp.parse_url(url).path.lstrip('/').split('/', 1)[0]) \
