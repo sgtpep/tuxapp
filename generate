@@ -26,21 +26,21 @@ def detect_image_extension(path):
     imghdr.tests.append(lambda header, file: header[:4] == b"\0\0\1\0" and 'ico')
   return sys.modules['imghdr'].what(path) or ''
 
-def write_app_page_worker(app):
+def generate_app_page_worker(app):
   try:
-    return write_app_page(app)
+    return generate_app_page(app)
   except:
     import traceback
     traceback.print_exc()
     raise
 
-def write_app_pages(apps):
+def generate_app_pages(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
     return functools.reduce(
       lambda result, app_result: result and app_result,
-      pool.imap_unordered(write_app_page_worker, apps),
+      pool.imap_unordered(generate_app_page_worker, apps),
       True,
     )
 
@@ -918,6 +918,22 @@ filter_category_name = lambda category: category.title()
 
 filter_group_name = lambda group: group.replace('-', ' ').title()
 
+generate_app_page = lambda app: tuxapp.write_file(get_app_page_path(app), process_styles(build_app_page(app)))
+
+generate_category_pages = lambda apps: generate_list_pages(apps, 'category', get_category_page_path, build_category_page)
+
+generate_feed = lambda: tuxapp.write_file(get_feed_path(), build_feed(get_recently_added_apps(25)))
+
+generate_group_pages = lambda apps: generate_list_pages(apps, 'group', get_group_page_path, build_group_page)
+
+generate_list_pages = lambda apps, key, get_path, build: \
+  all((os.path.isfile(get_path(tuxapp.query_appfile(app, key))) or tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build(tuxapp.query_appfile(app, key)))) and tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build_app_card(app, True), True) for app in apps) and \
+  all(tuxapp.write_file(path, process_styles(u"{}{}".format(tuxapp.read_file(path), build_footer()))) for path in glob.iglob(get_path('*')))
+
+generate_main_page = lambda: tuxapp.write_file(get_main_page_path(), process_styles(build_main_page()))
+
+generate_search_page = lambda: tuxapp.write_file(get_search_page_path(), process_styles(build_search_page()))
+
 get_app_json_ld = lambda app: \
   {
     '@context': "http://schema.org",
@@ -1078,13 +1094,13 @@ main = \
     lambda arguments=tuple(sys.argv[1:]): \
       (arguments or (
         tuxapp.remove_directory(get_build_path()) and \
-        write_category_pages(sorted(get_apps())) and \
-        write_feed() and \
-        write_group_pages(sorted(get_apps())) and \
-        write_main_page() and \
-        write_search_page()
+        generate_category_pages(sorted(get_apps())) and \
+        generate_feed() and \
+        generate_group_pages(sorted(get_apps())) and \
+        generate_main_page() and \
+        generate_search_page()
       )) and \
-      write_app_pages(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
+      generate_app_pages(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
   ))
 
 process_lightbox = lambda html: update_lightbox(html, tuple(re.findall(r""" class="lightbox[" ].*? href="([^"]+)""", html)))
@@ -1115,22 +1131,6 @@ update_lightbox = lambda html, urls: \
       html,
     ),
   )
-
-write_app_page = lambda app: tuxapp.write_file(get_app_page_path(app), process_styles(build_app_page(app)))
-
-write_category_pages = lambda apps: write_list_pages(apps, 'category', get_category_page_path, build_category_page)
-
-write_feed = lambda: tuxapp.write_file(get_feed_path(), build_feed(get_recently_added_apps(25)))
-
-write_group_pages = lambda apps: write_list_pages(apps, 'group', get_group_page_path, build_group_page)
-
-write_list_pages = lambda apps, key, get_path, build: \
-  all((os.path.isfile(get_path(tuxapp.query_appfile(app, key))) or tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build(tuxapp.query_appfile(app, key)))) and tuxapp.write_file(get_path(tuxapp.query_appfile(app, key)), build_app_card(app, True), True) for app in apps) and \
-  all(tuxapp.write_file(path, process_styles(u"{}{}".format(tuxapp.read_file(path), build_footer()))) for path in glob.iglob(get_path('*')))
-
-write_main_page = lambda: tuxapp.write_file(get_main_page_path(), process_styles(build_main_page()))
-
-write_search_page = lambda: tuxapp.write_file(get_search_page_path(), process_styles(build_search_page()))
 
 if __name__ == '__main__':
   main()
