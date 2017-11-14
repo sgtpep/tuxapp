@@ -226,7 +226,7 @@ detect_app_packages = lambda app, packages='', installed_packages='': \
 
 detect_version_regex = lambda html: \
   r"/download/v([^/]+)" \
-    if re.search(r"\bgithub\.com/[\w-]+/[\w-]+/releases/download/\w", html) else \
+    if re.search(r"/releases/download/v\d", html) else \
   r'"softwareVersion"\s*:\s*"([^"]+)' \
     if re.search(r'"softwareVersion"\s*:\s*"', html) else \
   r'"softwareVersion" content="([^"]+)' \
