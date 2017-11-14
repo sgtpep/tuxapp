@@ -17,6 +17,6 @@ git pull -q
 ./test
 ./parse
 ./generate
-git diff --word-diff "$root_path" ./build > "$diff_path" || :
+./diff "$root_path" ./build > "$diff_path"
 head -1000 "$diff_path"
 rsync -Oac --delete ./build/ "$root_path"
