@@ -1,0 +1,17 @@
+category=system
+description=Fman is a dual-pane file manager for Mac, Windows and Linux.
+desktop-entry=
+download-x86-64-url=http://download.fman.io/fman.deb
+download-x86-url=
+executable=opt/fman/fman
+firejail=
+free-license=
+group=file-managers
+homepage-url=https://fman.io/
+icon-url=https://fman.io/static/public/img/icon-1024.png
+name=fman
+note=
+packages=libgirepository-1.0-1 libqt5gui5
+title=Dual-pane file manager
+version-regex=Version ([^\s]+)
+version-url=https://fman.io/download
