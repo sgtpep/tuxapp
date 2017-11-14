@@ -148,7 +148,7 @@ def execute_app(appfile):
   for distribution in test.get_test_distributions():
     print("Executing {} on {}".format(appfile['app'], distribution), file=sys.stderr)
     tuxapp.call_process(test.build_bwrap_arguments(distribution, appfile['app']))
-    if input_boolean("Edit packages?", True):
+    if not input_boolean("Continue?"):
       raise KeyboardInterrupt
 
 def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
