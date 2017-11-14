@@ -9,7 +9,7 @@ for line in sys.stdin:
   if line.startswith(\"--- \"):
     filtered_line = line.replace(\"--- a$1\", '.', 1).rstrip('\n')
   else:
-    filtered_line = re.sub(r"(?<=\")data:[^\"]+", "...", ''.join(re.findall(r\"\[-.+?-\]|{\+.+?\+}\", line)))
+    filtered_line = re.sub(r"(?<=\")data:[^\"]+", "...", '\n'.join(re.findall(r\"\[-.+?-\]|{\+.+?\+}\", line)))
   if filtered_line:
     print(filtered_line)
 "
