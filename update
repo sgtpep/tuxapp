@@ -13,10 +13,10 @@ function on-exit {
 trap on-exit EXIT
 
 git -C "$project_path" pull -q
-"$project_path"/validate
-"$project_path"/test
-"$project_path"/parse
-"$project_path"/generate
+"$project_path"/validate "$@"
+"$project_path"/test "$@"
+"$project_path"/parse "$@"
+"$project_path"/generate "$@"
 "$project_path"/diff "$root_path" "$project_path"/build > "$diff_path" || :
 head -1000 "$diff_path"
 rsync -Oac --delete "$project_path"/build/ "$root_path"

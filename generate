@@ -1071,7 +1071,6 @@ join_elements = lambda *elements: ''.join(elements)
 
 main = \
   tuxapp.handles_exceptions(
-  tuxapp.does(lambda arguments=tuple(sys.argv[1:]), *args, **kwargs: arguments and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.join_arguments(get_app_page_path(tuxapp.extract_app(argument)) for argument in arguments))))(
   tuxapp.silences(
     lambda arguments=tuple(sys.argv[1:]): \
       (arguments or (
