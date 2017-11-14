@@ -1117,7 +1117,7 @@ write_app_page = lambda app: tuxapp.write_file(get_app_page_path(app), process_s
 
 write_category_pages = lambda apps: write_list_pages(apps, 'category', get_category_page_path, build_category_page)
 
-write_feed = lambda: tuxapp.write_file(get_feed_path(), build_feed(get_recently_added_apps(100)))
+write_feed = lambda: tuxapp.write_file(get_feed_path(), build_feed(get_recently_added_apps(25)))
 
 write_group_pages = lambda apps: write_list_pages(apps, 'group', get_group_page_path, build_group_page)
 
