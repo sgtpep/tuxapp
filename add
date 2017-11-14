@@ -301,7 +301,7 @@ get_update_appfile_functions = lambda: \
 
 input_app = validates(lambda *args, **kwargs: \
   validate.validate_app(kwargs['result']) and \
-  tuxapp.asserts(lambda *args, **kwargs: not input_boolean("Overwrite an existing file?") and "Provide another identifier")(lambda app: not os.path.isfile(tuxapp.get_appfile_path(app)))(kwargs['result'])
+  tuxapp.asserts("Provide another identifier")(lambda app: not os.path.isfile(tuxapp.get_appfile_path(app)) or input_boolean("Overwrite an existing file?"))(kwargs['result'])
 )(
   lambda prefill='': filter_app(input_text("Identifier", prefill))
 )
