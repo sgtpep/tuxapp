@@ -126,6 +126,7 @@ class TitleParser(parse.BaseParser):
       self.add_result((self.priority.index('og-title'), attributes['content']))
 
 def detect_app_library_packages(app, packages=()):
+  tuxapp.install_app_runner(app)
   tuxapp.install_app_appfile_packages(app, tuxapp.expand_packages(packages))
   for distribution in test.get_test_distributions():
     filenames = test.detect_missing_app_libraries(distribution, app)
