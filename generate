@@ -204,7 +204,7 @@ build_app_info = lambda app: \
       build_tag('a', parse.query_app_info(app, 'downloads-url'), href=parse.query_app_info(app, 'downloads-url')) \
         if parse.query_app_info(app, 'downloads-url') else \
       build_tag('a', tuxapp.query_appfile(app, 'homepage-url'), href=tuxapp.query_appfile(app, 'homepage-url')),
-      escape_html(" ({})".format(", ".join(re.findall(r"^download-(.+)-url=", tuxapp.read_appfile(app), re.M)))),
+      escape_html(" ({})".format(", ".join(re.findall(r"^download-(.+)-url=.", tuxapp.read_appfile(app), re.M)))),
     ),
     join_elements(
       build_tag('dt', "Distribution formats:"),
