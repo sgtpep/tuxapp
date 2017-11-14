@@ -419,7 +419,7 @@ update_appfile = tuxapp.logs_result(
     dict(appfile, **{key: value})
 )
 
-update_appfile_app = lambda appfile: update_appfile(appfile, 'app', input_app(filter_app(appfile.get('name', ''))))
+update_appfile_app = lambda appfile: update_appfile(appfile, 'app', input_app(filter_app(appfile['name']) if appfile['app'] == get_default_app() else appfile['app']))
 
 update_appfile_category = lambda appfile: update_appfile(appfile, 'category', input_category(appfile.get('category', '')))
 
