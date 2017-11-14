@@ -804,8 +804,8 @@ build_main_page = lambda: \
       build_tag('a', filter_group_name(group), href=get_group_url(group)),
       build_tag('span', " ({})".format(count)),
     ) for group, count in get_groups()),
-    build_tag('h2', "Recent apps"),
-    build_columns(build_app_card(app, True) for app, _ in get_recent_apps(16)),
+    build_tag('h2', "Recently added"),
+    build_columns(build_app_card(app, True) for app, _ in get_recently_added_apps(15)),
     build_footer(),
   )
 
@@ -967,7 +967,7 @@ get_copyright = lambda: u"\N{COPYRIGHT SIGN} 2017 {}".format(get_site_name())
 
 get_description = lambda: u"An open catalog of easily installable and up-to-date Linux\N{REGISTERED SIGN} applications"
 
-get_feed_name = lambda: "Recent apps"
+get_feed_name = lambda: "Recently added"
 
 get_feed_path = lambda: "{}/feed.xml".format(get_build_path())
 
@@ -1019,7 +1019,7 @@ get_logo_path = lambda: "{}/logo.png".format(get_assets_path())
 
 get_main_page_path = lambda: "{}/index.html".format(get_build_path())
 
-get_recent_apps = tuxapp.memoizes()(
+get_recently_added_apps = tuxapp.memoizes()(
   lambda limit=10: \
     tuple(itertools.islice(((app, timestamp) for timestamp, apps in functools.reduce(
       lambda apps, app: (apps.setdefault(int(app), []) or apps if app.isdigit() and len(app) == 10 else os.path.isfile(tuxapp.get_appfile_path(app)) and apps[max(apps)].append(app)) or apps,
@@ -1116,7 +1116,7 @@ write_app_page = lambda app: tuxapp.write_file(get_app_page_path(app), process_s
 
 write_category_pages = lambda apps: write_list_pages(apps, 'category', get_category_page_path, build_category_page)
 
-write_feed = lambda: tuxapp.write_file(get_feed_path(), build_feed(get_recent_apps(100)))
+write_feed = lambda: tuxapp.write_file(get_feed_path(), build_feed(get_recently_added_apps(100)))
 
 write_group_pages = lambda apps: write_list_pages(apps, 'group', get_group_page_path, build_group_page)
 
