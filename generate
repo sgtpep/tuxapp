@@ -806,7 +806,7 @@ build_main_page = lambda: \
       build_tag('a', filter_group_name(group), href=get_group_url(group)),
       build_tag('span', " ({})".format(count)),
     ) for group, count in get_groups()),
-    build_tag('h2', "Recently added"),
+    build_tag('h2', get_feed_name()),
     build_columns(build_app_card(app, True) for app, _ in get_recently_added_apps(15)),
     build_footer(),
   )
@@ -969,7 +969,7 @@ get_copyright = lambda: u"\N{COPYRIGHT SIGN} 2017 {}".format(get_site_name())
 
 get_description = lambda: u"An open catalog of easily installable and up-to-date Linux\N{REGISTERED SIGN} applications"
 
-get_feed_name = lambda: "Recently added"
+get_feed_name = lambda: "Recent Apps"
 
 get_feed_path = lambda: "{}/feed.xml".format(get_build_path())
 
