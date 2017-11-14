@@ -1,5 +1,6 @@
 category=network
 description=Google Chrome is a fast, secure, and free web browser, built for the modern web.
+desktop-entry=
 download-x86-64-url=https://dl.google.com/linux/direct/google-chrome-unstable_current_amd64.deb
 download-x86-url=
 executable=google-chrome-unstable --no-sandbox

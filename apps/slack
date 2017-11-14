@@ -1,5 +1,6 @@
 category=network
 description=Slack is where work flows. It's where the people you need, the information you share, and the tools you use come together to get things done.
+desktop-entry=
 download-x86-64-url=https://downloads.slack-edge.com/linux_releases/slack-desktop-{version}-amd64.deb
 download-x86-url=
 executable=

@@ -1,5 +1,6 @@
 category=video
 description=Hybrid between a Torrent Client and a Player. It can be used to stream torrents with subtitles and much more.
+desktop-entry=
 download-x86-64-url=https://github.com/jaruba/PowderPlayer/releases/download/v{version}/PowderPlayer_v{version}.tar.gz
 download-x86-url=
 executable=

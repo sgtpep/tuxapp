@@ -1,5 +1,6 @@
 category=video
 description=Stremio is a one-stop hub for video content aggregation. Discover, organize and watch video from all kind of sources on any device that you own. Movies, TV shows, series, live television or web channels like YouTube and Twitch.tv - you can find all this on Stremio.
+desktop-entry=
 download-x86-64-url=https://www.strem.io/download?platform=linux
 download-x86-url=
 executable=Stremio.sh

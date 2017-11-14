@@ -1,5 +1,6 @@
 category=network
 description=DuckieTV is an application that takes care of TV-Show addicts by providing a personalized TV-Show calendar. DuckieTV makes sure the information is always up-to-date and gives you an integrated blocking-resistant torrent search to help you get to the right download as easy as possible.
+desktop-entry=
 download-x86-64-url=https://github.com/SchizoDuckie/DuckieTV/releases/download/{version}/DuckieTV-{version}-linux-x64.tar.gz
 download-x86-url=https://github.com/SchizoDuckie/DuckieTV/releases/download/{version}/DuckieTV-{version}-linux-x32.tar.gz
 executable=DuckieTV/DuckieTV

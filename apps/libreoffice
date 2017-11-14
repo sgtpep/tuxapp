@@ -1,5 +1,6 @@
 category=office
 description=LibreOffice is a powerful office suite – its clean interface and feature-rich tools help you unleash your creativity and enhance your productivity. LibreOffice includes several applications that make it the most powerful Free and Open Source office suite on the market.
+desktop-entry=
 download-x86-64-url=https://download.documentfoundation.org/libreoffice/stable/{version}/deb/x86_64/LibreOffice_{version}_Linux_x86-64_deb.tar.gz
 download-x86-url=https://download.documentfoundation.org/libreoffice/stable/{version}/deb/x86/LibreOffice_{version}_Linux_x86_deb.tar.gz
 executable=

@@ -1,5 +1,6 @@
 category=office
 description=LibreOffice Still is the stable version that has undergone more testing (over a longer time). It is usually recommended for more conservative use.
+desktop-entry=
 download-x86-64-url=https://download.documentfoundation.org/libreoffice/stable/{version}/deb/x86_64/LibreOffice_{version}_Linux_x86-64_deb.tar.gz
 download-x86-url=https://download.documentfoundation.org/libreoffice/stable/{version}/deb/x86/LibreOffice_{version}_Linux_x86_deb.tar.gz
 executable=

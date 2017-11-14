@@ -1,5 +1,6 @@
 category=network
 description=Firefox ESR is intended for groups who deploy and maintain the desktop environment in large organizations such as schools, governments and businesses.
+desktop-entry=
 download-x86-64-url=https://download.mozilla.org/?product=firefox-{version}esr-SSL&os=linux64&lang=en-US
 download-x86-url=https://download.mozilla.org/?product=firefox-{version}esr-SSL&os=linux&lang=en-US
 executable=firefox

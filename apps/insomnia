@@ -1,5 +1,6 @@
 category=development
 description=A powerful REST API Client with cookie management, environment variables, code generation, and authentication.
+desktop-entry=
 download-x86-64-url=https://builds.insomnia.rest/downloads/linux/latest
 download-x86-url=
 executable=

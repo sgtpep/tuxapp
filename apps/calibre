@@ -1,5 +1,6 @@
 category=office
 description=The one stop solution for all your e-book needs. Comprehensive e-book software.
+desktop-entry=
 download-x86-64-url=https://calibre-ebook.com/dist/linux64
 download-x86-url=https://calibre-ebook.com/dist/linux32
 executable=

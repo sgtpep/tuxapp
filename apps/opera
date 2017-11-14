@@ -1,5 +1,6 @@
 category=network
 description=Opera is a fast and secure browser. Developed in Europe, used by millions around the world. Now with a built-in ad blocker and free VPN.
+desktop-entry=
 download-x86-64-url=https://download1.operacdn.com/pub/opera/desktop/{version}/linux/opera-stable_{version}_amd64.deb
 download-x86-url=
 executable=opera --no-sandbox

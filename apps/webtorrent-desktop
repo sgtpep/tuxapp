@@ -1,5 +1,6 @@
 category=video
 description=WebTorrent Desktop is for streaming torrents. Whether it's video from the Internet Archive, music from Creative Commons, or audiobooks from Librivox, you can play it right away. You don't have to wait for it to finish downloading.
+desktop-entry=
 download-x86-64-url=https://github.com/webtorrent/webtorrent-desktop/releases/download/v{version}/WebTorrent-v{version}-linux.zip
 download-x86-url=https://github.com/webtorrent/webtorrent-desktop/releases/download/v{version}/WebTorrent-v{version}-linux-ia32.zip
 executable=

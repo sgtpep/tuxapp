@@ -1,5 +1,6 @@
 category=network
 description=Telegram is a cloud-based mobile and desktop messaging app with a focus on security and speed.
+desktop-entry=
 download-x86-64-url=https://telegram.org/dl/desktop/linux
 download-x86-url=https://telegram.org/dl/desktop/linux32
 executable=

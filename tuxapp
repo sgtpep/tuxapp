@@ -793,7 +793,8 @@ Icon={icon_path}
 Name={name}
 TryExec={runner_path}
 Type=Application
-""".format(
+{appendix}""".format(
+  appendix=query_appfile(app, 'desktop-entry'),
   category=generate_desktop_entry_category(query_appfile(app, 'category')),
   icon_path=install_app_icon(app) or '',
   name=query_appfile(app, 'name'),

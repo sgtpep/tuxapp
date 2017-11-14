@@ -76,6 +76,7 @@ get_appfile_keys = lambda: \
   (
     'category',
     'description',
+    'desktop-entry',
     'download-x86-64-url',
     'download-x86-url',
     'executable',
@@ -160,6 +161,8 @@ validate_appfile_item = tuxapp.asserts("Unknown key")(
       if key == 'category' else \
     validate_description(app, value) \
       if key == 'description' else \
+    validate_desktop_entry(value) \
+      if key == 'desktop-entry' else \
     validate_download_url(app, re.sub(r"^download-(.+)-url$", r'\1', key), value) \
       if re.match(r"^download-(x86-64|x86)-url$", key) else \
     validate_executable(value) \
@@ -217,6 +220,13 @@ validate_description = lambda app, description: \
   validate_capitalized(description) and \
   validate_terminal_punctuation(description) and \
   validate_homepage_contains(app, description)
+
+validate_desktop_entry = lambda entry: \
+  not entry or \
+  validate_text(entry) and \
+  tuxapp.asserts("Extraneous keys")(lambda lines: all('=' in line for line in lines))(entry.split("\\n")) and \
+  tuxapp.asserts("Duplicated keys")(lambda keys: sorted(set(keys)) == sorted(keys))(tuple(line.split('=', 1)[0] for line in entry.split("\\n"))) and \
+  tuxapp.asserts("Unsupported keys")(lambda keys: all(key in ('Terminal',) for key in keys))(tuple(line.split('=', 1)[0] for line in entry.split("\\n")))
 
 validate_download_url = lambda app, architecture, urls: \
   architecture != 'x86-64' and not urls or \
