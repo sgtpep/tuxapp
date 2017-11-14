@@ -1,13 +1,12 @@
 #!/bin/bash
 set -eu -o pipefail
 
-git diff --word-diff-regex="[^[:space:]<>\"]+" "$1" "$2" | python << EOF
+git diff --word-diff-regex="[^[:space:]<>\"]+" "$1" "$2" | python -c "
 from __future__ import print_function
 import re
 import sys
-for line in sys.stdin.readlines():
-  if line.startswith("--- "):
-    print(line.replace("--- a$2", '.', 1))
-  elif "[-" in line or '{+' in line:
-    print(''.join(re.findall(r"\[-.+?-\]|{\+.+?\+}", line)))
-EOF
+for line in sys.stdin:
+  filtered_line = line.replace(\"--- a$1\", '.', 1).rstrip('\n') if line.startswith(\"--- \") else ''.join(re.findall(r\"\[-.+?-\]|{\+.+?\+}\", line))
+  if filtered_line:
+    print(filtered_line)
+"
