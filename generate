@@ -1082,7 +1082,7 @@ main = \
         write_search_page()
       )) and \
       write_app_pages(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
-  )))
+  ))
 
 process_lightbox = lambda html: update_lightbox(html, tuple(re.findall(r""" class="lightbox[" ].*? href="([^"]+)""", html)))
 
