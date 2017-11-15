@@ -227,6 +227,7 @@ is_library_text = lambda string: \
   extract_library(string) not in (
     "libGLESv2.so",
     "libasound_module_conf_pulse.so",
+    "libproj.so",
   )
 
 main = tuxapp.handles_exceptions(
