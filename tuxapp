@@ -898,7 +898,7 @@ function build_environment {
 
   [[ ${executable_arguments[0]} != AppRun ]] || result_environment[APPDIR]=$distribution_path
 
-  build_lib_path result_environment\[LD_LIBRARY_PATH\]
+  build_library_path result_environment\[LD_LIBRARY_PATH\]
   build_gdk_pixbuf result_environment\[GDK_PIXBUF_MODULE_FILE\] "${result_environment[LD_LIBRARY_PATH]}"
 
   declare -r python_paths=("$root_path"/usr/lib/python*{,/plat-*})
@@ -964,7 +964,7 @@ function build_firejail_arguments {
 
 function build_gdk_pixbuf {
   declare -n result_gdk_pixbuf=$1
-  declare -r argument_lib_path=$2
+  declare -r argument_library_path=$2
   shift 2
 
   declare -r gdk_pixbuf_paths=(/usr/lib/*-linux-gnu/gdk-pixbuf-2.0)
@@ -973,7 +973,7 @@ function build_gdk_pixbuf {
     for gdk_pixbuf_path in "$root_path"/usr/lib/*-linux-gnu/gdk-pixbuf-2.0/*; do
       if [[ -d $gdk_pixbuf_path ]]; then
         result_gdk_pixbuf=$gdk_pixbuf_path/loaders.cache
-        [[ -f $result_gdk_pixbuf ]] || LD_LIBRARY_PATH=$argument_lib_path "${gdk_pixbuf_path%/*}"/gdk-pixbuf-query-loaders "$gdk_pixbuf_path"/loaders/* > "$result_gdk_pixbuf"
+        [[ -f $result_gdk_pixbuf ]] || LD_LIBRARY_PATH=$argument_library_path "${gdk_pixbuf_path%/*}"/gdk-pixbuf-query-loaders "$gdk_pixbuf_path"/loaders/* > "$result_gdk_pixbuf"
       fi
     done
   fi
@@ -981,21 +981,21 @@ function build_gdk_pixbuf {
   readonly result_gdk_pixbuf 2> /dev/null
 }
 
-function build_lib_path {
-  declare -n result_lib_path=$1
+function build_library_path {
+  declare -n result_library_path=$1
   shift
 
-  declare lib_paths=()
-  declare lib_root_path
-  for lib_root_path in "$distribution_path" "$root_path" ''; do
-    declare lib_relative_path
-    for lib_relative_path in {,/usr}/lib{,32,64} {,/usr}/lib/{i386,x86_64}-linux-gnu /usr/lib/{i386,x86_64}-linux-gnu/alsa-lib; do
-      lib_paths+=("$lib_root_path$lib_relative_path")
+  declare library_paths=()
+  declare library_root_path
+  for library_root_path in "$distribution_path" "$root_path" ''; do
+    declare library_relative_path
+    for library_relative_path in {,/usr}/lib{,32,64} {,/usr}/lib/{i386,x86_64}-linux-gnu /usr/lib/{i386,x86_64}-linux-gnu/alsa-lib; do
+      library_paths+=("$library_root_path$library_relative_path")
     done
   done
-  readonly lib_paths
+  readonly library_paths
 
-  build_directory_list result_lib_path "${lib_paths[@]}"
+  build_directory_list result_library_path "${library_paths[@]}"
 }
 
 function check_firejail {
