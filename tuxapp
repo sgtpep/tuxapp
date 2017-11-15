@@ -901,16 +901,14 @@ function build_environment {
   result_environment=()
 
   [[ ${executable_arguments[0]} != AppRun ]] || result_environment[APPDIR]=$distribution_path
-  result_environment[PATH]=$PATH:$root_path/usr/bin:$root_path/bin
-
-  build_library_path result_environment\[LD_LIBRARY_PATH\]
-  build_gdk_pixbuf result_environment\[GDK_PIXBUF_MODULE_FILE\] "${result_environment[LD_LIBRARY_PATH]}"
-
-  result_environment[PYTHONHOME]=$root_path/usr
   build_directory_list result_environment[PYTHONPATH] "$distribution_path"/usr/lib/python*/dist-packages "$root_path"/usr/lib/python*{,/dist-packages,/plat-*}
-
   build_directory_list result_environment[QT_PLUGIN_PATH] "$root_path"/usr/lib/*-linux-gnu/qt5/plugins
   build_directory_list result_environment[QT_QPA_PLATFORM_PLUGIN_PATH] "$root_path"/usr/lib/*-linux-gnu/qt5/plugins/platforms
+  build_library_path result_environment\[LD_LIBRARY_PATH\]
+  result_environment[PATH]=$PATH:$root_path/usr/bin:$root_path/bin
+  result_environment[PYTHONHOME]=$root_path/usr
+
+  build_gdk_pixbuf result_environment\[GDK_PIXBUF_MODULE_FILE\] "${result_environment[LD_LIBRARY_PATH]}"
 
   if type firejail &> /dev/null; then
     result_environment[BROWSER]=$browser_path
