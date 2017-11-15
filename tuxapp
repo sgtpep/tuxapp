@@ -521,7 +521,7 @@ fetch_app_version_memoized = \
           ('-Sq', '-O', '-', '--header', "Accept-Encoding: gzip", url),
         )),
         quote_argument(pattern),
-      )), flags=re.S), 0, 1) or '').replace('/', '-')
+      )), flags=re.S), 0, 1) or '').replace('/', '-').strip()
   )))
 
 fetch_appfile = \
