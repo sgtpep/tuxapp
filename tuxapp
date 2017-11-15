@@ -905,11 +905,8 @@ function build_environment {
   build_library_path result_environment\[LD_LIBRARY_PATH\]
   build_gdk_pixbuf result_environment\[GDK_PIXBUF_MODULE_FILE\] "${result_environment[LD_LIBRARY_PATH]}"
 
-  declare -r python_paths=("$root_path"/usr/lib/python*{,/plat-*})
-  if [[ -d ${python_paths[0]} ]]; then
-    result_environment[PYTHONHOME]=${python_paths[0]}
-    build_directory_list result_environment[PYTHONPATH] "${python_paths[@]}"
-  fi
+  result_environment[PYTHONHOME]=$root_path/usr
+  build_directory_list result_environment[PYTHONPATH] "$distribution_path"/usr/lib/python*/dist-packages "$root_path"/usr/lib/python*{,/dist-packages,/plat-*}
 
   if type firejail &> /dev/null; then
     result_environment[BROWSER]=$browser_path
