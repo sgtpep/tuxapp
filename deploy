@@ -35,7 +35,7 @@ username="$USER"
 SSH
 
 ! grep -q "^debian:" /etc/passwd || userdel -r debian
-grep -q "^$username:" /etc/passwd || useradd -m -G sudo -s /bin/bash "$username"
+grep -q "^$username:" /etc/passwd || useradd -m -G adm,sudo -s /bin/bash "$username"
 grep -q "^$username:[^!]" /etc/shadow || chpasswd -e <<< "$username:$password"
 
 [[ -f /etc/netrc ]] || echo "$netrc" > /etc/netrc
