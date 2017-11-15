@@ -830,6 +830,7 @@ install_app_package = lambda app, path, excludes=(): \
   extract_package_name(path) \
     if is_app_package_updated(app, path) else \
   silences(unpack_package)(path, get_app_root_path(app), tuple("--exclude=.{}".format(path) for path in excludes)) and \
+  patch_app_package(app, extract_package_name(path)) and \
   write_file(get_app_package_version_path(app, extract_package_name(path)), "{}\n".format(extract_package_version(path))) and \
   extract_package_name(path)
 
@@ -1126,6 +1127,19 @@ patch_app_distribution = lambda app: \
   True
 
 patch_app_distribution_file = lambda app, path, patch: write_file("{}/{}".format(get_app_distribution_path(app), path), patch(read_file("{}/{}".format(get_app_distribution_path(app), path))))
+
+patch_app_package = lambda app, package: \
+  write_file("{}/usr/bin/qt.conf".format(get_app_root_path(app)), r"""[Paths]
+Data = {0}/usr/share/qt5
+LibraryExecutables = {1}/qt5/libexec
+Translations = {0}/usr/share/qt5/translations
+""".format(
+  get_app_root_path(app),
+  glob.glob("{}/usr/lib/*-linux-gnu".format(get_app_root_path(app)))[0],
+)) and \
+  symlink_file("{}/usr/bin/qt.conf".format(get_app_root_path(app)), "{}/qt5/libexec/qt.conf".format(glob.glob("{}/usr/lib/*-linux-gnu".format(get_app_root_path(app)))[0])) \
+    if package == 'libqt5webenginecore5' else \
+  True
 
 patch_executable = lambda path: \
   write_file(path, re.sub(r"^(#!)[^\s]*/([^\s]+)", r"\1/usr/bin/env \2", read_file(path), 1)) \
