@@ -38,11 +38,7 @@ def generate_app_pages(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
-    return functools.reduce(
-      lambda result, app_result: result and app_result,
-      pool.imap_unordered(generate_app_page_worker, apps),
-      True,
-    )
+    return functools.reduce(lambda result, app_result: result and app_result, pool.imap_unordered(generate_app_page_worker, apps), True)
 
 build_absolute_url = lambda url='': "https://tuxapp.org/{}".format(url)
 

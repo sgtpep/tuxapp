@@ -215,11 +215,7 @@ def update_apps_info(apps):
   import contextlib
   import multiprocessing
   with contextlib.closing(multiprocessing.Pool(10)) as pool:
-    return functools.reduce(
-      lambda result, app_result: result and app_result,
-      pool.imap_unordered(update_app_info_worker, apps),
-      True,
-    )
+    return functools.reduce(lambda result, app_result: result and app_result, pool.imap_unordered(update_app_info_worker, apps), True)
 
 are_app_debian_screenshots_ignored = lambda app: \
   app in (
@@ -280,11 +276,7 @@ main = \
   tuxapp.silences(
     lambda arguments=tuple(sys.argv[1:]): \
       update_apps_info(get_apps(arguments)) and \
-      functools.reduce(
-        lambda result, app: result and update_all_app_files(app),
-        get_apps(arguments),
-        True,
-      )
+      functools.reduce(lambda result, app: result and update_all_app_files(app), get_apps(arguments), True)
   ))
 
 normalize_url = lambda page_url, url, base_url=None: \
