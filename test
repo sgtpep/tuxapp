@@ -223,6 +223,7 @@ install_package = \
 
 is_library_text = lambda string: \
   "/nacl_helper: error while loading shared libraries:" not in string and \
+  "ldd: warning: you do not have execution permission for " not in string and \
   extract_library(string) and \
   extract_library(string) not in (
     "libGLESv2.so",
