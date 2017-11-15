@@ -13,5 +13,5 @@ name=qutebrowser
 note=
 packages=libqt5gui5 libqt5sql5-sqlite libqt5webengine-data python3 python3-attr python3-jinja2 python3-pkg-resources python3-pygments python3-pyqt5 python3-pyqt5.qtopengl python3-pyqt5.qtquick python3-pyqt5.qtsql python3-pyqt5.qtwebengine python3-yaml
 title=A keyboard-driven browser
-version-regex=/download/v([^/]+)
+version-regex=/qutebrowser_([^_]+)
 version-url=https://github.com/qutebrowser/qutebrowser/releases/latest
