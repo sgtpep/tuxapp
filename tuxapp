@@ -693,11 +693,6 @@ get_package_groups = lambda: \
       'libgtk-3-0',
       'libxt6',
     ),
-    'group-python': (
-      'libpython2.7',
-      'libpython2.7-minimal',
-      'libpython2.7-stdlib',
-    ),
   }
 
 get_package_list_archive_path = lambda url: "{}{}".format(get_package_list_path(url), os.path.splitext(url)[1])
