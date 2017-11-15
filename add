@@ -223,7 +223,7 @@ detect_app_package_groups = lambda filenames: \
   ('group-chromium',) \
     if "nw_100_percent.pak" in filenames else \
   ('group-electron',) \
-    if "atom.asar" in filenames or "cef.pak" in filenames or "electron.asar" in filenames else \
+    if "atom.asar" in filenames or "cef.pak" in filenames or "electron.asar" in filenames or "nw.pak" in filenames else \
   ()
 
 detect_app_packages = lambda app, packages='', installed_packages='': \
