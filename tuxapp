@@ -876,6 +876,25 @@ function build_command_arguments {
   readonly result_command_arguments
 }
 
+function build_directory_list {
+  declare -n result_directory_list=$1
+  shift
+
+  declare directory_paths=()
+  declare directory_path
+  for directory_path; do
+    [[ ! -d $directory_path ]] || directory_paths+=("$directory_path")
+  done
+  readonly directory_paths
+
+  declare -r ifs=$IFS
+  IFS=:
+  result_directory_list=${directory_paths[*]}
+  IFS=$ifs
+
+  readonly result_directory_list 2> /dev/null
+}
+
 function build_environment {
   declare -n result_environment=$1
   shift
@@ -886,6 +905,12 @@ function build_environment {
 
   build_lib_path result_environment\[LD_LIBRARY_PATH\]
   build_gdk_pixbuf result_environment\[GDK_PIXBUF_MODULE_FILE\] "${result_environment[LD_LIBRARY_PATH]}"
+
+  declare -r python_paths=("$root_path"/usr/lib/python*{,/plat-*})
+  if [[ -d ${python_paths[0]} ]]; then
+    result_environment[PYTHONHOME]=${python_paths[0]}
+    build_directory_list result_environment[PYTHONPATH] "${python_paths[@]}"
+  fi
 
   if type firejail &> /dev/null; then
     result_environment[BROWSER]=$browser_path
@@ -970,18 +995,12 @@ function build_lib_path {
   for lib_root_path in "$distribution_path" "$root_path" ''; do
     declare lib_relative_path
     for lib_relative_path in {,/usr}/lib{,32,64} {,/usr}/lib/{i386,x86_64}-linux-gnu /usr/lib/{i386,x86_64}-linux-gnu/alsa-lib; do
-      declare lib_path=$lib_root_path$lib_relative_path
-      [[ ! -d $lib_path ]] || lib_paths+=("$lib_path")
+      lib_paths+=("$lib_root_path$lib_relative_path")
     done
   done
   readonly lib_paths
 
-  declare -r ifs=$IFS
-  IFS=:
-  result_lib_path=${lib_paths[*]}
-  IFS=$ifs
-
-  readonly result_lib_path 2> /dev/null
+  build_directory_list result_lib_path "${lib_paths[@]}"
 }
 
 function check_firejail {
