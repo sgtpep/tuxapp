@@ -144,7 +144,7 @@ parse_appfile_keys = lambda app: tuple(key for key, _ in parse_appfile(app))
 
 validate_app = lambda app: \
   validate_text(app) and \
-  tuxapp.asserts("Invalid characters")(lambda app: bool(re.match("^[a-z0-9-]*$", app)))(app) and \
+  tuxapp.asserts("Invalid character")(lambda app: bool(re.match("^[a-z0-9-]*$", app)))(app) and \
   tuxapp.asserts("Edge dash")(lambda app: not app.startswith('-') and not app.endswith('-'))(app) and \
   tuxapp.asserts("Continuous dashes")(lambda app: not re.search(r"-{2}", app))(app)
 
@@ -195,12 +195,12 @@ validate_appfile_item = tuxapp.asserts("Unknown key")(
 )
 
 validate_appfile_keys = lambda app: \
-  tuxapp.asserts("Extra lines")(lambda app: all('=' in line for line in tuxapp.read_appfile(app).splitlines()))(app) and \
+  tuxapp.asserts("Extra line")(lambda app: all('=' in line for line in tuxapp.read_appfile(app).splitlines()))(app) and \
   tuxapp.asserts("No trailing newline")(lambda app: tuxapp.read_appfile(app).endswith('\n'))(app) and \
   tuxapp.asserts("Not sorted")(lambda app: parse_appfile_keys(app) == tuple(sorted(parse_appfile_keys(app))))(app) and \
-  tuxapp.asserts("Extraneous keys")(lambda app: set(parse_appfile_keys(app)) <= set(get_appfile_keys()))(app) and \
-  tuxapp.asserts("Missing keys")(lambda app: set(parse_appfile_keys(app)) >= set(get_appfile_keys()))(app) and \
-  tuxapp.asserts("Duplicated keys")(lambda app: sorted(set(parse_appfile_keys(app))) == sorted(parse_appfile_keys(app)))(app) and \
+  tuxapp.asserts("Extraneous key")(lambda app: set(parse_appfile_keys(app)) <= set(get_appfile_keys()))(app) and \
+  tuxapp.asserts("Missing key")(lambda app: set(parse_appfile_keys(app)) >= set(get_appfile_keys()))(app) and \
+  tuxapp.asserts("Duplicated key")(lambda app: sorted(set(parse_appfile_keys(app))) == sorted(parse_appfile_keys(app)))(app) and \
   tuxapp.asserts("Unknown error")(lambda app: parse_appfile_keys(app) == get_appfile_keys())(app)
 
 validate_capitalized = tuxapp.asserts("Not capitalized")(
@@ -226,14 +226,14 @@ validate_description = lambda app, description: \
 validate_desktop_entry = lambda entry: \
   not entry or \
   validate_text(entry) and \
-  tuxapp.asserts("Extraneous keys")(lambda lines: all('=' in line for line in lines))(entry.split("\\n")) and \
-  tuxapp.asserts("Duplicated keys")(lambda keys: sorted(set(keys)) == sorted(keys))(tuple(line.split('=', 1)[0] for line in entry.split("\\n"))) and \
-  tuxapp.asserts("Unsupported keys")(lambda keys: all(key in ('Terminal',) for key in keys))(tuple(line.split('=', 1)[0] for line in entry.split("\\n")))
+  tuxapp.asserts("Extraneous key")(lambda lines: all('=' in line for line in lines))(entry.split("\\n")) and \
+  tuxapp.asserts("Duplicated key")(lambda keys: sorted(set(keys)) == sorted(keys))(tuple(line.split('=', 1)[0] for line in entry.split("\\n"))) and \
+  tuxapp.asserts("Unsupported key")(lambda keys: all(key in ('Terminal',) for key in keys))(tuple(line.split('=', 1)[0] for line in entry.split("\\n")))
 
 validate_download_url = lambda app, architecture, urls: \
   architecture != 'x86-64' and not urls or \
   validate_text(urls) and \
-  tuxapp.asserts("Duplicated items")(lambda urls: sorted(set(urls.split())) == sorted(urls.split()))(urls) and \
+  tuxapp.asserts("Duplicated item")(lambda urls: sorted(set(urls.split())) == sorted(urls.split()))(urls) and \
   tuxapp.asserts("Contains the version number")(lambda app: tuxapp.fetch_app_version(app) not in urls)(app) and \
   all(validate_url(tuxapp.filter_app_download_url(app, url)) for url in urls.split())
 
@@ -284,7 +284,7 @@ validate_packages = lambda packages, list_paths=None: \
   validate_text(packages) and \
   tuxapp.asserts("Not sorted")(lambda packages: packages.split() == sorted(packages.split()))(packages) and \
   tuxapp.asserts("Unknown group")(lambda packages: all(package in tuxapp.get_package_groups() for package in packages.split() if package.startswith('group-')))(packages) and \
-  tuxapp.asserts("Duplicated items")(lambda packages: sorted(set(packages.split())) == sorted(packages.split()))(packages) and \
+  tuxapp.asserts("Duplicated item")(lambda packages: sorted(set(packages.split())) == sorted(packages.split()))(packages) and \
   tuxapp.asserts("Group already contains a package")(lambda packages: not set(packages.split()) & set(tuxapp.expand_packages(package for package in packages.split() if package.startswith('group-'))))(packages) and \
   all(tuxapp.parse_package_lists(package, list_paths) for package in packages.split() if not package.startswith('group-'))
 
