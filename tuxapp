@@ -762,6 +762,7 @@ install_app = \
   locks(
     lambda app: \
       install_app_distribution(app) and \
+      patch_app_distribution(app) and \
       install_app_appfile_packages(app) and \
       install_app_desktop_entry(app) and \
       get_app_path(app)
@@ -1096,6 +1097,13 @@ parse_package_lists = \
   asserts("Unknown package: {}")(
     lambda package, paths=None: read_process(('grep', '-Fh', '-C', '1', '-m', '1', r"/{}_".format(package)) + (paths or update_package_lists())).rstrip('\n').split("\n--\n", 1)[0]
   ))
+
+patch_app_distribution = lambda app: \
+  patch_app_distribution_file(app, "usr/bin/mysql-workbench", lambda content: re.sub(r"(^destdir=).*", r"\1${0%/*/*/*}", re.sub(r"(^\s*)catchsegv ", r"\1", content, 0, re.M), 0, re.M)) \
+    if app == 'mysql-workbench' else \
+  True
+
+patch_app_distribution_file = lambda app, path, patch: write_file("{}/{}".format(get_app_distribution_path(app), path), patch(read_file("{}/{}".format(get_app_distribution_path(app), path))))
 
 pipe_process = lambda file, process, offset=0, size=None: \
   copy_file_content(file, process.stdin, offset, size) and \

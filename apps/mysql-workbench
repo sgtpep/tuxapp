@@ -1,0 +1,17 @@
+category=development
+description=MySQL Workbench provides data modeling, SQL development, and comprehensive administration tools for server configuration, user administration, backup, and much more.
+desktop-entry=
+download-x86-64-url=https://dev.mysql.com/get/Downloads/MySQLGUITools/mysql-workbench-community-{version}-1ubuntu16.10-amd64.deb
+download-x86-url=
+executable=mysql-workbench
+firejail=
+free-license=
+group=database-management
+homepage-url=https://www.mysql.com/products/workbench/
+icon-url=https://labs.mysql.com/common/logos/mysql-logo.svg
+name=MySQL Workbench
+note=
+packages=libgnome-keyring0 libpcrecpp0v5 libzip4
+title=A unified visual tool for database architects, developers, and DBAs
+version-regex=<h1>MySQL Workbench ([^<]+)
+version-url=https://dev.mysql.com/downloads/workbench/

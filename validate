@@ -114,6 +114,7 @@ get_groups = lambda: \
     'audio-streaming',
     'code-editors',
     'content-management',
+    'database-management',
     'ebook-utilities',
     'email-clients',
     'file-managers',
