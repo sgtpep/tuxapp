@@ -670,6 +670,19 @@ get_message = lambda name: \
     'firejail-x11': "Warning: X11 sandboxing is not enabled for this app.", # "To prevent it from reading any window contents and input events install this app with the --x11 option."
   }[name]
 
+get_package_excludes = lambda package: \
+  (
+    "/etc",
+    "/sbin",
+    "/usr/sbin",
+    "/var",
+  ) + \
+  (("/usr/share",) if package != 'libqt5webengine-data' else ()) + \
+  ((
+    "/bin",
+    "/usr/bin",
+  ) if package.startswith('lib') and package != 'libarchive-tools' else ())
+
 get_package_groups = lambda: \
   {
     'group-chromium': (
@@ -767,16 +780,7 @@ install_app = \
       get_app_path(app)
   )))
 
-install_app_appfile_packages = lambda app, packages=None: \
-  all(install_app_packages(app, query_appfile_packages(app) if packages is None else packages, (
-    "/bin",
-    "/etc",
-    "/sbin",
-    "/usr/bin",
-    "/usr/sbin",
-    "/usr/share",
-    "/var",
-  )))
+install_app_appfile_packages = lambda app, packages=None: all(install_app_packages(app, query_appfile_packages(app) if packages is None else packages))
 
 install_app_browser = lambda app: \
   write_executable_file("{}/usr/bin/browser".format(get_app_root_path(app)), r"""#!/bin/sh
@@ -830,7 +834,7 @@ install_app_package = lambda app, path, excludes=(): \
   extract_package_name(path)
 
 install_app_packages = logs(lambda app, packages, *args, **kwargs: not are_app_packages_updated(app, packages) and "Installing packages: {}".format(", ".join(sorted(resolve_outdated_app_packages(app, packages)))))(
-  lambda app, packages, excludes=(): tuple(install_app_package(app, path, excludes) for path in download_app_packages(app, resolve_package_urls_cached(packages)))
+  lambda app, packages: tuple(install_app_package(app, path, get_package_excludes(extract_package_name(path))) for path in download_app_packages(app, resolve_package_urls_cached(packages)))
 )
 
 install_app_runner = lambda app: \
