@@ -13,5 +13,5 @@ name=fman
 note=
 packages=libgirepository-1.0-1 libqt5gui5
 title=Dual-pane file manager
-version-regex=Version ([^\s]+)
+version-regex=Version ([^<]+)
 version-url=https://fman.io/download

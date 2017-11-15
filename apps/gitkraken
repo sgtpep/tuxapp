@@ -13,5 +13,5 @@ name=GitKraken
 note=
 packages=group-electron libcurl3 libgnome-keyring0
 title=Git GUI
-version-regex=>Latest release: ([^<]+)
+version-regex=Latest release: ([^<]+)
 version-url=https://www.gitkraken.com/download
