@@ -7,7 +7,7 @@ import re
 import sys
 for line in sys.stdin:
   if line.startswith(\"+++ \"):
-    filtered_line = line.replace(\"+++ b$2\", '.', 1).rstrip('\n')
+    filtered_line = line.replace(\"\+\+\+ b$2\", '.', 1).rstrip('\n')
   else:
     filtered_line = re.sub(r\"(data:image/.+?;).+?(\\\"|-\]|\+})\", r\"\1...\2\", '\n'.join(re.findall(r\"\[-.+?-\]|{\+.+?\+}\", line)))
   if filtered_line:
