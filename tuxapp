@@ -1114,7 +1114,7 @@ move_directory = lambda path, destination_path: \
 parse_package_lists = \
   memoizes()(
   asserts("Unknown package: {}")(
-    lambda package, paths=None: read_process(('grep', '-Fh', '-C', '1', '-m', '1', r"/{}_".format(package)) + (paths or update_package_lists())).rstrip('\n').split("\n--\n", 1)[0]
+    lambda package, paths=None: read_process(('grep', '-h', '-A', '4', '-m', '1', r"^\(Package: {0}$\|Provides:.* {0}\( \|$\)\)".format(package)) + (paths or update_package_lists())).rstrip('\n').split("\n--\n", 1)[0].split("\n\n", 1)[0]
   ))
 
 patch_app_distribution = lambda app: \
@@ -1149,7 +1149,7 @@ query_appfile_version_url = lambda app: query_appfile(app, 'version-url') or que
 query_package_data = lambda path, key: parse_package_data(path).get(key)
 
 query_package_depends = memoizes()(
-  lambda package: tuple((search(r"(?<=^Depends: ).*$", parse_package_lists(package), re.M) or '').split())
+  lambda package: tuple(package for line in parse_package_lists(package).splitlines() if re.match(r"^(Depends|Pre-Depends):", line) for package in line.split(':', 1)[1].split())
 )
 
 query_package_url = memoizes()(
@@ -1293,7 +1293,7 @@ unpack_tarball = \
 
 update_package_list = lambda url: \
   call_process(r"""
-  xzgrep "^\(\(Depends\|Filename\): \|$\)" {} | \
+  xzgrep "^\(\(Depends\|Filename\|Package\|Pre-Depends\|Provides\): \|$\)" {} | \
   sed "s/ ([^)]\+)//g; s/ | [^,]\+//g; s/:any//g; s/, / /g; s/^Filename: /\0{}\//" > {}
   """.format(
     quote_argument(get_package_list_archive_path(url)),
