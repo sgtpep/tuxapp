@@ -299,7 +299,7 @@ parse_app_debian_screenshot_urls = lambda app: \
     if are_app_debian_screenshots_ignored(app) else \
   tuple(url for url in parse_screenshot_urls("https://screenshots.debian.net/package/{}".format(app)) if not url.endswith("/no-screenshots-available.svg"))
 
-parse_app_screenshot_urls = lambda app, url: parse_screenshot_urls(url) + parse_app_debian_screenshot_urls(app)
+parse_app_screenshot_urls = lambda app, url: parse_screenshot_urls(parse_screenshots_url(url) or url) + parse_app_debian_screenshot_urls(app)
 
 parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url_cached(url)) or url, url)
 
@@ -331,7 +331,7 @@ parse_github_repository = lambda url: check_github_repository(extract_github_rep
 
 parse_image_url = lambda url: normalize_url(url, parse_html(ImageURLParser, fetch_url_cached(url)))
 
-parse_screenshot_urls = lambda url: tuple(normalize_url(url, screenshot_url) for screenshot_url in parse_html(ScreenshotURLsParser, fetch_url_cached(parse_screenshots_url(url) or url)) if normalize_url(url, screenshot_url) and not is_screenshot_url_ignored(url, screenshot_url))
+parse_screenshot_urls = lambda url: tuple(normalize_url(url, screenshot_url) for screenshot_url in parse_html(ScreenshotURLsParser, fetch_url_cached(url)) if normalize_url(url, screenshot_url) and not is_screenshot_url_ignored(url, screenshot_url))
 
 parse_screenshots_url = lambda url: normalize_url(url, parse_html(ScreenshotsURLParser, fetch_url_cached(url)))
 
