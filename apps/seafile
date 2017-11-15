@@ -1,0 +1,17 @@
+category=network
+description=Seafile is an open source, self-hosted file sync and share solution with high performance and reliability. Sync, access, and collaborate on files on your own server or private cloud.
+desktop-entry=
+download-x86-64-url=https://deb.seadrive.org/stretch/pool/main/s/seafile-gui/seafile-gui_{version}_amd64.deb https://deb.seadrive.org/stretch/pool/main/c/ccnet/ccnet_6.0.4_amd64.deb https://deb.seadrive.org/stretch/pool/main/s/seadrive-daemon/seadrive-daemon_0.8.0_amd64.deb https://deb.seadrive.org/stretch/pool/main/l/libccnet0/libccnet0_6.0.4_amd64.deb https://deb.seadrive.org/stretch/pool/main/l/libseafile0/libseafile0_{version}_amd64.deb https://deb.seadrive.org/stretch/pool/main/l/libsearpc1/libsearpc1_3.0.8.3_amd64.deb
+download-x86-url=
+executable=seafile-applet
+firejail=
+free-license=yes
+group=cloud-storage
+homepage-url=https://www.seafile.com/en/home/
+icon-url=https://avatars0.githubusercontent.com/u/1948782
+name=Seafile
+note=
+packages=libevent-2.0-5 libjansson4 libqt5gui5 libqt5webkit5 libqt5network5  libqt5core5a  libqt5dbus5  libqt5widgets5  libsqlite3-0
+title=Open-source file sync and share software
+version-regex=/seafile-gui_([^_]+)
+version-url=https://deb.seadrive.org/dists/stretch/main/binary-amd64/Packages
