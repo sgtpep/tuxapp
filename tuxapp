@@ -762,7 +762,6 @@ install_app = \
   locks(
     lambda app: \
       install_app_distribution(app) and \
-      patch_app_distribution(app) and \
       install_app_appfile_packages(app) and \
       install_app_desktop_entry(app) and \
       get_app_path(app)
@@ -813,6 +812,7 @@ install_app_distribution = lambda app: \
     fetch_app_version(app),
     hash_md5(url),
   )) for url in query_appfile_download_urls(app))) and \
+  patch_app_distribution(app) and \
   write_file(get_app_version_path(app), "{}\n".format(fetch_app_version(app))) and \
   get_app_distribution_path(app) \
 
