@@ -359,6 +359,8 @@ update_all_app_files = lambda app: \
   update_app_files(app, get_app_screenshot_path, query_app_info(app, 'screenshot-urls').split()) and \
   update_app_files(app, get_app_video_thumbnail_path, tuple(url for url in query_app_info(app, 'video-thumbnail-urls').split() if url != '-'))
 
+update_app = lambda app: update_app_info(app) and update_all_app_files(app)
+
 update_app_file = lambda app, get_path, url: update_app_files(app, get_path, (url,) if url else ())
 
 update_app_files = lambda app, get_path, urls: \

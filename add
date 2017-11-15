@@ -6,6 +6,7 @@ import os
 import re
 import sys
 
+generate = imp.load_source('generate', os.path.join(os.path.dirname(__file__), 'generate'))
 parse = imp.load_source('parse', os.path.join(os.path.dirname(__file__), 'parse'))
 test = imp.load_source('test', os.path.join(os.path.dirname(__file__), 'test'))
 tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
@@ -144,12 +145,13 @@ def detect_app_library_packages(app, packages=()):
           return detect_app_library_packages(app, packages + (package,))
   return packages
 
-def execute_app(appfile):
+def execute_app(app):
   for distribution in test.get_test_distributions():
-    print("Executing {} on {}".format(appfile['app'], distribution), file=sys.stderr)
-    tuxapp.call_process(test.build_bwrap_arguments(distribution, appfile['app']))
+    print("Executing {} on {}".format(app, distribution), file=sys.stderr)
+    tuxapp.call_process(test.build_bwrap_arguments(distribution, app))
     if not input_boolean("Continue?"):
       raise KeyboardInterrupt
+  return True
 
 def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
   try:
@@ -299,7 +301,7 @@ get_update_appfile_functions = lambda: \
     update_appfile_download_x86_url,
     update_appfile_executable,
     update_appfile_packages,
-    execute_app,
+    update_appfile_finish,
   )
 
 input_app = validates(lambda *args, **kwargs: \
@@ -426,6 +428,12 @@ update_appfile_download_x86_64_url = lambda appfile: update_appfile(appfile, 'do
 update_appfile_download_x86_url = lambda appfile: update_appfile(appfile, 'download-x86-url', input_download_url(appfile['app'], 'x86', appfile.get('download-x86-url', '')))
 
 update_appfile_executable = lambda appfile: update_appfile(appfile, 'executable', input_executable(appfile['app'], appfile.get('executable', '')))
+
+update_appfile_finish = lambda appfile: \
+  execute_app(appfile['app']) and \
+  parse.update_app(appfile['app']) and \
+  generate.generate_app_page(appfile['app']) and \
+  open_url(generate.get_app_page_path(appfile['app']))
 
 update_appfile_free_license = lambda appfile: update_appfile(appfile, 'free-license', input_free_license(appfile.get('free-license', 'yes')))
 
