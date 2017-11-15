@@ -6,10 +6,10 @@ from __future__ import print_function
 import re
 import sys
 for line in sys.stdin:
-  if line.startswith(\"--- \"):
-    filtered_line = line.replace(\"--- a$1\", '.', 1).rstrip('\n')
+  if line.startswith(\"+++ \"):
+    filtered_line = line.replace(\"+++ b$2\", '.', 1).rstrip('\n')
   else:
-    filtered_line = re.sub(r\"(data:image/.+?;).+(\\\"|-\]|\+})\", r\"\1...\2\", '\n'.join(re.findall(r\"\[-.+?-\]|{\+.+?\+}\", line)))
+    filtered_line = re.sub(r\"(data:image/.+?;).+?(\\\"|-\]|\+})\", r\"\1...\2\", '\n'.join(re.findall(r\"\[-.+?-\]|{\+.+?\+}\", line)))
   if filtered_line:
     print(filtered_line)
 "
