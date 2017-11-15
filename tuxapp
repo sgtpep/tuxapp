@@ -951,7 +951,7 @@ function build_firejail_arguments {
     fi
     readonly profile
 
-    [[ $profile != *whitelist\ * ]] || result_firejail_arguments+=(--whitelist="$distribution_path")
+    [[ $profile != *whitelist\ * ]] || result_firejail_arguments+=(--whitelist={"$distribution_path","$root_path"})
   fi
 
   declare app_firejail_options
