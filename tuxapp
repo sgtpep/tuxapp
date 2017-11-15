@@ -1210,7 +1210,10 @@ resolve_packages = lambda packages, resolved_packages=set(): \
   functools.reduce(
     lambda packages, package: \
       packages | {package} | resolve_packages(
-        tuple(package for package in query_package_depends(package) if package.startswith('lib') and package != 'libc6' and package not in resolved_packages),
+        tuple(depend for depend in query_package_depends(package) if (depend.startswith('lib') or not package.startswith('lib')) and depend not in (
+          'dpkg',
+          'libc6',
+        ) and depend not in resolved_packages),
         packages | {package},
       ),
     packages,
