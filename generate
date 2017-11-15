@@ -22,7 +22,7 @@ tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxa
 def detect_image_extension(path):
   if 'imghdr' not in sys.modules:
     import imghdr
-    imghdr.tests.append(lambda header, file: b"<svg " in header and 'svg')
+    imghdr.tests.append(lambda header, file: (b"<?xml " in header or b"<svg " in header) and 'svg')
     imghdr.tests.append(lambda header, file: header[:4] == b"\0\0\1\0" and 'ico')
   return sys.modules['imghdr'].what(path) or ''
 
