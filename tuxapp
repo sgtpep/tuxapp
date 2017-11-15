@@ -887,10 +887,12 @@ function build_directory_list {
   done
   readonly directory_paths
 
-  declare -r ifs=$IFS
-  IFS=:
-  result_directory_list=${directory_paths[*]}
-  IFS=$ifs
+  if [[ ${directory_paths-} ]]; then
+    declare -r ifs=$IFS
+    IFS=:
+    result_directory_list=${directory_paths[*]}
+    IFS=$ifs
+  fi
 
   readonly result_directory_list 2> /dev/null
 }
