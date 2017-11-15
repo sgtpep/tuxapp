@@ -909,6 +909,9 @@ function build_environment {
   result_environment[PYTHONHOME]=$root_path/usr
   build_directory_list result_environment[PYTHONPATH] "$distribution_path"/usr/lib/python*/dist-packages "$root_path"/usr/lib/python*{,/dist-packages,/plat-*}
 
+  build_directory_list result_environment[QT_PLUGIN_PATH] "$root_path"/usr/lib/*-linux-gnu/qt5/plugins
+  build_directory_list result_environment[QT_QPA_PLATFORM_PLUGIN_PATH] "$root_path"/usr/lib/*-linux-gnu/qt5/plugins/platforms
+
   if type firejail &> /dev/null; then
     result_environment[BROWSER]=$browser_path
     result_environment[TUXAPP_URLS]=$urls_path
