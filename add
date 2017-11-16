@@ -130,7 +130,9 @@ def detect_app_library_packages(app, packages=()):
   tuxapp.install_app_runner(app)
   try:
     tuxapp.install_app_appfile_packages(app, tuxapp.expand_packages(packages))
-  except AssertionError:
+  except AssertionError as exception:
+    if exception.args:
+      print(exception.args[0], file=sys.stderr)
     return packages
   for distribution in test.get_test_distributions():
     filenames = test.detect_missing_app_libraries(distribution, app)
@@ -145,7 +147,9 @@ def detect_app_library_packages(app, packages=()):
             tuxapp.detect_debian_architecture(),
             filename,
           ), ('-Po', '-m', '1', r"(?<=\"/{}/)[^\"]+".format(tuxapp.get_debian_release())))
-        except AssertionError:
+        except AssertionError as exception:
+          if exception.args:
+            print(exception.args[0], file=sys.stderr)
           return packages
         if package and package not in packages:
           return detect_app_library_packages(app, packages + (package,))
