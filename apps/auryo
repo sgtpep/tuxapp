@@ -1,0 +1,17 @@
+category=audio
+description=Listen to SoundCloud® from the comfort of your desktop. Use keyboard shortcuts to navigate through your music.
+desktop-entry=
+download-x86-64-url=https://github.com/Superjo149/auryo/releases/download/v{version}/Auryo_{version}_amd64.deb
+download-x86-url=
+executable=opt/Auryo/auryo
+firejail=
+free-license=
+group=audio-streaming
+homepage-url=http://auryo.com/
+icon-url=http://auryo.com/favicon.ico
+name=Auryo
+note=
+packages=group-electron
+title=SoundCloud desktop client
+version-regex=/download/v([^/]+)
+version-url=https://github.com/Superjo149/auryo/releases/latest
