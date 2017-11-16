@@ -252,6 +252,8 @@ filter_downloads_url = lambda url, downloads_url: \
     "https://www.mozilla.org/en-US/thunderbird/": r"/firefox/",
   }.get(url, r"^$"), downloads_url) else downloads_url
 
+filter_url = lambda url: re.sub(r"\.pagespeed\.ce\..+$", '', url)
+
 get_app_icon_path = lambda app, url: "{}/icon-{}".format(get_app_path(app), url if url == '*' else tuxapp.hash_md5(url))
 
 get_app_image_path = lambda app, url: "{}/image-{}".format(get_app_path(app), url if url == '*' else tuxapp.hash_md5(url))
@@ -329,15 +331,15 @@ parse_github_releases_url = lambda url: check_github_repository(extract_github_r
 
 parse_github_repository = lambda url: check_github_repository(extract_github_repository(url))
 
-parse_image_url = lambda url: normalize_url(url, parse_html(ImageURLParser, fetch_url_cached(url)))
+parse_image_url = lambda url: filter_url(normalize_url(url, parse_html(ImageURLParser, fetch_url_cached(url))))
 
-parse_screenshot_urls = lambda url: tuple(normalize_url(url, screenshot_url) for screenshot_url in parse_html(ScreenshotURLsParser, fetch_url_cached(url)) if normalize_url(url, screenshot_url) and not is_screenshot_url_ignored(url, screenshot_url))
+parse_screenshot_urls = lambda url: filter(bool, tuple(filter_url(normalize_url(url, screenshot_url)) for screenshot_url in parse_html(ScreenshotURLsParser, fetch_url_cached(url)) if not is_screenshot_url_ignored(url, screenshot_url)))
 
 parse_screenshots_url = lambda url: normalize_url(url, parse_html(ScreenshotsURLParser, fetch_url_cached(url)))
 
-parse_video_poster_urls = lambda url: tuple(normalize_url(url, poster_url) or '-' for video_url, poster_url in zip(parse_html(VideoURLsParser, fetch_url_cached(url)), parse_html(VideoPosterURLsParser, fetch_url_cached(url))) if normalize_url(url, video_url))
+parse_video_poster_urls = lambda url: filter(bool, tuple(filter_url(normalize_url(url, poster_url)) or '-' for video_url, poster_url in zip(parse_html(VideoURLsParser, fetch_url_cached(url)), parse_html(VideoPosterURLsParser, fetch_url_cached(url)))))
 
-parse_video_src_urls = lambda url: tuple(normalize_url(url, video_url) for video_url in parse_html(VideoURLsParser, fetch_url_cached(url)) if normalize_url(url, video_url))
+parse_video_src_urls = lambda url: filter(bool, tuple(filter_url(normalize_url(url, video_url)) for video_url in parse_html(VideoURLsParser, fetch_url_cached(url))))
 
 parse_video_thumbnail_urls = lambda url: parse_youtube_thumbnail_urls(url) + parse_video_poster_urls(url)
 
