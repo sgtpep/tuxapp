@@ -123,6 +123,7 @@ get_groups = lambda: \
     'note-taking',
     'office-suits',
     'role-playing',
+    'sports-utilities',
     'version-control',
     'video-streaming',
     'web-browsers',
