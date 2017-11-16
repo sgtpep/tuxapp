@@ -18,9 +18,9 @@ def validates(validate_function):
     def wrapper(*args, **kwargs):
       result = None
       while True:
-        try:
+        if not sys.argv[0]:
           result = function(*args, prefill=result, **kwargs)
-        except TypeError:
+        else:
           result = function(*args if result is None else args[:-1] + (result,), **kwargs)
         try:
           validate_function(*args, result=result, **kwargs)
