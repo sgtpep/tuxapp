@@ -1089,15 +1089,15 @@ main = \
   tuxapp.does(lambda arguments=tuple(sys.argv[1:]), *args, **kwargs: arguments and tuxapp.is_command_exist('xdg-open') and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.join_arguments(get_app_page_path(tuxapp.extract_app(argument)) for argument in arguments))))(
   tuxapp.silences(
     lambda arguments=tuple(sys.argv[1:]): \
+      (arguments or tuxapp.remove_directory(get_build_path())) and \
+      generate_app_pages(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*'))) and \
       (arguments or (
-        tuxapp.remove_directory(get_build_path()) and \
         generate_category_pages(sorted(get_apps())) and \
         generate_feed() and \
         generate_group_pages(sorted(get_apps())) and \
         generate_main_page() and \
         generate_search_page()
-      )) and \
-      generate_app_pages(tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
+      ))
   )))
 
 process_lightbox = lambda html: update_lightbox(html, tuple(re.findall(r""" class="lightbox[" ].*? href="([^"]+)""", html)))
