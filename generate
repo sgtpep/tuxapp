@@ -83,7 +83,7 @@ build_app_gallery = lambda app: \
       display: inline-block;
       padding: 0.125em;
       text-align: center;
-      vertical-align: top;
+      vertical-align: middle;
       width: 50%;
     }
     @media (min-width: 30em) {
