@@ -161,6 +161,11 @@ def execute_app(app):
     tuxapp.call_process(test.build_bwrap_arguments(distribution, app))
     if not input_boolean("Continue?"):
       raise KeyboardInterrupt
+  print("Executing {} with firejail".format(app), file=sys.stderr)
+  test.install_missing_package('firejail')
+  tuxapp.execute_app(app)
+  if not input_boolean("Continue?"):
+    raise KeyboardInterrupt
   return True
 
 def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
