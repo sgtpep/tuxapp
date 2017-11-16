@@ -341,9 +341,14 @@ input_description = validates(lambda app, *args, **kwargs: validate.validate_des
   lambda app, prefill='': filter_description(input_text("Description", prefill))
 )
 
-input_download_url = validates(lambda app, architecture, *args, **kwargs: validate.validate_download_url(app, architecture, kwargs['result']))(
-  lambda app, architecture, prefill='': filter_download_url(app, input_text("Download URL ({}){}".format(architecture, '' if architecture == 'x86-64' else " (optional)"), prefill))
-)
+input_download_url = \
+  validates(
+    lambda app, architecture, *args, **kwargs: \
+      validate.validate_download_url(app, architecture, kwargs['result']) and \
+      tuxapp.asserts("Improper Content-Type")(lambda url: bool(tuxapp.search(r"\bContent-Type:\s*application/", tuxapp.fetch_headers(url), re.I)))(tuxapp.filter_app_download_url(app, kwargs['result']))
+  )(
+    lambda app, architecture, prefill='': filter_download_url(app, input_text("Download URL ({}){}".format(architecture, '' if architecture == 'x86-64' else " (optional)"), prefill))
+  )
 
 input_executable = \
   validates(
