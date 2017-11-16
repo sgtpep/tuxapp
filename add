@@ -403,7 +403,7 @@ input_version_url = validates(lambda *args, **kwargs: validate.validate_version_
 
 list_app_executables = lambda app: \
   tuxapp.install_app_distribution(app) and \
-  tuple(sorted(set(strip_bin_path(path.replace("{}/".format(tuxapp.get_app_distribution_path(app)), '', 1)) for path in tuxapp.list_app_distribution(app) if tuxapp.is_file_executable(path))))
+  tuple(sorted(set(strip_bin_path(path.replace("{}/".format(tuxapp.get_app_distribution_path(app)), '', 1)).replace(' ', r"\ ") for path in tuxapp.list_app_distribution(app) if tuxapp.is_file_executable(path))))
 
 open_url = tuxapp.does(lambda url, *args, **kwargs: url and input_boolean("Open {} in the browser?".format(url)) and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.quote_argument(url))))(lambda url: url)
 
