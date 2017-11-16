@@ -252,6 +252,13 @@ filter_downloads_url = lambda url, downloads_url: \
     "https://www.mozilla.org/en-US/thunderbird/": r"/firefox/",
   }.get(url, r"^$"), downloads_url) else downloads_url
 
+filter_unique = lambda urls, reference_urls=None: \
+  (zip(*functools.reduce(
+    lambda items, item: items + (() if item in items else (item,)),
+    zip(urls, reference_urls or urls),
+    (),
+  )) or [()])[0]
+
 filter_url = lambda url: re.sub(r"\.pagespeed\.ce\..+$", '', url)
 
 get_app_icon_path = lambda app, url: "{}/icon-{}".format(get_app_path(app), url if url == '*' else tuxapp.hash_md5(url))
@@ -376,9 +383,9 @@ update_app_info = lambda app: \
     'downloads-url': parse_downloads_url(tuxapp.query_appfile(app, 'homepage-url')),
     'github-repository': parse_github_repository(tuxapp.query_appfile(app, 'homepage-url')),
     'image-url': parse_image_url(tuxapp.query_appfile(app, 'homepage-url')),
-    'screenshot-urls': ' '.join(parse_app_screenshot_urls(app, tuxapp.query_appfile(app, 'homepage-url'))),
-    'video-thumbnail-urls': ' '.join(parse_video_thumbnail_urls(tuxapp.query_appfile(app, 'homepage-url'))),
-    'video-urls': ' '.join(parse_video_urls(tuxapp.query_appfile(app, 'homepage-url'))),
+    'screenshot-urls': ' '.join(filter_unique(parse_app_screenshot_urls(app, tuxapp.query_appfile(app, 'homepage-url')))),
+    'video-thumbnail-urls': ' '.join(filter_unique(parse_video_thumbnail_urls(tuxapp.query_appfile(app, 'homepage-url')), parse_video_urls(tuxapp.query_appfile(app, 'homepage-url')))),
+    'video-urls': ' '.join(filter_unique(parse_video_urls(tuxapp.query_appfile(app, 'homepage-url')))),
   })
 
 write_app_info = lambda app, info: tuxapp.write_file(get_app_info_path(app), ''.join("{}={}\n".format(key, info[key]) for key in sorted(info)))
