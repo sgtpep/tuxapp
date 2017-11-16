@@ -164,7 +164,7 @@ class ScreenshotURLsParser(BaseParser):
 
   def on_tag(self, tag, attributes):
     if tag in ('a', 'img') and re.search(r"\bscreen", str(attributes), re.I):
-      if tag == 'a' and attributes.get('href') and tuxapp.parse_url(attributes['href']).path.rsplit('.', 1)[-1].lower() in ('gif', 'jpeg', 'jpg', 'png', 'svg') and (not self.tag or self.tag == tag):
+      if tag == 'a' and attributes.get('href') and tuxapp.parse_url(attributes['href']).path.rsplit('.', 1)[-1].lower() in ('gif', 'jpeg', 'jpg', 'png', 'svg') and "/File:" not in attributes['href'] and (not self.tag or self.tag == tag):
         self.tag = tag
         self.add_result(attributes['href'])
       elif tag == 'img' and (not self.tag or self.tag == tag):
