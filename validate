@@ -321,7 +321,7 @@ validate_version_regex = lambda app, pattern: \
   validate_regex(pattern) and \
   tuxapp.asserts("No grouping parentheses")(lambda pattern: bool(re.search(r"\((?!\?)", pattern)) and ')' in pattern)(pattern) and \
   bool(tuxapp.fetch_app_version(app, pattern)) and \
-  tuxapp.asserts("Extraneous character in the version number")(lambda version: not re.search(r"[\s\"<>]", version))(tuxapp.fetch_app_version(app, pattern))
+  tuxapp.asserts("Extraneous character in the version number")(lambda version: not re.search(r"[\s\"<>]", version) or print("Detected version: {}".format(version)))(tuxapp.fetch_app_version(app, pattern))
 
 validate_version_url = lambda url: not url or validate_url(url)
 
