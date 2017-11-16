@@ -1,0 +1,17 @@
+category=utility
+description=Subsurface can plan and track single- and multi-tank dives using air, Nitrox or TriMix. It allows tracking of dive locations including GPS coordinates (which can also conveniently be entered using a map interface), logging of equipment used and names of other divers, and lets users rate dives and provide additional notes.
+desktop-entry=
+download-x86-64-url=https://subsurface-divelog.org/downloads/Subsurface-{version}-x86_64.AppImage
+download-x86-url=
+executable=usr/bin/subsurface
+firejail=
+free-license=yes
+group=sports-utilities
+homepage-url=https://subsurface-divelog.org/
+icon-url=https://subsurface-divelog.org/wp-content/uploads/2015/10/subsurface-icon1.png
+name=Subsurface
+note=
+packages=libgssapi-krb5-2 libqt5gui5 libusb-1.0-0
+title=An open source divelog program for recreational, tech, and free-divers
+version-regex=/Subsurface-([^-]+)-x86_64
+version-url=https://subsurface-divelog.org/download/
