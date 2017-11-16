@@ -1,0 +1,17 @@
+category=network
+description=Send high-quality group, text, voice, video, document, and picture messages anywhere in the world without SMS or MMS fees.
+desktop-entry=
+download-x86-64-url=https://updates.signal.org/desktop/apt/pool/main/s/signal-desktop-beta/signal-desktop-beta_1.0.35-beta.1_amd64.deb
+download-x86-url=
+executable=opt/Signal\ Beta/signal-desktop-beta
+firejail=
+free-license=yes
+group=instant-messengers
+homepage-url=https://signal.org/
+icon-url=https://signal.org/assets/favicon/android-icon-192x192-1d508a6d63f514f7199ce3e677c55dbd30f30809961c645ac526a278a9c9449d.png
+name=Signal
+note=
+packages=group-electron
+title=Privacy that fits in your pocket
+version-regex=/signal-desktop-beta_([^_]+)
+version-url=https://updates.signal.org/desktop/apt/dists/xenial/main/binary-amd64/Packages.gz
