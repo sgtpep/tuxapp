@@ -122,6 +122,7 @@ get_groups = lambda: \
     'instant-messengers',
     'note-taking',
     'office-suits',
+    'racing-games',
     'role-playing',
     'sports-utilities',
     'version-control',
