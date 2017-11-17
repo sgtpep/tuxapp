@@ -1,7 +1,7 @@
 category=development
 description=MySQL Workbench provides data modeling, SQL development, and comprehensive administration tools for server configuration, user administration, backup, and much more.
 desktop-entry=
-download-x86-64-url=https://dev.mysql.com/get/Downloads/MySQLGUITools/mysql-workbench-community-{version}-1ubuntu16.10-amd64.deb
+download-x86-64-url=https://dev.mysql.com/get/Downloads/MySQLGUITools/mysql-workbench-community-{version}-1ubuntu17.10-amd64.deb http://mirrors.kernel.org/ubuntu/pool/main/g/gcc-7/libstdc++6_7.2.0-8ubuntu3_amd64.deb
 download-x86-url=
 executable=mysql-workbench
 firejail=
