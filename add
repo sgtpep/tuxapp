@@ -19,9 +19,15 @@ def validates(validate_function):
       result = None
       while True:
         previous_result = result
-        result = function(*args if result is None else args[:-1] + (result,), **kwargs) if sys.argv[0] else function(*args, prefill=result, **kwargs)
+        if sys.argv[0]:
+          result = function(*args[:-1] + (args[-1] if result is None else result,), **kwargs)
+        else:
+          result = function(*args, prefill=result, **kwargs)
         try:
-          validate_function(*args[:-1], prefill=previous_result, result=result, **kwargs) if sys.argv[0] else validate_function(*args, prefill=previous_result, result=result, **kwargs)
+          if sys.argv[0]:
+            validate_function(*args[:-1] + (args[-1] if previous_result is None else previous_result,), result=result, **kwargs)
+          else:
+            validate_function(*args, prefill=previous_result, result=result, **kwargs)
         except AssertionError as exception:
           if exception.args:
             print(exception.args[0], file=sys.stderr)
