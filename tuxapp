@@ -1280,6 +1280,11 @@ unpack_app_distribution = lambda app, path: \
     if is_magic_in_file(path, b"PK") else \
   unpack_app_tarball_distribution(app, path)
 
+unpack_app_nested_distribution = lambda app: \
+  all(unpack_app_package_distribution(app, path) and remove_file(path, True) for path in list_app_distribution(app) if path.endswith(".deb")) and \
+  all(unpack_app_distribution(app, path) and remove_file(path, True) for path in list_app_distribution(app) if print(path) or re.search(r"\.AppImage$", path, re.I)) and \
+  get_app_distribution_path(app)
+
 unpack_app_package_distribution = lambda app, path: \
   unpack_package(path, get_app_distribution_path(app)) and \
   all(symlink_file(os.path.relpath("{}{}".format(get_app_distribution_path(app), os.readlink(path)), os.path.dirname(path)), path) for path in glob.iglob("{}/usr/bin/*".format(get_app_distribution_path(app))) if os.path.islink(path) and os.readlink(path).startswith('/')) and \
@@ -1288,14 +1293,14 @@ unpack_app_package_distribution = lambda app, path: \
 unpack_app_tarball_distribution = logs(lambda app, path, *args, **kwargs: "Preparing to unpack {}".format(os.path.basename(path)))(
   lambda app, path: \
     unpack_tarball(path, get_app_distribution_path(app), ("--strip-components=1",) if is_tarball_nested(path) else ()) and \
-    all(unpack_app_package_distribution(app, path) and remove_file(path, True) for path in list_app_distribution(app) if path.endswith(".deb")) and \
-    get_app_distribution_path(app)
+    unpack_app_nested_distribution(app)
 )
 
 unpack_app_zipfile_distribution = lambda app, path: \
-  move_directory(next(glob.iglob("{}/*".format(unpack_zipfile(path, "{}/unpack".format(get_app_path(app)))))), get_app_distribution_path(app)) \
+  (move_directory(next(glob.iglob("{}/*".format(unpack_zipfile(path, "{}/unpack".format(get_app_path(app)))))), get_app_distribution_path(app)) \
     if is_zipfile_nested(path) else \
-  unpack_zipfile(path, get_app_distribution_path(app))
+  unpack_zipfile(path, get_app_distribution_path(app))) and \
+  unpack_app_nested_distribution(app)
 
 unpack_package = \
   outputs(' ')(
