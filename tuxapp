@@ -702,6 +702,7 @@ get_package_groups = lambda: \
       'libgconf-2-4',
       'libgtk2.0-0',
       'libnss3',
+      'libpulse0',
       'libxss1',
       'libxtst6',
     ),
