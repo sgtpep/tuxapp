@@ -909,8 +909,6 @@ function build_environment {
 
   [[ ${executable_arguments[0]} != AppRun ]] || result_environment[APPDIR]=$distribution_path
   build_directory_list result_environment[PYTHONPATH] "$distribution_path"/usr/lib/python*/dist-packages "$root_path"/usr/lib/python*{,/dist-packages,/plat-*}
-  build_directory_list result_environment[QT_PLUGIN_PATH] "$root_path"/usr/lib/*-linux-gnu/qt5/plugins
-  build_directory_list result_environment[QT_QPA_PLATFORM_PLUGIN_PATH] "$root_path"/usr/lib/*-linux-gnu/qt5/plugins/platforms
   build_library_path result_environment\[LD_LIBRARY_PATH\]
   result_environment[PATH]=$PATH:$root_path/usr/bin:$root_path/bin
   result_environment[PYTHONHOME]=$root_path/usr
@@ -1136,15 +1134,14 @@ patch_app_distribution_file = lambda app, path, patch: write_file("{}/{}".format
 
 patch_app_package = lambda app, package: \
   write_file("{}/usr/bin/qt.conf".format(get_app_root_path(app)), r"""[Paths]
-Data = {0}/usr/share/qt5
-LibraryExecutables = {1}/qt5/libexec
-Translations = {0}/usr/share/qt5/translations
-""".format(
-  get_app_root_path(app),
-  glob.glob("{}/usr/lib/*-linux-gnu".format(get_app_root_path(app)))[0],
-)) and \
+Data = ../../share/qt5
+LibraryExecutables = qt5/libexec
+Plugins = qt5/plugins
+Prefix = {}
+Translations = ../../share/qt5/translations
+""".format(glob.glob("{}/usr/lib/*-linux-gnu".format(get_app_root_path(app)))[0])) and \
   symlink_file("{}/usr/bin/qt.conf".format(get_app_root_path(app)), "{}/qt5/libexec/qt.conf".format(glob.glob("{}/usr/lib/*-linux-gnu".format(get_app_root_path(app)))[0])) \
-    if package == 'libqt5webenginecore5' else \
+    if package in ('python-pyqt5', 'python3-pyqt5') else \
   True
 
 patch_executable = lambda path: \
