@@ -22,6 +22,18 @@ def reasserts(message):
     return wrapper
   return decorator
 
+@tuxapp.memoizes()
+@tuxapp.logs("Checking {}")
+def check_url(url):
+  try:
+    from urllib.request import Request, urlopen
+  except ImportError:
+    from urllib2 import Request, urlopen
+  try:
+    return urlopen(Request(url, headers={'User-Agent': tuxapp.get_user_agent()}), timeout=10).getcode() == 200
+  except: # pylint: disable=bare-except
+    return False
+
 def validate_appfile_worker(app, list_paths):
   try:
     return validate_appfile(app, list_paths)
@@ -52,16 +64,6 @@ check_page_contains = lambda url, string, is_case_sensitive=False: \
     r"\b{}\b".format(re.escape(re.sub(r"\s+", ' ', re.sub(r"\W+", ' ', string)))),
     fetch_url_text(url),
     0 if is_case_sensitive else re.I | re.U,
-  ))
-
-check_url = \
-  tuxapp.memoizes()(
-  tuxapp.logs("Checking {}")(
-    lambda url: \
-      tuxapp.call_process("{} > /dev/null 2>&1".format(tuxapp.join_arguments(tuxapp.build_request_arguments(
-        ('-ISs', '-X', 'GET', url),
-        ('-Sq', '-O', '-', '--spider', url),
-      ))))
   ))
 
 check_url_protocol = lambda url: url.startswith("https://") or not check_url(url.replace("http://", "https://", 1))
