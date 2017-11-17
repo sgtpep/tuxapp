@@ -381,7 +381,15 @@ build_card = lambda icon_url, name, title, url=None, count=None, tags=(), is_hea
 
 build_category_page = lambda category: \
   join_elements(
-    build_head(os.path.relpath(get_build_path(), os.path.dirname(get_category_page_path(category))), filter_category_name(category)),
+    build_head(
+      os.path.relpath(get_build_path(), os.path.dirname(get_category_page_path(category))),
+      filter_category_name(category),
+      {'description': u"{} - {} - {}".format(
+        filter_category_name(category),
+        get_category_description(category),
+        get_description(),
+      )},
+    ),
     build_header(),
     build_breadcrumbs(build_tag('h1', filter_category_name(category))),
     build_tag('p', "{}.".format(get_category_description(category))),
@@ -524,7 +532,11 @@ build_footer = tuxapp.memoizes()(
 
 build_group_page = lambda group: \
   join_elements(
-    build_head(os.path.relpath(get_build_path(), os.path.dirname(get_group_page_path(group))), filter_group_name(group)),
+    build_head(
+      os.path.relpath(get_build_path(), os.path.dirname(get_group_page_path(group))),
+      filter_group_name(group),
+      {'description': u"{} - {}".format(filter_group_name(group), get_description())},
+    ),
     build_header(),
     build_breadcrumbs(build_tag('h1', filter_group_name(group))),
   )
