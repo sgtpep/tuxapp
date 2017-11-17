@@ -1,0 +1,17 @@
+category=network
+description=Make calls, send messages and much more - freely and securely.
+desktop-entry=
+download-x86-64-url=https://download.cdn.viber.com/cdn/desktop/Linux/viber.deb
+download-x86-url=
+executable=opt/viber/Viber
+firejail=
+free-license=
+group=instant-messengers
+homepage-url=https://www.viber.com/
+icon-url=https://www.viber.com/app/themes/viber.com/assets/images/favicon.png
+name=Viber
+note=
+packages=libasound2 libnss3 libpulse-mainloop-glib0 libqt5gui5 libxcomposite1 libxcursor1 libxrandr2 libxrender1 libxss1
+title=Free calls and messages
+version-regex=ETag:\s*"([^"]+)
+version-url=https://download.cdn.viber.com/cdn/desktop/Linux/viber.deb
