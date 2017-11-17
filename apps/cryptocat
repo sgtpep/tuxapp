@@ -1,0 +1,17 @@
+category=network
+description=Cryptocat is free software with a simple mission: everyone should be able to chat with their friends in privacy.
+desktop-entry=
+download-x86-64-url=https://download.crypto.cat/client/Cryptocat-linux-x64.zip
+download-x86-url=
+executable=
+firejail=
+free-license=yes
+group=instant-messengers
+homepage-url=https://crypto.cat/
+icon-url=https://crypto.cat/img/logo.png
+name=Cryptocat
+note=
+packages=group-electron
+title=Chat with your friends, securely
+version-regex=([^ ]+) Release
+version-url=https://crypto.cat/news.html
