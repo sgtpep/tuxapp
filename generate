@@ -48,7 +48,7 @@ build_actions = lambda *children: \
     @media (min-width: 30em) {
       .actions {
         float: right;
-        margin: 0;
+        margin: 0 0 0 0.5em;
       }
     }
     .actions > * {
