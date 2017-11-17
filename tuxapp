@@ -681,11 +681,11 @@ get_package_excludes = lambda package: \
     "/usr/sbin",
     "/var",
   ) + \
-  (("/usr/share",) if package != 'libqt5webengine-data' else ()) + \
   ((
     "/bin",
     "/usr/bin",
-  ) if package.startswith('lib') and package != 'libarchive-tools' else ())
+  ) if package.startswith('lib') and package != 'libarchive-tools' else ()) + \
+  (() if package == 'libqt5webengine-data' else ("/usr/share",))
 
 get_package_groups = lambda: \
   {
