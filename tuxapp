@@ -997,7 +997,7 @@ function build_library_path {
 
   declare library_paths=()
   declare library_root_path
-  for library_root_path in "$distribution_path" "$root_path" ''; do
+  for library_root_path in "$distribution_path" "$distribution_path"/opt/* "$root_path" ''; do
     declare library_relative_path
     for library_relative_path in {,/usr}/lib{,32,64} {,/usr}/lib/{i386,x86_64}-linux-gnu /usr/lib/{i386,x86_64}-linux-gnu/alsa-lib; do
       library_paths+=("$library_root_path$library_relative_path")
