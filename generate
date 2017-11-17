@@ -515,6 +515,7 @@ build_footer = tuxapp.memoizes()(
       build_tag(".footer-copyright", None,
         build_tag('p', get_copyright()),
         build_tag('p', u"Linux\N{REGISTERED SIGN} is the registered trademark of Linus Torvalds in the U.S. and other countries."),
+        build_tag('p', None, "Hosting is sponsored by {}.".format(build_tag('a', "DigitalOcean", href="https://www.digitalocean.com/"))),
       ),
       build_script(r"""
       if (location.protocol == "file:") {
