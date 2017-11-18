@@ -136,6 +136,16 @@ class DownloadsURLParser(BaseParser):
     if tag == 'a':
       self.read_content(tag, attributes)
 
+class GitHubScreenshotURLsParser(BaseParser):
+  is_article = False
+  is_multiple = True
+
+  def on_tag(self, tag, attributes):
+    if tag == 'article':
+      self.is_article = True
+    elif tag == 'a' and attributes.get('href') and is_image_url(attributes['href']) and self.is_article:
+      self.add_result(attributes['href'])
+
 class ImageURLParser(BaseParser):
   priority = (
     'og-image',
@@ -310,7 +320,10 @@ parse_app_debian_screenshot_urls = lambda app: \
     if are_app_debian_screenshots_ignored(app) else \
   tuple(url for url in parse_screenshot_urls("https://screenshots.debian.net/package/{}".format(app)) if not url.endswith("/no-screenshots-available.svg"))
 
-parse_app_screenshot_urls = lambda app, url: parse_screenshot_urls(parse_screenshots_url(url) or url) + parse_app_debian_screenshot_urls(app)
+parse_app_screenshot_urls = lambda app, url: \
+  parse_github_screenshot_urls(url) \
+    if re.search(r"\bgithub\.com/[\w-]+/[\w-]+$", url) else \
+  parse_screenshot_urls(parse_screenshots_url(url) or url) + parse_app_debian_screenshot_urls(app)
 
 parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url_cached(url)) or url, url)
 
@@ -339,6 +352,8 @@ parse_github_latest_release_url = lambda url: check_github_repository(extract_gi
 parse_github_releases_url = lambda url: check_github_repository(extract_github_repository(url), "https://github.com/{}/releases")
 
 parse_github_repository = lambda url: check_github_repository(extract_github_repository(url))
+
+parse_github_screenshot_urls = lambda url: parse_html(GitHubScreenshotURLsParser, fetch_url_cached(url))
 
 parse_image_url = lambda url: \
   '' \
