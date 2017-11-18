@@ -909,7 +909,7 @@ function build_environment {
   result_environment=()
 
   [[ ${executable_arguments[0]} != AppRun ]] || result_environment[APPDIR]=$distribution_path
-  build_directory_list result_environment[PYTHONPATH] "$distribution_path"/usr/lib/python*/dist-packages "$root_path"/usr/lib/python*{,/dist-packages,/plat-*}
+  build_directory_list result_environment\[PYTHONPATH\] "$distribution_path"/usr/lib/python*/dist-packages "$root_path"/usr/lib/python*{,/dist-packages,/plat-*}
   build_library_path result_environment\[LD_LIBRARY_PATH\]
   result_environment[PATH]=$PATH:$root_path/usr/bin:$root_path/bin
   result_environment[PYTHONHOME]=$root_path/usr
