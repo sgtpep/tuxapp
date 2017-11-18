@@ -119,6 +119,7 @@ get_groups = lambda: \
     'ebook-utilities',
     'email-clients',
     'file-managers',
+    'image-editors',
     'instant-messengers',
     'integrated-development-environments',
     'note-taking',
