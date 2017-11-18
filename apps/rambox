@@ -1,0 +1,17 @@
+category=network
+description=Rambox gives you the possibility to add common services many times you need, all in one place. It's perfect for people who work with many services for business and private accounts.
+desktop-entry=
+download-x86-64-url=https://github.com/saenzramiro/rambox/releases/download/{version}/Rambox-{version}-x64.tar.gz
+download-x86-url=https://github.com/saenzramiro/rambox/releases/download/{version}/Rambox-{version}-ia32.tar.gz
+executable=
+firejail=
+free-license=yes
+group=instant-messengers
+homepage-url=http://rambox.pro/
+icon-url=http://rambox.pro/favicons/favicon-194x194.png
+name=Rambox
+note=
+packages=group-electron
+title=Messaging and emailing app that combines common web applications into one
+version-regex=/download/([^/]+)
+version-url=https://github.com/saenzramiro/rambox/releases/latest
