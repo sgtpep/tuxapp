@@ -129,7 +129,7 @@ class DownloadsURLParser(BaseParser):
     if tag == 'a' and attributes.get('href'):
       if re.match(r"^(desktop\s+apps|downloads?)$", content, re.I | re.S) or re.search(r"\s+(downloads|platforms)$", content, re.I | re.S):
         self.add_result((self.priority.index('downloads'), self.filter_url(attributes['href'])))
-      elif re.match(r"^[Dd]ownload\s+[A-Z]", content, re.S):
+      elif re.match(r"^[Dd]ownload\s+[A-Z]", content, re.S) and not content.endswith(" ZIP"):
         self.add_result((self.priority.index('download'), self.filter_url(attributes['href'])))
 
   def on_tag(self, tag, attributes):
