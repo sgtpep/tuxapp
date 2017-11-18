@@ -139,12 +139,15 @@ class DownloadsURLParser(BaseParser):
 class GitHubScreenshotURLsParser(BaseParser):
   is_article = False
   is_multiple = True
+  paragraph_number = 0
 
   def on_tag(self, tag, attributes):
     if tag == 'article':
       self.is_article = True
-    elif tag == 'a' and attributes.get('href') and is_image_url(attributes['href']) and self.is_article:
-      self.add_result(attributes['href'])
+    elif tag == 'p' and self.is_article:
+      self.paragraph_number += 1
+    elif tag == 'img' and attributes.get('src') and self.previous_tag == 'a' and is_image_url(self.previous_attributes.get('href', '')) and self.is_article and self.paragraph_number > 1:
+      self.add_result(attributes['src'])
 
 class ImageURLParser(BaseParser):
   priority = (
