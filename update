@@ -13,9 +13,10 @@ function on-exit {
 trap on-exit EXIT
 
 git -C "$project_path" pull -q
+
 "$project_path"/validate "$@" || :
-"$project_path"/test "$@"
-"$project_path"/parse "$@"
+"$project_path"/test "$@" || :
+"$project_path"/parse "$@" || :
 
 "$project_path"/generate
 "$project_path"/diff {"$root_path","$project_path"/build}/apps > "$diff_path" || :
