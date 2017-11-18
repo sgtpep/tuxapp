@@ -240,6 +240,11 @@ are_app_debian_screenshots_ignored = lambda app: \
     'skype',
   )
 
+are_app_github_screenshots_ignored = lambda app: \
+  app in (
+    'jumpfm',
+  )
+
 check_github_repository = lambda repository, format="{}": \
   format.format(repository) \
     if repository and not re.search(r"/releases$", fetch_headers_cached("https://github.com/{}/releases/latest".format(repository)), re.M) else \
@@ -328,10 +333,17 @@ parse_app_debian_screenshot_urls = lambda app: \
     if are_app_debian_screenshots_ignored(app) else \
   tuple(url for url in parse_screenshot_urls("https://screenshots.debian.net/package/{}".format(app)) if not url.endswith("/no-screenshots-available.svg"))
 
+parse_app_github_screenshot_urls = lambda app, url: \
+  () \
+    if are_app_github_screenshots_ignored(app) else \
+  tuple(normalize_url(url, screenshot_url) for screenshot_url in parse_html(GitHubScreenshotURLsParser, fetch_url_cached(url)))
+
 parse_app_screenshot_urls = lambda app, url: \
-  parse_github_screenshot_urls(url) \
+  parse_app_github_screenshot_urls(app, url) \
     if re.search(r"\bgithub\.com/[\w-]+/[\w-]+$", url) else \
-  parse_screenshot_urls(parse_screenshots_url(url) or url) + parse_app_debian_screenshot_urls(app)
+  parse_screenshot_urls(parse_screenshots_url(url) or url) + \
+  (parse_app_github_screenshot_urls(app, "https://github.com/{}".format(extract_github_repository(url))) if extract_github_repository(url) else ()) + \
+  parse_app_debian_screenshot_urls(app)
 
 parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, fetch_url_cached(url)) or url, url)
 
@@ -360,8 +372,6 @@ parse_github_latest_release_url = lambda url: check_github_repository(extract_gi
 parse_github_releases_url = lambda url: check_github_repository(extract_github_repository(url), "https://github.com/{}/releases")
 
 parse_github_repository = lambda url: check_github_repository(extract_github_repository(url))
-
-parse_github_screenshot_urls = lambda url: parse_html(GitHubScreenshotURLsParser, fetch_url_cached(url))
 
 parse_image_url = lambda url: \
   '' \
