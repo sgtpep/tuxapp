@@ -1282,7 +1282,7 @@ unpack_app_distribution = lambda app, path: \
 
 unpack_app_nested_distribution = lambda app: \
   all(unpack_app_package_distribution(app, path) and remove_file(path, True) for path in list_app_distribution(app) if path.endswith(".deb")) and \
-  all(unpack_app_distribution(app, path) and remove_file(path, True) for path in list_app_distribution(app) if print(path) or re.search(r"\.AppImage$", path, re.I)) and \
+  all(unpack_app_distribution(app, path) and remove_file(path, True) for path in list_app_distribution(app) if re.search(r"\.AppImage$", path, re.I)) and \
   get_app_distribution_path(app)
 
 unpack_app_package_distribution = lambda app, path: \
