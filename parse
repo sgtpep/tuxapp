@@ -338,7 +338,10 @@ parse_github_releases_url = lambda url: check_github_repository(extract_github_r
 
 parse_github_repository = lambda url: check_github_repository(extract_github_repository(url))
 
-parse_image_url = lambda url: filter_url(normalize_url(url, parse_html(ImageURLParser, fetch_url_cached(url))))
+parse_image_url = lambda url: \
+  '' \
+    if re.search(r"\bgithub\.com/[\w-]+/[\w-]+$", url) else \
+  filter_url(normalize_url(url, parse_html(ImageURLParser, fetch_url_cached(url))))
 
 parse_screenshot_urls = lambda url: filter(bool, tuple(filter_url(normalize_url(url, screenshot_url)) for screenshot_url in parse_html(ScreenshotURLsParser, fetch_url_cached(url)) if not is_screenshot_url_ignored(url, screenshot_url)))
 
