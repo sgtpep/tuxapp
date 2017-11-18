@@ -294,6 +294,11 @@ filter_version_url = lambda homepage_url, url: \
     if url == homepage_url else \
   re.sub(r"\bgithub\.com/[\w-]+/[\w-]+/releases(?!/latest$).*", r"\g<0>/latest", url)
 
+generate_app_page = lambda app: \
+  parse.update_app(app) and \
+  generate.generate_app_page(app) and \
+  open_url(generate.get_app_page_path(app))
+
 generate_appfile = lambda appfile: ''.join(u"{}={}\n".format(key, appfile[key]) for key in sorted(appfile) if key != 'app')
 
 get_default_app = lambda: 'temp'
@@ -451,11 +456,7 @@ update_appfile_download_x86_url = lambda appfile: update_appfile(appfile, 'downl
 
 update_appfile_executable = lambda appfile: update_appfile(appfile, 'executable', input_executable(appfile['app'], appfile.get('executable', '')))
 
-update_appfile_finish = lambda appfile: \
-  execute_app(appfile['app']) and \
-  parse.update_app(appfile['app']) and \
-  generate.generate_app_page(appfile['app']) and \
-  open_url(generate.get_app_page_path(appfile['app']))
+update_appfile_finish = lambda appfile: execute_app(appfile['app']) and generate_app_page(appfile['app'])
 
 update_appfile_free_license = lambda appfile: update_appfile(appfile, 'free-license', input_free_license(appfile.get('free-license', 'yes')))
 
