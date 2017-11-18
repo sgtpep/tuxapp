@@ -1,0 +1,17 @@
+category=network
+description=The open-source, extensible email app for Mac, Linux, and Windows with open tracking, link click tracking, contacts enrichment data and more.
+desktop-entry=
+download-x86-64-url=https://updates.getmailspring.com/download?platform=linuxDeb
+download-x86-url=
+executable=
+firejail=
+free-license=yes
+group=email-clients
+homepage-url=https://getmailspring.com/
+icon-url=https://raw.githubusercontent.com/Foundry376/Mailspring/master/app/build/resources/mailspring.png
+name=Mailspring
+note=
+packages=libgnome-keyring0 group-electron
+title=The open-source, extensible email app
+version-regex=/mailspring-([^-]+)-amd64
+version-url=https://updates.getmailspring.com/download?platform=linuxDeb
