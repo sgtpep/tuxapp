@@ -1,0 +1,17 @@
+category=development
+description=Built on modern open source technology, the KDevelop IDE offers a seamless development environment to programmers that work on projects of any size. It helps you get the job done while staying out of your way.
+desktop-entry=
+download-x86-64-url=https://download.kde.org/stable/kdevelop/{version}/bin/linux/KDevelop-{version}-x86_64.AppImage
+download-x86-url=
+executable=
+firejail=
+free-license=yes
+group=integrated-development-environments
+homepage-url=https://www.kdevelop.org/
+icon-url=https://www.kdevelop.org/sites/www.kdevelop.org/files/kdevelop-48.png
+name=KDevelop
+note=
+packages=
+title=A cross-platform IDE for C, C++, Python, QML/JavaScript and PHP
+version-regex=([^/]+)/bin/linux/
+version-url=https://www.kdevelop.org/download
