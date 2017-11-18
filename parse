@@ -164,7 +164,7 @@ class ScreenshotURLsParser(BaseParser):
 
   def on_tag(self, tag, attributes):
     if tag in ('a', 'img') and re.search(r"\bscreen", str(attributes), re.I):
-      if tag == 'a' and attributes.get('href') and tuxapp.parse_url(attributes['href']).path.rsplit('.', 1)[-1].lower() in ('gif', 'jpeg', 'jpg', 'png', 'svg') and "/File:" not in attributes['href'] and (not self.tag or self.tag == tag):
+      if tag == 'a' and attributes.get('href') and is_image_url(attributes['href']) and "/File:" not in attributes['href'] and (not self.tag or self.tag == tag):
         self.tag = tag
         self.add_result(attributes['href'])
       elif tag == 'img' and (not self.tag or self.tag == tag):
@@ -274,6 +274,8 @@ get_app_screenshot_path = lambda app, url: "{}/screenshot-{}".format(get_app_pat
 get_app_video_thumbnail_path = lambda app, url: "{}/video-{}".format(get_app_path(app), url if url == '*' else tuxapp.hash_md5(url))
 
 get_apps = lambda arguments: (tuxapp.extract_app(argument) for argument in arguments or glob.iglob(tuxapp.get_appfile_path('*')))
+
+is_image_url = lambda url: tuxapp.parse_url(url).path.rsplit('.', 1)[-1].lower() in ('gif', 'jpeg', 'jpg', 'png', 'svg')
 
 is_screenshot_url_ignored = lambda url, screenshot_url: \
   bool(re.search({
