@@ -123,6 +123,7 @@ get_groups = lambda: \
     'integrated-development-environments',
     'note-taking',
     'office-suits',
+    'productivity-tools',
     'racing-games',
     'role-playing',
     'sports-utilities',
