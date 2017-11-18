@@ -222,13 +222,15 @@ install_package = \
   ))
 
 is_library_text = lambda string: \
-  "/nacl_helper: error while loading shared libraries:" not in string and \
-  "ldd: warning: you do not have execution permission for " not in string and \
   extract_library(string) and \
   extract_library(string) not in (
-    "libGLESv2.so",
-    "libproj.so",
-  )
+    "libGLESv2.so", # spotify
+    "libproj.so", # mysql-workbench
+  ) and \
+  not any(text in string for text in (
+    "/nacl_helper: error while loading shared libraries: ", # electron
+    "ldd: warning: you do not have execution permission for ", # mysql-workbench
+  ))
 
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): \
