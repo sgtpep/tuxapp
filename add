@@ -219,7 +219,7 @@ def main(arguments=tuple(sys.argv[1:])):
       print()
   return True
 
-check_name = lambda url, name: name.title() if validate.check_page_contains(url, name.title(), True) else name
+check_name = lambda url, name: name.title() if validate.check_page_contains(url, name.title(), True) else ''
 
 check_url_protocol = lambda url: url.replace("http://", "https://", 1) if validate.is_url_valid(url) and not validate.check_url_protocol(url) else url
 
