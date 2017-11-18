@@ -1146,8 +1146,8 @@ Translations = ../../share/qt5/translations
   True
 
 patch_executable = lambda path: \
-  write_file(path, re.sub(r"^(#!)[^\s]*/([^\s]+)", r"\1/usr/bin/env \2", read_file(path), 1)) \
-    if re.match(br"^#!/(?!bin/(bash|sh)\b|usr/bin/env )", read_file(path, True, 15)) else \
+  write_file(path, re.sub(r"^#!\s*/usr/bin/(python\d?)\b", r"#!/usr/bin/env \1", read_file(path), 1)) \
+    if re.match(br"^#!\s*/usr/bin/python\d?\b", read_file(path, True, 20)) else \
   path
 
 pipe_process = lambda file, process, offset=0, size=None: \
