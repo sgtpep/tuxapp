@@ -120,6 +120,7 @@ get_groups = lambda: \
     'email-clients',
     'file-managers',
     'instant-messengers',
+    'integrated-development-environments',
     'note-taking',
     'office-suits',
     'racing-games',
