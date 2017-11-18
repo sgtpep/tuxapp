@@ -140,7 +140,7 @@ def detect_app_library_packages(app, packages=()):
       print(exception.args[0], file=sys.stderr)
     return packages
   for distribution in test.get_test_distributions():
-    filenames = test.detect_missing_app_libraries(distribution, app)
+    filenames = test.detect_missing_app_libraries(app, distribution)
     package = next((get_library_package(filename) for filename in filenames if get_library_package(filename)), None)
     if package:
       return detect_app_library_packages(app, packages + (package,))

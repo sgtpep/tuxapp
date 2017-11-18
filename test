@@ -111,14 +111,14 @@ deb http://security.debian.org/ {0}/updates main
     "libXt.so",
   ) for path in glob.iglob("{}/usr/lib/*-linux-gnu/{}*".format(get_container_path('debian'), filename)))
 
-detect_missing_app_libraries = tuxapp.does(lambda distribution, app, *args, **kwargs: \
+detect_missing_app_libraries = tuxapp.does(lambda app, distribution, *args, **kwargs: \
   kwargs['result'] and print("Missing libraries for {} on {}: {}".format(
     app,
     distribution,
     ", ".join(kwargs['result']),
   ), file=sys.stderr)
 )(
-  lambda distribution, app: tuple(sorted(set(extract_library(line) for line in try_app_process(distribution, app).splitlines() if is_library_text(line))))
+  lambda app, distribution: tuple(sorted(set(extract_library(line) for line in try_app_process(app, distribution).splitlines() if is_library_text(line))))
 )
 
 execute_app = lambda distribution, app=None, arguments=(), is_trace=False: \
@@ -248,7 +248,7 @@ parse_distribution_arguments = lambda arguments: 'arch' if parse_arguments(argum
 test_app = lambda app: \
   tuxapp.install_app(app) and \
   all(tuxapp.remove_file(path) for path in glob.iglob("{}/{}-*".format(tuxapp.get_cache_path(), app))) and \
-  all(not detect_missing_app_libraries(distribution, app) for distribution in get_test_distributions()) and \
+  all(not detect_missing_app_libraries(app, distribution) for distribution in get_test_distributions()) and \
   tuxapp.remove_app(app)
 
 test_updated_app = lambda app, path: \
@@ -257,8 +257,8 @@ test_updated_app = lambda app, path: \
   test_app(app) and \
   tuxapp.write_file(path)
 
-try_app_process = tuxapp.logs("Trying {1} on {0}")(
-  lambda distribution, app: \
+try_app_process = tuxapp.logs("Trying {} on {}")(
+  lambda app, distribution: \
     install_missing_package('strace') and \
     tuxapp.read_process(r"""
     output=$({}timeout -s 9 3 {} 2>&1)
