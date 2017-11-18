@@ -168,7 +168,7 @@ def execute_app(app):
       raise KeyboardInterrupt
   print("Executing {} with firejail".format(app), file=sys.stderr)
   test.install_missing_package('firejail')
-  tuxapp.execute_app(app)
+  tuxapp.call_process((tuxapp.get_app_runner_path(app),))
   if not input_boolean("Continue?"):
     raise KeyboardInterrupt
   return True
