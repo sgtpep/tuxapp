@@ -1,0 +1,17 @@
+category=network
+description=Nylas Mail is an open-source mail client built on the modern web.
+desktop-entry=
+download-x86-64-url=https://github.com/nylas-mail-lives/nylas-mail/releases/download/{version}/nylas-mail-{version}-amd64.deb
+download-x86-url=
+executable=
+firejail=
+free-license=yes
+group=email-clients
+homepage-url=https://github.com/nylas-mail-lives/nylas-mail
+icon-url=https://raw.githubusercontent.com/nylas-mail-lives/nylas-mail/master/packages/client-app/build/resources/nylas.png
+name=Nylas Mail
+note=
+packages=group-electron
+title=The open-source, extensible mail client
+version-regex=/download/([^/]+)
+version-url=https://github.com/nylas-mail-lives/nylas-mail/releases/latest
