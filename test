@@ -244,7 +244,7 @@ parse_distribution_arguments = lambda arguments: 'arch' if parse_arguments(argum
 test_app = lambda app: \
   tuxapp.install_app(app) and \
   all(tuxapp.remove_file(path) for path in glob.iglob("{}/{}-*".format(tuxapp.get_cache_path(), app))) and \
-  all(not detect_missing_app_libraries(app, distribution) for distribution in get_test_distributions()) and \
+  tuple(not detect_missing_app_libraries(app, distribution) for distribution in get_test_distributions()) and \
   tuxapp.remove_app(app)
 
 test_updated_app = lambda app, path: \
