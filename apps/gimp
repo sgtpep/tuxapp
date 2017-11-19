@@ -1,0 +1,18 @@
+category=graphics
+description=Whether you are a graphic designer, photographer, illustrator, or scientist, GIMP provides you with sophisticated tools to get your job done. You can further enhance your productivity with GIMP thanks to many customization options and 3rd party plugins.
+desktop-entry=
+download-x86-64-url=https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+files/gimp_{version}-0x0~ppa_amd64.deb https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+files/gimp-data_{version}-0x0~ppa_all.deb https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+files/libgimp2.0_{version}-0x0~ppa_amd64.deb
+download-x86-url=https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+files/gimp_{version}-0x0~ppa_i386.deb https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+files/gimp-data_{version}-0x0~ppa_all.deb https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+files/libgimp2.0_{version}-0x0~ppa_i386.deb
+environment=GIMP2_DATADIR={dist}/usr/share/gimp/2.0 GIMP2_SYSCONFDIR={dist}/etc/gimp/2.0
+executable=
+firejail=
+free-license=yes
+group=image-editors
+homepage-url=https://www.gimp.org/
+icon-url=https://www.gimp.org/images/frontpage/wilber-big.png
+name=GIMP
+note=
+packages=libdbus-glib-1-2 libgegl-0.3-0 libgtk2.0-0
+title=GNU Image Manipulation Program
+version-regex=/gimp_([^-]+)
+version-url=https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+packages
