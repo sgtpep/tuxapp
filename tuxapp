@@ -858,6 +858,7 @@ declare -r firejail_options_path=${0%/*}/""" + quote_argument(get_app_relative_p
 declare -r root_path=${0%/*}/""" + quote_argument(get_app_relative_path(app, get_app_root_path(app))) + r"""
 declare -r urls_path=${0%/*}/urls
 
+# shellcheck disable=SC2088
 declare -r blacklisted_paths=(
 """ + '\n'.join("  {}".format(quote_argument(path)) for path in get_blacklisted_paths()) + r"""
 )
@@ -990,6 +991,7 @@ function build_gdk_pixbuf {
 }
 
 function build_library_path {
+  # shellcheck disable=SC2034
   declare -n result_library_path=$1
   shift
 
@@ -1012,7 +1014,7 @@ function check_firejail {
     read_app_firejail_options app_firejail_options
 
     [[ ${WAYLAND_DISPLAY-} || " ${firejail_options[@]} ${app_firejail_options[@]} " == " --x11[ =]" ]] || echo """ + quote_argument(get_message('firejail-x11')) + r""" >&2
-    [[ ! ${firejail_options-} ]] || echo """ + quote_argument(get_message('firejail-options')).format("'${firejail_options[@]}'") + r""" >&2
+    [[ ! ${firejail_options-} ]] || echo """ + quote_argument(get_message('firejail-options')).format(r"""'"${firejail_options[*]}"'""") + r""" >&2
   else
     [[ ${TUXAPP_TEST-} ]] || echo """ + quote_argument(get_message('firejail-missing')) + r""" >&2
   fi
