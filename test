@@ -107,6 +107,9 @@ deb http://security.debian.org/ {0}/updates main
   DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
   """) and \
   all(tuxapp.remove_file(path) for filename in (
+    "libdbus-1.so.3",
+  ) for path in glob.iglob("{}/lib/*-linux-gnu/{}*".format(get_container_path('debian'), filename))) and \
+  all(tuxapp.remove_file(path) for filename in (
     "libSM.so",
     "libXt.so",
   ) for path in glob.iglob("{}/usr/lib/*-linux-gnu/{}*".format(get_container_path('debian'), filename)))
