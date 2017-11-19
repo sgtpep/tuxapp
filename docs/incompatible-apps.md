@@ -3,6 +3,7 @@
 `tuxapp` requires some significant modifications or workarounds to make these apps working which may be resolved later.
 
 - **Dragonfire**: https://github.com/DragonComputer/Dragonfire: installs many python packages from the .deb postinst script
+- **MySQL Workbench**: https://www.mysql.com/products/workbench/: relies on lsb_release which relies on absolute paths
 - **Nylas Mail Lives** https://github.com/nylas-mail-lives/nylas-mail: hangs on startup
 - **Ring** https://ring.cx/: the daemon application needs to be launched before the graphical one
 - **Seafile** https://www.seafile.com/en/home/: splitted into many packages with different versions, hangs after the welcome screen
