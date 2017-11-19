@@ -1147,6 +1147,11 @@ patch_app_executable = lambda app, path: \
   path
 
 patch_app_package = lambda app, package: \
+  write_file("{}/usr/bin/lsb_release".format(get_app_root_path(app)), r"""#!/bin/sh
+[ ! -x /usr/bin/lsb_release ] || exec /usr/bin/lsb_release "$@"
+echo "No LSB modules are available." 2> /dev/null
+""") \
+    if package == 'lsb-release' else \
   write_file("{}/usr/bin/qt.conf".format(get_app_root_path(app)), r"""[Paths]
 Data = ../../share/qt5
 LibraryExecutables = qt5/libexec
