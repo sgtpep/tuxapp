@@ -1125,6 +1125,13 @@ parse_package_lists = \
     lambda package, paths=None: read_process(('grep', '-h', '-A', '4', '-m', '1', r"^\(Package: {0}$\|Provides:.* {0}\( \|$\)\)".format(package)) + (paths or update_package_lists())).rstrip('\n').split("\n--\n", 1)[0].split("\n\n", 1)[0]
   ))
 
+patch_app_executable = lambda app, path: \
+  write_file(path, re.sub(r"^#!\s*/usr/bin/(python\d?)\s*$", r"#!/usr/bin/env \1", read_file(path), 1)) \
+    if re.match(br"^#!\s*/usr/bin/python\d?\s*$", read_file(path, True, 20)) else \
+  write_file(path, re.sub(r"^#!\s*(/usr/bin/python\d?)", r"#!{}\1".format(get_app_root_path(app)), read_file(path), 1)) \
+    if re.match(br"^#!\s*/usr/bin/python\d?\s*[^\s]", read_file(path, True, 20)) else \
+  path
+
 patch_app_package = lambda app, package: \
   write_file("{}/usr/bin/qt.conf".format(get_app_root_path(app)), r"""[Paths]
 Data = ../../share/qt5
@@ -1136,11 +1143,6 @@ Translations = ../../share/qt5/translations
   symlink_file("{}/usr/bin/qt.conf".format(get_app_root_path(app)), "{}/qt5/libexec/qt.conf".format(glob.glob("{}/usr/lib/*-linux-gnu".format(get_app_root_path(app)))[0])) \
     if package in ('python-pyqt5', 'python3-pyqt5') else \
   True
-
-patch_executable = lambda path: \
-  write_file(path, re.sub(r"^#!\s*/usr/bin/(python\d?)\b", r"#!/usr/bin/env \1", read_file(path), 1)) \
-    if re.match(br"^#!\s*/usr/bin/python\d?\b", read_file(path, True, 20)) else \
-  path
 
 pipe_process = lambda file, process, offset=0, size=None: \
   copy_file_content(file, process.stdin, offset, size) and \
@@ -1232,7 +1234,7 @@ resolve_packages = lambda packages, resolved_packages=set(): \
 sanitize_app_executable = lambda app, command: \
   join_arguments(("{}{}".format(
     "./" if command.startswith("./") else '',
-    patch_executable(os.path.realpath("{}/{}".format(get_app_distribution_path(app), split_command(command)[0]))).replace("{}/".format(get_app_distribution_path(app)), '', 1),
+    patch_app_executable(app, os.path.realpath("{}/{}".format(get_app_distribution_path(app), split_command(command)[0]))).replace("{}/".format(get_app_distribution_path(app)), '', 1),
   ),) + split_command(command)[1:])
 
 sanitize_command = lambda command: join_arguments(split_command(command))
