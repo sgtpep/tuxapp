@@ -3,6 +3,7 @@ description=Listen to SoundCloud® from the comfort of your desktop. Use keyboar
 desktop-entry=
 download-x86-64-url=https://github.com/Superjo149/auryo/releases/download/v{version}/Auryo_{version}_amd64.deb
 download-x86-url=
+environment=
 executable=opt/Auryo/auryo
 firejail=
 free-license=

@@ -3,6 +3,7 @@ description=With focused visual tools and preprocessor support, Brackets is a mo
 desktop-entry=
 download-x86-64-url=https://github.com/adobe/brackets/releases/download/release-{version}/Brackets.Release.{version}.64-bit.deb
 download-x86-url=https://github.com/adobe/brackets/releases/download/release-{version}/Brackets.Release.{version}.32-bit.deb
+environment=
 executable=opt/brackets/Brackets --no-sandbox
 firejail=
 free-license=yes

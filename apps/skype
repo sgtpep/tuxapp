@@ -3,6 +3,7 @@ description=The Skype you know and love has a fresh new design and a ton of new 
 desktop-entry=
 download-x86-64-url=https://go.skype.com/skypeforlinux-64.deb
 download-x86-url=
+environment=
 executable=usr/share/skypeforlinux/skypeforlinux
 firejail=
 free-license=

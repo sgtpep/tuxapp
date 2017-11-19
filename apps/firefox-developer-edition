@@ -3,6 +3,7 @@ description=Firefox Developer Edition is the blazing fast browser that offers cu
 desktop-entry=
 download-x86-64-url=https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=linux64&lang=en-US
 download-x86-url=https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=linux&lang=en-US
+environment=
 executable=firefox
 firejail=
 free-license=yes

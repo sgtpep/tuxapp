@@ -3,6 +3,7 @@ description=The open-source, extensible email app for Mac, Linux, and Windows wi
 desktop-entry=
 download-x86-64-url=https://updates.getmailspring.com/download?platform=linuxDeb
 download-x86-url=
+environment=
 executable=
 firejail=
 free-license=yes

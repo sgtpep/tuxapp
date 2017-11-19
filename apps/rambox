@@ -3,6 +3,7 @@ description=Rambox gives you the possibility to add common services many times y
 desktop-entry=
 download-x86-64-url=https://github.com/saenzramiro/rambox/releases/download/{version}/Rambox-{version}-x64.tar.gz
 download-x86-url=https://github.com/saenzramiro/rambox/releases/download/{version}/Rambox-{version}-ia32.tar.gz
+environment=
 executable=
 firejail=
 free-license=yes

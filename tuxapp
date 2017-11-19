@@ -852,6 +852,7 @@ declare -r base_path=${0%/*/*}
 declare -r browser_path=${0%/*}/""" + quote_argument(get_app_relative_path(app, install_app_browser(app))) + r"""
 declare -r cache_path=${XDG_CACHE_HOME-~/.cache}/""" + quote_argument(os.path.relpath(get_cache_path(), get_xdg_cache_path())) + r"""
 declare -r distribution_path=${0%/*}/""" + quote_argument(get_app_relative_path(app, get_app_distribution_path(app))) + r"""
+declare -r environment_variables=(""" + sanitize_command(query_appfile(app, 'environment')) + r""")
 declare -r executable_arguments=(""" + sanitize_app_executable(app, build_app_executable(app)) + r""")
 declare -r firejail_options=(""" + sanitize_command(query_appfile(app, 'firejail')) + r""")
 declare -r firejail_options_path=${0%/*}/""" + quote_argument(get_app_relative_path(app, get_app_firejail_options_path(app))) + r"""
@@ -920,6 +921,14 @@ function build_environment {
     result_environment[BROWSER]=$browser_path
     result_environment[TUXAPP_URLS]=$urls_path
   fi
+
+  declare environment_variable
+  for environment_variable in "${environment_variables[@]}"; do
+    declare environment_variable_value=${environment_variable#*=}
+    environment_variable_value=${environment_variable_value//{dist\}/$distribution_path}
+    environment_variable_value=${environment_variable_value//{root\}/$root_path}
+    result_environment[${environment_variable%%=*}]=$environment_variable_value
+  done
 
   readonly result_environment
 }

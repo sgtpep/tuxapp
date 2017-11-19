@@ -3,6 +3,7 @@ description=A fast, secure, and free web browser built for the modern web. Chrom
 desktop-entry=
 download-x86-64-url=https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 download-x86-url=
+environment=
 executable=google-chrome-stable --no-sandbox
 firejail=
 free-license=

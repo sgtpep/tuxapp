@@ -3,6 +3,7 @@ description=Cryptocat is free software with a simple mission: everyone should be
 desktop-entry=
 download-x86-64-url=https://download.crypto.cat/client/Cryptocat-linux-x64.zip
 download-x86-url=
+environment=
 executable=
 firejail=
 free-license=yes

@@ -3,6 +3,7 @@ description=Hybrid between a Torrent Client and a Player. It can be used to stre
 desktop-entry=
 download-x86-64-url=https://github.com/jaruba/PowderPlayer/releases/download/v{version}/PowderPlayer_v{version}.tar.gz
 download-x86-url=
+environment=
 executable=
 firejail=
 free-license=yes

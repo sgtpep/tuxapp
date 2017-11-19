@@ -3,6 +3,7 @@ description=Telegram is a cloud-based mobile and desktop messaging app with a fo
 desktop-entry=
 download-x86-64-url=https://telegram.org/dl/desktop/linux
 download-x86-url=https://telegram.org/dl/desktop/linux32
+environment=
 executable=
 firejail=
 free-license=yes

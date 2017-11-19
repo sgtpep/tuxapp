@@ -3,6 +3,7 @@ description=Slack is where work flows. It's where the people you need, the infor
 desktop-entry=
 download-x86-64-url=https://downloads.slack-edge.com/linux_releases/slack-desktop-{version}-amd64.deb
 download-x86-url=
+environment=
 executable=
 firejail=
 free-license=

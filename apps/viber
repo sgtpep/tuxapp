@@ -3,6 +3,7 @@ description=Make calls, send messages and much more - freely and securely.
 desktop-entry=
 download-x86-64-url=https://download.cdn.viber.com/cdn/desktop/Linux/viber.deb
 download-x86-url=
+environment=
 executable=opt/viber/Viber
 firejail=
 free-license=

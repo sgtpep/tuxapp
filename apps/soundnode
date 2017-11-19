@@ -3,6 +3,7 @@ description=
 desktop-entry=
 download-x86-64-url=http://www.soundnodeapp.com/downloads/linux64/Soundnode.zip
 download-x86-url=http://www.soundnodeapp.com/downloads/linux32/Soundnode.zip
+environment=
 executable=
 firejail=
 free-license=yes

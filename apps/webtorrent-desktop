@@ -3,6 +3,7 @@ description=WebTorrent Desktop is for streaming torrents. Whether it's video fro
 desktop-entry=
 download-x86-64-url=https://github.com/webtorrent/webtorrent-desktop/releases/download/v{version}/WebTorrent-v{version}-linux.zip
 download-x86-url=https://github.com/webtorrent/webtorrent-desktop/releases/download/v{version}/WebTorrent-v{version}-linux-ia32.zip
+environment=
 executable=
 firejail=
 free-license=yes

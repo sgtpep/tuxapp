@@ -3,6 +3,7 @@ description=Qutebrowser is a keyboard-focused browser with a minimal GUI. It’s
 desktop-entry=
 download-x86-64-url=https://github.com/qutebrowser/qutebrowser/releases/download/v{version}/qutebrowser_{version}-2_all.deb https://qutebrowser.org/python3-pypeg2_2.15.2-1_all.deb
 download-x86-url=
+environment=
 executable=
 firejail=
 free-license=yes

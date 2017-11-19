@@ -3,6 +3,7 @@ description=Sublime Text is a sophisticated text editor for code, markup and pro
 desktop-entry=
 download-x86-64-url=https://download.sublimetext.com/sublime_text_3_build_{version}_x64.tar.bz2
 download-x86-url=https://download.sublimetext.com/sublime_text_3_build_{version}_x32.tar.bz2
+environment=
 executable=sublime_text
 firejail=
 free-license=

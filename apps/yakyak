@@ -3,6 +3,7 @@ description=
 desktop-entry=
 download-x86-64-url=https://github.com/yakyak/yakyak/releases/download/v{version}/yakyak-{version}-linux-x64.tar.gz
 download-x86-url=https://github.com/yakyak/yakyak/releases/download/v{version}/yakyak-{version}-linux-ia32.tar.gz
+environment=
 executable=
 firejail=
 free-license=yes

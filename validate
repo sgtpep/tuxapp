@@ -79,6 +79,7 @@ get_appfile_keys = lambda: \
     'desktop-entry',
     'download-x86-64-url',
     'download-x86-url',
+    'environment',
     'executable',
     'firejail',
     'free-license',
@@ -173,6 +174,8 @@ validate_appfile_item = tuxapp.asserts("Unknown key")(
       if key == 'desktop-entry' else \
     validate_download_url(app, re.sub(r"^download-(.+)-url$", r'\1', key), value) \
       if re.match(r"^download-(x86-64|x86)-url$", key) else \
+    validate_environment(value) \
+      if key == 'environment' else \
     validate_executable(value) \
       if key == 'executable' else \
     validate_firejail(value) \
@@ -242,6 +245,12 @@ validate_download_url = lambda app, architecture, urls: \
   tuxapp.asserts("Duplicated item")(lambda urls: sorted(set(urls.split())) == sorted(urls.split()))(urls) and \
   tuxapp.asserts("Contains the version number")(lambda app: tuxapp.fetch_app_version(app) not in urls)(app) and \
   all(validate_url(tuxapp.filter_app_download_url(app, url)) for url in urls.split())
+
+validate_environment = lambda environment: \
+  not environment or \
+  validate_text(environment) and \
+  tuxapp.asserts("No name")(lambda names: all(names))(variable.split('=', 1)[0] for variable in environment.split()) and \
+  tuxapp.asserts("Wrong name format")(lambda names: all(re.match(r"^[A-Z0-9_]+$", name) for name in names))(variable.split('=', 1)[0] for variable in environment.split())
 
 validate_executable = lambda command: \
   not command or \

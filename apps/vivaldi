@@ -3,6 +3,7 @@ description=Vivaldi is a free, fast web browser designed for power-users. You de
 desktop-entry=
 download-x86-64-url=https://downloads.vivaldi.com/stable/vivaldi-stable_{version}_amd64.deb
 download-x86-url=https://downloads.vivaldi.com/stable/vivaldi-stable_{version}_i386.deb
+environment=
 executable=vivaldi-stable --no-sandbox
 firejail=
 free-license=

@@ -3,6 +3,7 @@ description=Built on modern open source technology, the KDevelop IDE offers a se
 desktop-entry=
 download-x86-64-url=https://download.kde.org/stable/kdevelop/{version}/bin/linux/KDevelop-{version}-x86_64.AppImage
 download-x86-url=
+environment=
 executable=
 firejail=
 free-license=yes
