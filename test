@@ -121,10 +121,6 @@ detect_missing_app_libraries = tuxapp.does(lambda app, distribution, *args, **kw
   lambda app, distribution: tuple(sorted(set(extract_library(line) for line in try_app_process(app, distribution).splitlines() if is_library_text(line))))
 )
 
-execute_app = lambda distribution, app=None, arguments=(), is_trace=False: \
-  (tuxapp.is_app_installed(app) or tuxapp.install_app(app)) and \
-  execute_bwrap(distribution, app, arguments, is_trace)
-
 execute_bwrap = lambda distribution, app=None, arguments=(), is_trace=False: tuxapp.execute_process(build_bwrap_arguments(install_missing_container(distribution), app, arguments, is_trace))
 
 execute_root_bwrap = lambda distribution: tuxapp.execute_process(build_root_bwrap_arguments(install_missing_container(distribution)))
@@ -234,7 +230,7 @@ is_library_text = lambda string: \
 
 main = tuxapp.handles_exceptions(
   lambda arguments=tuple(sys.argv[1:]): \
-    execute_app(parse_distribution_arguments(arguments), parse_arguments(arguments).apps[0], parse_arguments(arguments).apps[1:], parse_arguments(arguments).trace) \
+    execute_bwrap(parse_distribution_arguments(arguments), tuxapp.check_app_installed(parse_arguments(arguments).apps[0]), parse_arguments(arguments).apps[1:], parse_arguments(arguments).trace) \
       if parse_arguments(arguments).execute and parse_arguments(arguments).apps else \
     execute_root_bwrap(parse_distribution_arguments(arguments)) \
       if parse_arguments(arguments).root else \
