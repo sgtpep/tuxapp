@@ -723,7 +723,7 @@ get_package_urls_cache_path = memoizes()(
   lambda packages: \
     "{}/package-urls-{}".format(
       get_cache_path(),
-      hash_md5(str(sorted(packages))),
+      hash_md5(sorted(packages)),
     )
 )
 
@@ -759,7 +759,7 @@ get_user_agent = lambda: "Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/2010010
 
 get_xdg_cache_path = lambda: os.environ.get('XDG_CACHE_HOME', os.path.expanduser("~/.cache"))
 
-hash_md5 = lambda string: hashlib.md5(string.encode('utf-8', 'replace')).hexdigest()
+hash_md5 = lambda value: hashlib.md5((value if is_string(value) else str(value)).encode('utf-8', 'replace')).hexdigest()
 
 install_app = \
   logs_after(
