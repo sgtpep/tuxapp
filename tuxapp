@@ -821,7 +821,7 @@ install_app_distribution = lambda app: \
     fetch_app_version(app),
     hash_md5(url),
   )) for url in query_appfile_download_urls(app))) and \
-  write_file(get_app_version_path(app), "{}\n".format(fetch_app_version(app))) and \
+  write_app_version(app) and \
   get_app_distribution_path(app) \
 
 install_app_icon = lambda app: \
@@ -1063,7 +1063,9 @@ is_app_installed = lambda app: bool(read_app_version(app))
 
 is_app_package_updated = lambda app, path: extract_package_version(path) == read_app_package_version(app, extract_package_name(path))
 
-is_app_updated = lambda app: read_app_version(app) == fetch_app_version(app)
+is_app_updated = lambda app: \
+  read_app_version(app) == fetch_app_version(app) and \
+  read_app_version_components(app)[-1] == hash_md5(query_appfile_download_urls(app))
 
 is_command_exist = lambda command: bool(distutils.spawn.find_executable(command))
 
@@ -1180,7 +1182,9 @@ read_app_firejail_options = lambda app: sanitize_command(read_file(get_app_firej
 
 read_app_package_version = lambda app, package: read_file(get_app_package_version_path(app, package)).rstrip()
 
-read_app_version = lambda app: read_file(get_app_version_path(app)).rstrip()
+read_app_version = lambda app: read_app_version_components(app)[0]
+
+read_app_version_components = lambda app: read_file(get_app_version_path(app)).rstrip().split(' ', 1)
 
 read_appfile = lambda app: read_file(get_appfile_path(app)) or fetch_appfile(app)
 
@@ -1352,6 +1356,12 @@ update_package_lists = memoizes(True)(
       )),
     )
 )
+
+write_app_version = lambda app: \
+  write_file(get_app_version_path(app), "{} {}\n".format(
+    fetch_app_version(app),
+    hash_md5(query_appfile_download_urls(app)),
+  ))
 
 write_executable_file = lambda path, content: change_file_mode(write_file(path, content), lambda mode: mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
