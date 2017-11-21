@@ -6,7 +6,7 @@ from __future__ import print_function
 import re
 import sys
 for line in sys.stdin:
-  if re.match(r\"^(\+\+\+|---) \", line):
+  if re.match(r\"(\+\+\+|---) \", line):
     print(line.rstrip('\n'))
   else:
     filtered_line = re.sub(r\"(data:image/.+?;).+?(\\\"|-\]|\+})\", r\"\1...\2\", '\n'.join(re.findall(r\"\[-.+?-\]|{\+.+?\+}\", line)))

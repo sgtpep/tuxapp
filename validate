@@ -151,7 +151,7 @@ parse_appfile_keys = lambda app: tuple(key for key, _ in parse_appfile(app))
 
 validate_app = lambda app: \
   validate_text(app) and \
-  tuxapp.asserts("Invalid character")(lambda app: bool(re.match("^[a-z0-9-]*$", app)))(app) and \
+  tuxapp.asserts("Invalid character")(lambda app: bool(re.match("[a-z0-9-]*$", app)))(app) and \
   tuxapp.asserts("Edge dash")(lambda app: not app.startswith('-') and not app.endswith('-'))(app) and \
   tuxapp.asserts("Continuous dashes")(lambda app: not re.search(r"-{2}", app))(app)
 
@@ -173,7 +173,7 @@ validate_appfile_item = tuxapp.asserts("Unknown key")(
     validate_desktop_entry(value) \
       if key == 'desktop-entry' else \
     validate_download_url(app, re.sub(r"^download-(.+)-url$", r'\1', key), value) \
-      if re.match(r"^download-(x86-64|x86)-url$", key) else \
+      if re.match(r"download-(x86-64|x86)-url$", key) else \
     validate_environment(value) \
       if key == 'environment' else \
     validate_executable(value) \
@@ -250,7 +250,7 @@ validate_environment = lambda environment: \
   not environment or \
   validate_text(environment) and \
   tuxapp.asserts("No name")(lambda names: all(names))(variable.split('=', 1)[0] for variable in environment.split()) and \
-  tuxapp.asserts("Wrong name format")(lambda names: all(re.match(r"^[A-Z0-9_]+$", name) for name in names))(variable.split('=', 1)[0] for variable in environment.split())
+  tuxapp.asserts("Wrong name format")(lambda names: all(re.match(r"[A-Z0-9_]+$", name) for name in names))(variable.split('=', 1)[0] for variable in environment.split())
 
 validate_executable = lambda command: \
   not command or \

@@ -1141,9 +1141,9 @@ parse_package_lists = \
 
 patch_app_executable = lambda app, path: \
   write_file(path, re.sub(r"^#!\s*/usr/bin/(python\d?)\s*$", r"#!/usr/bin/env \1", read_file(path), 1)) \
-    if re.match(br"^#!\s*/usr/bin/python\d?\s*$", read_file(path, True, 20)) else \
+    if re.match(br"#!\s*/usr/bin/python\d?\s*$", read_file(path, True, 20)) else \
   write_file(path, re.sub(r"^#!\s*(/usr/bin/python\d?)", r"#!{}\1".format(get_app_root_path(app)), read_file(path), 1)) \
-    if re.match(br"^#!\s*/usr/bin/python\d?\s*[^\s]", read_file(path, True, 20)) else \
+    if re.match(br"#!\s*/usr/bin/python\d?\s*[^\s]", read_file(path, True, 20)) else \
   path
 
 patch_app_package = lambda app, package: \
@@ -1188,7 +1188,7 @@ query_appfile_version_url = lambda app: query_appfile(app, 'version-url') or que
 query_package_data = lambda path, key: parse_package_data(path).get(key)
 
 query_package_depends = memoizes()(
-  lambda package: tuple(package for line in parse_package_lists(package).splitlines() if re.match(r"^(Depends|Pre-Depends):", line) for package in line.split(':', 1)[1].split())
+  lambda package: tuple(package for line in parse_package_lists(package).splitlines() if re.match(r"(Depends|Pre-Depends):", line) for package in line.split(':', 1)[1].split())
 )
 
 query_package_url = memoizes()(

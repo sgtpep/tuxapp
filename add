@@ -352,9 +352,9 @@ input_app = validates(lambda *args, **kwargs: \
 )
 
 input_boolean = lambda question, is_no=False: \
-  ('' if re.match(r"^($|n)", input_text("{} [y/N]".format(question)), re.I) else 'yes') \
+  ('' if re.match(r"($|n)", input_text("{} [y/N]".format(question)), re.I) else 'yes') \
     if is_no else \
-  ('yes' if re.match(r"^($|y)", input_text("{} [Y/n]".format(question)), re.I) else '')
+  ('yes' if re.match(r"($|y)", input_text("{} [Y/n]".format(question)), re.I) else '')
 
 input_category = \
   validates(lambda *args, **kwargs: validate.validate_category(kwargs['result']))(

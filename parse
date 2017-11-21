@@ -101,7 +101,7 @@ class ChangelogURLParser(BaseParser):
   )
 
   def on_content(self, tag, attributes, content):
-    if tag == 'a' and attributes.get('href') and re.match(r"^(changelog|release\s+notes|what[^\s]+s\s+new)\b", content, re.I | re.S):
+    if tag == 'a' and attributes.get('href') and re.match(r"(changelog|release\s+notes|what[^\s]+s\s+new)\b", content, re.I | re.S):
       self.add_result((self.priority.index('anchor'), attributes['href']))
 
   def on_json_ld(self, item):
@@ -127,9 +127,9 @@ class DownloadsURLParser(BaseParser):
 
   def on_content(self, tag, attributes, content):
     if tag == 'a' and attributes.get('href'):
-      if re.match(r"^(desktop\s+apps|downloads?)$", content, re.I | re.S) or re.search(r"\s+(downloads|platforms)$", content, re.I | re.S):
+      if re.match(r"(desktop\s+apps|downloads?)$", content, re.I | re.S) or re.search(r"\s+(downloads|platforms)$", content, re.I | re.S):
         self.add_result((self.priority.index('downloads'), self.filter_url(attributes['href'])))
-      elif re.match(r"^[Dd]ownload\s+[A-Z]", content, re.S) and not content.endswith(" ZIP"):
+      elif re.match(r"[Dd]ownload\s+[A-Z]", content, re.S) and not content.endswith(" ZIP"):
         self.add_result((self.priority.index('download'), self.filter_url(attributes['href'])))
 
   def on_tag(self, tag, attributes):
@@ -315,7 +315,7 @@ main = \
 
 normalize_url = lambda page_url, url, base_url=None: \
   url \
-    if re.match(r"^https?://", url) else \
+    if re.match(r"https?://", url) else \
   "{}:{}".format(tuxapp.parse_url(page_url).scheme, url) \
     if url.startswith("//") else \
   "{0.scheme}://{0.netloc}{1}".format(tuxapp.parse_url(page_url), url) \
@@ -325,7 +325,7 @@ normalize_url = lambda page_url, url, base_url=None: \
     os.path.normpath(os.path.join(os.path.dirname(tuxapp.parse_url(base_url or parse_base_url(page_url)).path or '/'), url)),
     '/' if url and url[-1] == '/' else '',
   ) \
-    if url and url != '#' and not re.match(r"^\w+:", url) else \
+    if url and url != '#' and not re.match(r"\w+:", url) else \
   ''
 
 parse_app_debian_screenshot_urls = lambda app: \
