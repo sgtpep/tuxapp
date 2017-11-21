@@ -1,6 +1,4 @@
-#!/bin/bash
-set -eu -o pipefail
-
+#!/bin/bash -eu -o pipefail
 git diff --word-diff-regex="[^[:space:]<>\"]+" "$1" "$2" | python -c "
 from __future__ import print_function
 import re

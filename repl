@@ -1,6 +1,4 @@
-#!/bin/bash
-set -eu -o pipefail
-
+#!/bin/bash -eu -o pipefail
 read -r -d '' script << EOF || :
 from __future__ import print_function
 

@@ -1,5 +1,3 @@
-#!/bin/bash
-set -eu -o pipefail
-
+#!/bin/bash -eu -o pipefail
 [[ $@ ]] || set -- $(grep -Flx "#!/usr/bin/env python" --exclude-dir=* "${0%/*}"/*)
 exec pylint -d similarities "$@"

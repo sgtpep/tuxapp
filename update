@@ -1,5 +1,4 @@
-#!/bin/bash
-set -eu -o pipefail
+#!/bin/bash -eu -o pipefail
 
 diff_path=~/tuxapp.diff
 project_path=${0%/*}
