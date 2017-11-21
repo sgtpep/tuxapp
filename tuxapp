@@ -845,7 +845,9 @@ install_app_packages = logs(lambda app, packages, *args, **kwargs: not are_app_p
 
 install_app_runner = lambda app: \
   check_app_firejail(app) and \
-  write_executable_file(get_app_runner_path(app), r"""#!/bin/bash -eu -o pipefail
+  write_executable_file(get_app_runner_path(app), r"""#!/usr/bin/env bash
+set -eu -o pipefail
+
 declare -r app_path=${0%/*}
 declare -r base_path=${0%/*/*}
 declare -r browser_path=${0%/*}/""" + quote_argument(get_app_relative_path(app, install_app_browser(app))) + r"""

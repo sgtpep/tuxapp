@@ -1,2 +1,4 @@
-#!/bin/bash -eu -o pipefail
+#!/usr/bin/env bash
+set -eu -o pipefail
+
 zcat -f /var/log/nginx/* | exec goaccess --date-format="%d/%b/%Y" --log-format='%h %^[%d:%t %^] "%r" %s %b "%R" "%u"' --time-format="%H:%M:%S"

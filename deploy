@@ -1,4 +1,6 @@
-#!/bin/bash -eu -o pipefail
+#!/usr/bin/env bash
+set -eu -o pipefail
+
 github_repository=sgtpep/tuxapp
 hostname=tuxapp.org
 
