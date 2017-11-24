@@ -23,7 +23,7 @@ UxJuLRgUJTm3GeH4DWoBreciF1EUQ68vdpCTBQmBfCiBuylqMGI/Gw==
 =IeOj
 -----END PGP MESSAGE-----"
 
-( cat << SSH; cat << \SSH ) | exec ssh root@"$hostname" bash -eu -o pipefail -$-
+( cat << SSH; cat << \SSH ) | ssh root@"$hostname" bash -eu -o pipefail -$-
 github_repository="$github_repository"
 home_path=/home/"$USER"
 hostname="$hostname"
