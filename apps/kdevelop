@@ -1,7 +1,7 @@
 category=development
 description=Built on modern open source technology, the KDevelop IDE offers a seamless development environment to programmers that work on projects of any size. It helps you get the job done while staying out of your way.
 desktop-entry=
-download-x86-64-url=http://mirrors.mit.edu/kde/stable/kdevelop/{version}/bin/linux/KDevelop-{version}-x86_64.AppImage
+download-x86-64-url=https://download.kde.org/stable/kdevelop/{version}/bin/linux/KDevelop-{version}-x86_64.AppImage
 download-x86-url=
 environment=
 executable=
