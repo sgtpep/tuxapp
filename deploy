@@ -53,7 +53,7 @@ deb http://deb.debian.org/debian stretch main
 deb http://security.debian.org/ stretch/updates main
 EOF
 
-if [[ ! $(zgrep " dist-upgrade\>" /var/log/apt/history.log* || :) ]]; then
+if [[ ! $(zgrep " dist-upgrade\b" /var/log/apt/history.log* || :) ]]; then
   apt update
   APT_LISTCHANGES_FRONTEND=none DEBIAN_FRONTEND=noninteractive apt -o Dpkg::Options::=--force-confnew dist-upgrade -y
   apt autoremove -y --purge
@@ -127,7 +127,7 @@ md5sum -c --status <<< $checksum || systemctl restart nginx
 [[ -d $repository_path ]] || sudo -u "$username" git -C "$home_path" clone https://github.com/"$github_repository".git
 
 chown "$username": "$root_path"
-rm -fr "$root_path"/{.well-known,index.nginx-debian.html}
+rm -f "$root_path"/{.well-known,index.nginx-debian.html}
 
 [[ ! -f /run/reboot-required ]] || reboot
 SSH
