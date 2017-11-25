@@ -628,6 +628,8 @@ get_base_path = lambda: os.path.expanduser("~/.tuxapp")
 get_blacklisted_paths = lambda: \
   (
     "~/.electron-cash",
+    "~/.passwd-s3fs",
+    "~/.s3cmd",
   )
 
 get_cache_path = lambda: "{}/tuxapp".format(get_xdg_cache_path())
