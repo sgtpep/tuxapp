@@ -120,7 +120,8 @@ build_app_gallery = lambda app: \
     (function() {
     var scrollTop = 0;
     function getElement(selector, url) {
-      return (document.getElementById((url || location.hash).split('#', 2)[1]) || { querySelector: function() {} }).querySelector(selector);
+      var element = document.getElementById((url || location.hash).split('#', 2)[1]);
+      if (element) return element.querySelector(selector);
     }
     addEventListener('hashchange', function(event) {
       scrollTo(0, scrollTop);
