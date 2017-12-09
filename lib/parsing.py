@@ -246,7 +246,6 @@ filter_app_screenshot_url = lambda app, url: \
   '' \
     if re.search({
       'jumpfm': r'/dev\.png$',
-      'mailspring': r'/search@2x\.png$',
       'skype': r'\bscreenshots\.debian\.net/',
       'visual-studio-code': r'\.svg$',
     }.get(app, r'^$'), url) else \
