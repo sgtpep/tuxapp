@@ -733,10 +733,7 @@ get_package_exclusions = lambda package: \
     '/var',
   ) + \
   (('/bin', '/usr/bin') if package.startswith('lib') and package != 'libarchive-tools' else ()) + \
-  (() if package in (
-    'evolution-data-server-common',
-    'libqt5webengine-data',
-  ) else ('/usr/share',))
+  (() if package == 'libqt5webengine-data' else ('/usr/share',))
 
 get_package_install_command = lambda package, message='{}': \
   message.format('sudo apt install {}'.format(package)) \
