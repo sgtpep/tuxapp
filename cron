@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, print_function, unicode_literals
+
+import functools
+import glob
+import sys
+
+from lib import (
+  generating,
+  parsing,
+  testing,
+  tuxapp,
+  utilities,
+  validation,
+)
+
+def handle_failed_app_requests(function):
+  @functools.wraps(function)
+  def wrapper(app, *args, **kwargs):
+    try:
+      result = function(app, *args, **kwargs)
+      utilities.update_data((app, 'request-failures'), '0')
+      return result
+    except AssertionError as exception:
+      if exception.args and ' failed to request ' in exception.args[0]:
+        count = int(utilities.query_data((app, 'request-failures'), '0')) + 1
+        utilities.update_data((app, 'request-failures'), count)
+        if count >= 3:
+          utilities.update_data((app, 'request-failures'), '0')
+          raise
+        return False
+      else:
+        raise
+  return wrapper
+
+def skip_processed_app(prefix):
+  def decorator(function):
+    @functools.wraps(function)
+    def wrapper(app, *args, **kwargs):
+      md5 = tuxapp.hash_md5(tuxapp.read_appfile(app) + tuxapp.request_app_version(app))
+      if utilities.query_data((app, '{}-hash'.format(prefix))) == md5:
+        return True
+      else:
+        result = function(app, *args, **kwargs)
+        if result:
+          utilities.update_data((app, '{}-hash'.format(prefix)), md5)
+        return result
+    return wrapper
+  return decorator
+
+def process_app_worker(app):
+  return process_app(app)
+
+main = \
+  tuxapp.handle_exceptions(
+    lambda: \
+      process_app(tuxapp.extract_app(sys.argv[1]))
+        if len(sys.argv[1:]) == 1 else \
+      tuxapp.silence(all)(testing.install_missing_container(distribution) for distribution in testing.get_distributions()) and \
+      (process_apps(tuxapp.extract_app(argument) for argument in sys.argv[1:] or glob.iglob(tuxapp.get_appfile_path('*'))) or True) and \
+      generating.generate_pages()
+  )
+
+process_app = \
+  handle_failed_app_requests(
+    lambda app: \
+      validation.validate_appfile(app) and \
+      skip_processed_app('tested')(testing.test_app)(app) and \
+      skip_processed_app('parsed')(parsing.parse_app)(app) and \
+      generating.generate_app_page(app)
+  )
+
+process_apps = lambda apps: utilities.call_parallel(process_app_worker, apps)
+
+if __name__ == '__main__':
+  main()

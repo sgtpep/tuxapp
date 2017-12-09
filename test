@@ -1,17 +1,16 @@
 #!/usr/bin/env python
-from __future__ import print_function
-import functools
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, print_function, unicode_literals
+
 import glob
-import imp
-import os
-import stat
-import subprocess
-import sys
 
-tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
+from lib import (
+  testing,
+  tuxapp,
+)
 
-@tuxapp.memoizes()
-def parse_arguments(arguments):
+@tuxapp.memoize
+def parse_arguments(arguments=None):
   import argparse
   parser = argparse.ArgumentParser()
   parser.add_argument('-a', '--arch', action='store_true')
@@ -19,252 +18,28 @@ def parse_arguments(arguments):
   parser.add_argument('-r', '--root', action='store_true')
   parser.add_argument('-s', '--shell', action='store_true')
   parser.add_argument('-t', '--trace', action='store_true')
-  parser.add_argument('apps', metavar='app', nargs='*')
+  parser.add_argument('arguments', metavar='app', nargs='*')
   parsed_arguments = parser.parse_args(arguments)
-  parsed_arguments.apps = tuple(tuxapp.extract_app(app) for app in parsed_arguments.apps)
   return parsed_arguments
 
-@tuxapp.silences
-def test_apps(apps):
-  get_base_path, tuxapp.get_base_path = tuxapp.get_base_path, lambda: os.path.expanduser("~/.tuxapp-test")
-  get_cache_path, tuxapp.get_cache_path = tuxapp.get_cache_path, lambda: "{}/tuxapp-test".format(tuxapp.get_xdg_cache_path())
-  result = functools.reduce(lambda result, app: result and test_updated_app(app, get_app_tested_path(app)), apps, True)
-  tuxapp.get_base_path = get_base_path
-  tuxapp.get_cache_path = get_cache_path
-  return result
-
-call_process_verbose = tuxapp.logs("Running the command: {}")(
-  lambda arguments, *args, **kwargs: tuxapp.call_process(arguments, *args, **kwargs)
-)
-
-build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_trace=False: \
-  install_missing_package('bubblewrap', 'bwrap') and \
-  ('bwrap', '--bind', get_container_path(distribution), '/',
-    '--bind', "/run", "/run",
-    '--dev-bind', "/dev", "/dev",
-    '--proc', "/proc",
-    '--ro-bind', "/etc/resolv.conf", "/etc/resolv.conf",
-    '--ro-bind', "/sys", "/sys",
-    '--setenv', 'TUXAPP_TEST', '1',
-    '--tmpfs', "/tmp",
-  ) + \
-  tuple(option for path in get_bwrap_ro_bind_paths() for option in ('--ro-bind', path, path)) + \
-  (('--setenv', 'TUXAPP_TRACE', '1') if is_trace else ()) + \
-  (
-    ('--bind', tuxapp.get_app_path(app), tuxapp.get_app_path(app)) \
-      if app else \
-    ('--bind', tuxapp.get_base_path(), tuxapp.get_base_path())
-  ) + \
-  ('bash', '-l') + \
-  ((tuxapp.get_app_runner_path(app),) + arguments if app else ())
-
-build_root_bwrap_arguments = lambda distribution: \
-  install_missing_package('bubblewrap', 'bwrap') and \
-  ('bwrap', '--bind', get_container_path(distribution), "/",
-    '--bind', tuxapp.make_directories(get_container_cache_path(distribution)), "/var/cache/pacman/pkg" if distribution == 'arch' else "/var/cache/apt/archives",
-    '--dev', "/dev",
-    '--proc', "/proc",
-    '--ro-bind', "/etc/resolv.conf", "/etc/resolv.conf",
-    '--tmpfs', "/tmp",
-  ) + \
-  ('env', '-u', 'LANG') + \
-  (('fakechroot', 'fakeroot') if distribution == 'arch' else ('fakeroot-sysv',)) + \
-  ('bash', '-l')
-
-call_root_bwrap = lambda distribution, script: tuxapp.call_process(build_root_bwrap_arguments(distribution) + ('-c', "set -eu -o pipefail\n(\n{}\n){}".format(script, " &> /dev/null" if tuxapp.is_silenced() else '')))
-
-configure_arch_container = lambda: \
-  all(install_arch_container_package(package) for package in ('fakechroot', 'fakeroot', 'sed')) and \
-  tuxapp.write_file("{}/etc/pacman.d/mirrorlist".format(get_container_path('arch')), "Server = {}".format(get_arch_url("$repo/os/$arch"))) and \
-  call_root_bwrap('arch', r"""
-  pacman-key --init
-  pacman-key --populate archlinux
-  packages=(
-    base
-    strace
-    ttf-dejavu
-    xorg-server
-  )
-  pacman -Sy --force --needed --noconfirm "${packages[@]}"
-  """)
-
-configure_debian_container = lambda: \
-  all(install_debian_container_package(package) for package in ('fakeroot', 'libfakeroot')) and \
-  tuxapp.write_file("{}/etc/apt/apt.conf.d/50keep-downloaded-packages".format(get_container_path('debian')), """Binary::apt::APT::Keep-Downloaded-Packages "true";""") and \
-  tuxapp.write_file("{}/etc/apt/sources.list".format(get_container_path('debian')), """\
-deb http://deb.debian.org/debian {0} main
-deb http://security.debian.org/ {0}/updates main
-""".format(tuxapp.get_debian_release())) and \
-  call_root_bwrap('debian', r"""
-  apt update
-  DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y
-  packages=(
-    fontconfig-config
-    fonts-dejavu-core
-    strace
-    xserver-xorg-core
-  )
-  DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
-  """) and \
-  all(tuxapp.remove_file(path) for filename in (
-    "libSM.so",
-    "libXt.so",
-  ) for path in glob.iglob("{}/usr/lib/*-linux-gnu/{}*".format(get_container_path('debian'), filename)))
-
-detect_missing_app_libraries = tuxapp.does(lambda app, distribution, *args, **kwargs: \
-  kwargs['result'] and print("Missing libraries for {} on {}: {}".format(
-    app,
-    distribution,
-    ", ".join(kwargs['result']),
-  ), file=sys.stderr)
-)(
-  lambda app, distribution: tuple(sorted(set(extract_library(line) for line in try_app_process(app, distribution).splitlines() if is_library_text(line))))
-)
-
-execute_bwrap = lambda distribution, app=None, arguments=(), is_trace=False: tuxapp.execute_process(build_bwrap_arguments(install_missing_container(distribution), app, arguments, is_trace))
-
-execute_root_bwrap = lambda distribution: tuxapp.execute_process(build_root_bwrap_arguments(install_missing_container(distribution)))
-
-extract_library = lambda string: \
-  "libqxcb.so" \
-    if " could not find or load the Qt platform plugin \"xcb\"" in string else \
-  tuxapp.search(r"[\w.-]+\.so[\w.-]*", string)
-
-fetch_arch_container_url = lambda: get_arch_url("iso/latest/") + tuxapp.fetch_grep_url(get_arch_url("iso/latest/"), ('-Po', '-m', '1', r"(?<=\")archlinux-bootstrap-[^\"]+"))
-
-fetch_arch_package_url = lambda package: get_arch_package_url(package) + tuxapp.fetch_grep_url(get_arch_package_url(package), ('-Po', '-m', '1', r"(?<=\"){}-[^\"]+".format(package)))
-
-fetch_debian_package_url = lambda package: "{}{}".format(tuxapp.get_debian_url(), tuxapp.fetch_grep_url(get_debian_package_url(package), ('-o', '-m', '1', r"[^/]*/pool/[^\"]*")))
-
-get_app_tested_path = lambda app: \
-  "{}/test/{}-{}-{}".format(
-    tuxapp.get_cache_path(),
-    app,
-    tuxapp.fetch_app_version(app),
-    tuxapp.hash_md5(tuxapp.read_appfile(app))
+main = \
+  tuxapp.handle_exceptions(
+    lambda: \
+      testing.execute_app(parse_distribution_argument(), tuxapp.check_app_installed(tuxapp.extract_app(parse_arguments().arguments[0])), tuple(parse_arguments().arguments[1:]), parse_arguments().trace) \
+        if parse_arguments().execute and parse_arguments().arguments else \
+      testing.execute_root_shell(parse_distribution_argument()) \
+        if parse_arguments().root else \
+      testing.execute_shell(parse_distribution_argument()) \
+        if parse_arguments().shell else \
+      testing.test_app(tuxapp.extract_app(parse_arguments().arguments[0])) \
+        if len(parse_arguments().arguments) == 1 else \
+      testing.test_apps(tuxapp.extract_app(argument) for argument in parse_arguments().arguments or glob.iglob(tuxapp.get_appfile_path('*')))
   )
 
-get_arch_package_url = lambda package: get_arch_url("{}/os/x86_64/".format('extra' if package == 'fakechroot' else 'core'))
-
-get_arch_url = lambda path='': "https://mirrors.kernel.org/archlinux/{}".format(path)
-
-get_bwrap_ro_bind_paths = lambda: \
-  tuple(path for path in (
-    "/usr/lib/locale",
-    "/usr/share/alsa",
-  ) if os.path.isdir(path)) + \
-  tuple(glob.iglob("/usr/lib/*-linux-gnu/alsa-lib")) + \
-  tuple(glob.iglob("/usr/lib/*-linux-gnu/pulseaudio")) + \
-  (get_xauthority_path(),) if tuxapp.is_command_exist('xvfb-run') else ()
-
-get_container_cache_path = lambda distribution: "{}/{}".format(tuxapp.get_cache_path(), distribution)
-
-get_container_installed_path = lambda distribution: "{}/var/lib/tuxapp".format(get_container_path(distribution))
-
-get_container_path = lambda distribution: tuxapp.get_app_path(distribution)
-
-get_debian_container_url = lambda: "https://download.openvz.org/template/precreated/contrib/debian-9.0-{}-minimal.tar.gz".format(tuxapp.detect_architecture().replace('-', '_'))
-
-get_debian_package_url = lambda package: \
-  "https://packages.debian.org/{}/{}/{}/download".format(
-    tuxapp.get_debian_release(),
-    tuxapp.detect_debian_architecture(),
-    package,
-  )
-
-get_test_distributions = lambda: ('debian', 'arch')
-
-get_xauthority_path = lambda: os.path.expanduser("~/.Xauthority")
-
-install_arch_container = lambda: \
-  tuxapp.unpack_tarball(tuxapp.download_missing_cache_file(fetch_arch_container_url()), get_container_path('arch'), ("--strip-components=1",)) and \
-  tuxapp.change_file_mode("{}/etc/ca-certificates/extracted/cadir".format(get_container_path('arch')), lambda mode: mode | stat.S_IWUSR) and \
-  configure_arch_container() and \
-  'arch'
-
-install_arch_container_package = lambda package: \
-  tuxapp.silences(tuxapp.unpack_tarball)(tuxapp.download_missing_cache_file(fetch_arch_package_url(package)), get_container_path('arch'), ("--exclude=.*", "--warning=no-unknown-keyword")) and \
-  package
-
-install_container = tuxapp.asserts("Failed to install {}")(
-  lambda distribution: install_arch_container() if distribution == 'arch' else install_debian_container()
-)
-
-install_debian_container = lambda: \
-  tuxapp.unpack_tarball(tuxapp.download_missing_cache_file(get_debian_container_url()), get_container_path('debian'), ("--exclude=./dev",)) and \
-  configure_debian_container() and \
-  'debian'
-
-install_debian_container_package = lambda package: \
-  tuxapp.silences(tuxapp.unpack_package)(tuxapp.download_missing_cache_file(fetch_debian_package_url(package)), get_container_path('debian')) and \
-  package
-
-install_missing_container = lambda distribution: \
-  distribution \
-    if os.path.isfile(get_container_installed_path(distribution)) else \
-  install_container(distribution) and \
-  tuxapp.write_file(get_container_installed_path(distribution)) and \
-  distribution
-
-install_missing_package = lambda package, command=None: tuxapp.is_command_exist(command or package) or install_package(package)
-
-install_package = \
-  tuxapp.asserts("{} is not installed")(
-  tuxapp.logs("Installing {}")(
-    lambda package: \
-      not tuxapp.is_silenced() and \
-      tuxapp.is_command_exist('apt') and \
-      call_process_verbose("sudo apt update && sudo apt install -y {}".format(tuxapp.quote_argument(package)))
-  ))
-
-is_library_text = lambda string: \
-  extract_library(string) and \
-  extract_library(string) not in (
-    "libGLESv2.so", # spotify
-    "libproj.so", # mysql-workbench
-  ) and \
-  not any(text in string for text in (
-    "/nacl_helper: error while loading shared libraries: ", # electron
-    "ldd: warning: you do not have execution permission for ", # mysql-workbench
-  ))
-
-main = tuxapp.handles_exceptions(
-  lambda arguments=tuple(sys.argv[1:]): \
-    execute_bwrap(parse_distribution_arguments(arguments), tuxapp.check_app_installed(parse_arguments(arguments).apps[0]), parse_arguments(arguments).apps[1:], parse_arguments(arguments).trace) \
-      if parse_arguments(arguments).execute and parse_arguments(arguments).apps else \
-    execute_root_bwrap(parse_distribution_arguments(arguments)) \
-      if parse_arguments(arguments).root else \
-    execute_bwrap(parse_distribution_arguments(arguments)) \
-      if parse_arguments(arguments).shell else \
-    test_apps(parse_arguments(arguments).apps or (tuxapp.extract_app(path) for path in glob.iglob(tuxapp.get_appfile_path('*'))))
-)
-
-parse_distribution_arguments = lambda arguments: 'arch' if parse_arguments(arguments).arch else 'debian'
-
-test_app = lambda app: \
-  tuxapp.install_app(app) and \
-  all(tuxapp.remove_file(path) for path in glob.iglob("{}/{}-*".format(tuxapp.get_cache_path(), app))) and \
-  tuple(not detect_missing_app_libraries(app, distribution) for distribution in get_test_distributions()) and \
-  tuxapp.remove_app(app)
-
-test_updated_app = lambda app, path: \
-  True \
-    if os.path.isfile(path) else \
-  test_app(app) and \
-  tuxapp.write_file(path)
-
-try_app_process = tuxapp.logs("Trying {} on {}")(
-  lambda app, distribution: \
-    install_missing_package('strace') and \
-    tuxapp.read_process(r"""
-    output=$({}timeout -s 9 3 {} 2>&1)
-    kill -9 $(echo "$output" | grep -Po "(?<= Process )\d+") 2> /dev/null
-    echo "$output"
-    """.format(
-      "xvfb-run -f {} ".format(tuxapp.quote_argument(get_xauthority_path())) if tuxapp.is_command_exist('xvfb-run') else '',
-      tuxapp.join_arguments(build_bwrap_arguments(install_missing_container(distribution), tuxapp.check_app_installed(app))).replace(" bash ", " strace -f -e none bash ", 1),
-    ), stderr=subprocess.STDOUT)
-)
+parse_distribution_argument = lambda arguments=None: \
+  'arch' \
+    if parse_arguments(arguments).arch else \
+  testing.get_default_distribution()
 
 if __name__ == '__main__':
   main()

@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
 
-[[ $@ ]] || set -- $(grep -Flx "#!/usr/bin/env python" --exclude-dir=* "${0%/*}"/*)
-exec pylint -d similarities "$@"
+if [[ ! $@ ]]; then
+  readarray -t <<< $(
+    find "${0%/*}"/lib -type f -name '*.py'
+    grep -l -m 1 '^#!.*\bpython\b' --exclude-dir=* "${0%/*}"/*
+  )
+  set -- "${MAPFILE[@]}"
+fi
+exec pylint"${0##*[[:alpha:]]}" "$@"

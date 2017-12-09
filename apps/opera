@@ -3,16 +3,17 @@ description=Opera is a fast and secure browser. Developed in Europe, used by mil
 desktop-entry=
 download-x86-64-url=https://download1.operacdn.com/pub/opera/desktop/{version}/linux/opera-stable_{version}_amd64.deb
 download-x86-url=
-environment=
-executable=opera --no-sandbox
+executable=./usr/bin/opera --no-sandbox
 firejail=
-free-license=
+free-license=no
 group=web-browsers
 homepage-url=https://www.opera.com/
 icon-url=https://www-static.operacdn.com/static-heap/75/759b5d5a74e1be5fdfd0fd1fed338c9d1c6cbb33/opera-152.png
+ignored-libraries=
 name=Opera
 note=
-packages=group-chromium libcurl3 libnotify4
+packages-repository=stretch
+packages=group-chromium libcurl3 libnotify4 libpulse0
 title=Fast, secure, easy-to-use browser
 version-regex=ver=([^&"]+)
 version-url=https://www.opera.com/download/index.dml/?os=linux-x86-64&list=all

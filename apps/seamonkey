@@ -3,16 +3,17 @@ description=Web-browser, advanced e-mail, newsgroup and feed client, IRC chat, a
 desktop-entry=
 download-x86-64-url=https://archive.mozilla.org/pub/seamonkey/releases/{version}/contrib/seamonkey-{version}.en-US.linux-x86_64.tar.bz2
 download-x86-url=https://download.mozilla.org/?product=seamonkey-{version}&os=linux&lang=en-US
-environment=
-executable=
+executable=./seamonkey
 firejail=
 free-license=yes
 group=web-browsers
 homepage-url=https://www.seamonkey-project.org/
 icon-url=https://www.seamonkey-project.org/images/seamonkey96.png
+ignored-libraries=
 name=SeaMonkey
 note=
+packages-repository=stretch
 packages=group-firefox libasound2
 title=All-in-one internet application suite
 version-regex==seamonkey-([^&"]+)
-version-url=
+version-url=https://www.seamonkey-project.org/

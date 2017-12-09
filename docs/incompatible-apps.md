@@ -1,11 +1,9 @@
 # Incompatible apps
 
-`tuxapp` requires some significant modifications or workarounds to make these apps working which may be resolved later.
+The following apps are not supported by `tuxapp` due to different issues which may require some significant modifications or workarounds:
 
-- **Dragonfire**: https://github.com/DragonComputer/Dragonfire: installs many python packages from the .deb postinst script
-- **MySQL Workbench**: https://www.mysql.com/products/workbench/: relies on lsb_release which relies on absolute paths
-- **Nylas Mail Lives** https://github.com/nylas-mail-lives/nylas-mail: hangs on startup
-- **Ring** https://ring.cx/: the daemon application needs to be launched before the graphical one
-- **Seafile** https://www.seafile.com/en/home/: splitted into many packages with different versions, hangs after the welcome screen
+- **Dragonfire**: http://dragon.computer/#dragonfire: installs many python packages from the .deb postinst script
+- **Ring** https://ring.cx/: no GUI is appeared
+- **Seafile** https://www.seafile.com/en/home/: no GUI is appeared after the welcome screen
 - **Steam** http://store.steampowered.com/: requires x86 libraries on the x86-64 architecuture
 - **k2pdfopt** http://www.willus.com/k2pdfopt/: requires solving a CAPTCHA to download
