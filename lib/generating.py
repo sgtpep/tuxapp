@@ -399,6 +399,8 @@ build_columns = lambda *children: \
     build_tag('.columns', None, *children),
   )
 
+build_combined_styles = lambda: build_tag('combined-styles')
+
 build_command = lambda command: \
   join_elements(
     build_style('''
@@ -409,8 +411,6 @@ build_command = lambda command: \
     '''),
     build_tag('code.command', command),
   )
-
-build_combined_styles = lambda: build_tag('combined-styles')
 
 build_feed = lambda url, name, timestamp, entries: \
   join_elements(
@@ -707,7 +707,7 @@ build_search_page = lambda: \
       return items.reduce(function(result, item) {
         return result +
           '<p>' +
-          '<a class="search-link" href="''' + get_app_url('\' + encodeURIComponent(item.name) + \'') + r'''">' + escapeHTML(getAppName(item.name)) + '</a>' + 
+          '<a class="search-link" href="''' + get_app_url('\' + encodeURIComponent(item.name) + \'') + r'''">' + escapeHTML(getAppName(item.name)) + '</a>' +
           '<br>' +
           escapeHTML(buildSnippet(item.text_matches) && buildSnippet(item.text_matches) + '...').replace(/\[MATCH\]/g, '<span class="search-highlight">').replace(/\[\/MATCH\]/g, '</span>') +
           '</p>';
@@ -1120,9 +1120,9 @@ join_elements = lambda *elements: ''.join(elements)
 
 process_lightbox = lambda html: process_lightbox_previous(process_lightbox_next(html)) + build_lightbox_script()
 
-process_lightbox_next = lambda html: re.sub(r' class="lightbox-action is-next" href=".*?#(?=")', lambda match: match.group() + (re.compile(r'(?<= class="lightbox" id=")[^"]+').findall(html, match.start()) + [''])[0], html)
+process_lightbox_next = lambda html: re.sub(r' class="lightbox-action is-next" href=".*?#(?=")', lambda match: match.group() + (re.compile(r'(?<= class="lightbox" id=")[^"]+').findall(html, match.start()) + [''])[0], html) # pylint: disable=undefined-variable
 
-process_lightbox_previous = lambda html: re.sub(r' class="lightbox-action is-previous" href=".*?#(?=")', lambda match: match.group() + ([''] + re.compile(r'(?<= class="lightbox" id=")[^"]+').findall(html, 0, match.start()))[-2], html)
+process_lightbox_previous = lambda html: re.sub(r' class="lightbox-action is-previous" href=".*?#(?=")', lambda match: match.group() + ([''] + re.compile(r'(?<= class="lightbox" id=")[^"]+').findall(html, 0, match.start()))[-2], html) # pylint: disable=undefined-variable
 
 process_styles = lambda html: get_style_regex().sub('', html).replace(build_combined_styles(), build_tag('style', None, *functools.reduce(lambda styles, style: styles if style in styles else styles + (style,), get_style_regex().findall(html), ())))
 
