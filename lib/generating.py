@@ -1025,7 +1025,7 @@ get_category_page_path = lambda category: os.path.join(get_categories_path(), '{
 
 get_category_url = lambda category: get_file_url(get_category_page_path(category))
 
-get_copyright = lambda: '© 2017 {}'.format(get_name())
+get_copyright = lambda: '© {} {}'.format(tuxapp.get_copyright_range(), get_name())
 
 get_description = lambda: 'An open catalog of easily installable and up-to-date Linux® applications'
 

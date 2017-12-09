@@ -677,7 +677,11 @@ get_cache_path = lambda: os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.e
 
 get_cached_file_path = lambda path: os.path.join(get_cache_path(), os.path.basename(path))
 
-get_copyright = lambda: '(c) 2017 Danil Semelenov'
+get_copyright = lambda: '(c) {} Danil Semelenov'.format(get_copyright_range())
+
+get_copyright_range = lambda: '{}{}'.format(get_copyright_year(), time.strftime('-%Y') if int(time.strftime('%Y')) > get_copyright_year() else '')
+
+get_copyright_year = lambda: 2017
 
 get_debian_mirror_url = lambda: 'https://cdn-aws.deb.debian.org/'
 
