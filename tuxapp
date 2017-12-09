@@ -405,6 +405,12 @@ def write_file(path, content='', is_append=False):
 
 append_file = lambda path, content='': write_file(path, content, True)
 
+backup_app_cache = lambda app: \
+  rename_file(get_app_data_path(app), build_cached_app_package_data_path(app, max(query_app_package_list_update_time(app, url) for url in build_app_package_list_urls(app) if query_app_package_list_update_time(app, url)))) and \
+  all(remove_file(path) for path in glob.iglob(build_cached_app_package_data_path(app, '*')) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * 7) and \
+  all(remove_file(path) if os.path.isfile(get_cached_file_path(path)) else rename_file(path, get_cached_file_path(path)) for path in glob.iglob(get_app_cached_file_path(app, '*.deb'))) and \
+  all(remove_file(path) for path in glob.iglob(get_cached_file_path('*.deb')) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * 30)
+
 build_app_bsdtar_arguments = lambda app: \
   ('bsdtar',) \
     if is_existing_command('bsdtar') else \
@@ -440,6 +446,8 @@ build_app_package_list_urls = \
 build_app_runner_relative_path = lambda app, path: re.sub(r'/\.$', '', os.path.join('${0%/*}', quote_argument(os.path.relpath(path, os.path.dirname(get_app_runner_path(app))))))
 
 build_app_temp_download_path = lambda app, url: build_download_path(get_app_temp_downloads_path(app), url)
+
+build_cached_app_package_data_path = lambda app, timestamp: get_cached_file_path('packages-{}-{}'.format(query_appfile(app, 'packages-repository'), timestamp))
 
 build_curl_request_arguments = lambda options, is_gzip=False: \
   ('curl', '-#Lf', '-H', 'Accept-Language: en', '-m', '10', '--retry', '2') + \
@@ -877,10 +885,9 @@ install_app_package_files = \
 
 install_app_packages = \
   lambda app, packages: \
+    (not packages or update_app_package_lists(app)) and \
     install_app_package_files(app, download_app_packages(app, resolve_outdated_app_packages(app, packages))) and \
-    all(remove_file(path) for path in glob.iglob(get_cached_file_path('*.deb')) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * 30) and \
-    all(rename_file(path, get_cached_file_path(path)) for path in glob.iglob(get_app_cached_file_path(app, '*.deb')) if not os.path.isfile(get_cached_file_path(path))) and \
-    True
+    backup_app_cache(app)
 
 install_app_runner = lambda app: \
   check_app_firejail(app) and \
@@ -1332,9 +1339,7 @@ request_url_headers = \
       ), get_request_command() == 'wget')
   ))
 
-resolve_app_packages = lambda app, packages: \
-  (not packages or update_app_package_lists(app)) and \
-  tuple(sorted(set(extract_package_name(query_app_package_data(app, package, 'url')) for package in resolve_app_packages_recursive(app, packages))))
+resolve_app_packages = lambda app, packages: tuple(sorted(set(extract_package_name(query_app_package_data(app, package, 'url')) for package in resolve_app_packages_recursive(app, packages))))
 
 resolve_app_packages_recursive = lambda app, packages, resolved_packages=set(): \
   functools.reduce(lambda packages, package: \
@@ -1476,10 +1481,9 @@ update_app_package_list_items = lambda app, items: \
   update_app_data_items(app, (((item['Package'], 'dependencies'), ' '.join(item[key] for key in ('Depends', 'Pre-Depends') if item.get(key))) for item in items), True) and \
   update_app_data_items(app, (((item['Package'], 'url'), item['Filename']) for item in items), True)
 
-update_app_package_lists = \
-  memoize_temporarily(
-    lambda app: all(update_app_package_list(app, url, download_missing_app_file(app, url, build_app_package_list_download_path(app, url))) for url in build_app_package_list_urls(app) if query_app_package_list_update_time(app, url) < time.time() - 60 * 60 * 12 and request_last_modified(url) > query_app_package_list_update_time(app, url))
-  )
+update_app_package_lists = lambda app: \
+  (not next(glob.iglob(build_cached_app_package_data_path(app, '*')), None) or copy_file(sorted(glob.iglob(build_cached_app_package_data_path(app, '*')))[-1], get_app_data_path(app))) and \
+  all(update_app_package_list(app, url, download_missing_app_file(app, url, build_app_package_list_download_path(app, url))) for url in build_app_package_list_urls(app) if query_app_package_list_update_time(app, url) < time.time() - 60 * 60 * 6 and request_last_modified(url) > query_app_package_list_update_time(app, url))
 
 write_app_version = lambda app: write_file(get_app_version_path(app), '{} {}\n'.format(request_app_version(app), hash_app_download_urls(app)))
 
