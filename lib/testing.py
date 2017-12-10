@@ -239,6 +239,6 @@ update_debian_container = lambda: \
 
 update_old_container = lambda distribution: \
   update_container(distribution) and \
-  utilities.update_data((distribution, 'update-time'), int(time.time())) \
-    if int(utilities.query_data((distribution, 'update-time'), '0')) < time.time() - 60 * 60 * 12 else \
+  utilities.update_data(('container', distribution, 'update-time'), int(time.time())) \
+    if int(utilities.query_data(('container', distribution, 'update-time'), '0')) < time.time() - 60 * 60 * 12 else \
   True
