@@ -57,10 +57,10 @@ build_bwrap_readonly_bind_paths = lambda: \
 build_root_bwrap_arguments = lambda distribution: \
   utilities.install_missing_package('bubblewrap', 'bwrap') and \
   ('bwrap', '--bind', tuxapp.get_app_root_path(distribution), '/',
+    '--bind', '/etc/resolv.conf', '/etc/resolv.conf',
     '--bind', tuxapp.make_directories(tuxapp.get_app_cache_path(distribution)), '/var/cache/pacman/pkg' if distribution == 'arch' else '/var/cache/apt/archives',
     '--dev', '/dev',
     '--proc', '/proc',
-    '--ro-bind', '/etc/resolv.conf', '/etc/resolv.conf',
     '--tmpfs', '/tmp',
   ) + \
   ('env', '-u', 'LANG') + \
