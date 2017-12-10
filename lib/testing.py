@@ -200,7 +200,6 @@ request_debian_package_url = lambda package: tuxapp.get_debian_mirror_url() + tu
 test_app = lambda app: \
   test_installed_app(app) \
     if tuxapp.is_app_installed(app) else \
-  print(app) or \
   (tuxapp.install_app(app) or tuxapp.remove_app(app) and False) and \
   (test_installed_app(app) or True) and \
   tuxapp.remove_app(app)
