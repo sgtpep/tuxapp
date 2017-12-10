@@ -44,6 +44,8 @@ call_process_verbose = \
     lambda arguments: tuxapp.call_process(arguments)
   )
 
+connect_data = lambda: tuxapp.connect_app_data(tuxapp.get_name())
+
 get_github_url_pattern = lambda: r'\bgithub\.com/([\w-]+/[\w-]+)'
 
 install_missing_package = lambda package, command=None: \
