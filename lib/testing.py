@@ -68,12 +68,12 @@ build_root_bwrap_arguments = lambda distribution: \
   ('bash', '-l')
 
 call_root_script = lambda distribution, script: \
-  tuxapp.call_process(build_root_bwrap_arguments(distribution) + ('-c', r'''
+  tuxapp.call_process(build_root_bwrap_arguments(distribution) + ('-c', textwrap.dedent(r'''
   set -eu -o pipefail
   (
     {}
   ){}
-  '''.format(
+  ''').format(
     script,
     ' &> /dev/null' if tuxapp.is_silent() else '',
   )))
