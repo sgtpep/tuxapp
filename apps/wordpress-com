@@ -12,7 +12,7 @@ icon-url=https://0.gravatar.com/blavatar/653166773dc88127bd3afe0b6dfe5ea7?s=114&
 ignored-libraries=
 name=WordPress.com
 note=
-packages-repository=stretch
+package-repository=stretch
 packages=group-electron
 title=Create a free website or blog
 version-regex=/download/v([^/]+)

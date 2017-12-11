@@ -159,7 +159,7 @@ validate_appfile_item = \
       validate_note(value) \
         if key == 'note' else \
       validate_package_repository(value) \
-        if key == 'packages-repository' else \
+        if key == 'package-repository' else \
       validate_app_packages(app, value) \
         if key == 'packages' else \
       validate_app_title(app, value) \

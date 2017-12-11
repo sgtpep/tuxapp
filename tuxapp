@@ -425,20 +425,20 @@ build_app_library_variable = lambda app: 'LD_LIBRARY_PATH={}'.format(':'.join(pa
 build_app_package_list_download_path = lambda app, url: get_app_package_list_download_path(app, hash_md5(url))
 
 build_app_package_list_urls = \
-  check(lambda app, *args, **kwargs: 'Unknown package repository: {}'.format(query_appfile(app, 'packages-repository')))(
+  check(lambda app, *args, **kwargs: 'Unknown package repository: {}'.format(query_appfile(app, 'package-repository')))(
     lambda app: \
-      tuple(url.format(query_appfile(app, 'packages-repository'), 'binary-{}/Packages.xz'.format(detect_debian_architecture())) for url in (
+      tuple(url.format(query_appfile(app, 'package-repository'), 'binary-{}/Packages.xz'.format(detect_debian_architecture())) for url in (
         (get_debian_mirror_url() + path for path in (
           'debian/dists/{}/main/{}',
           'debian-security/dists/{}/updates/main/{}',
         )) \
-          if query_appfile(app, 'packages-repository') == 'stretch' else \
+          if query_appfile(app, 'package-repository') == 'stretch' else \
         (get_ubuntu_mirror_url() + path for path in (
           'ubuntu/dists/{}/main/{}',
           'ubuntu/dists/{}/universe/{}',
           'ubuntu/dists/{}-security/main/{}',
         )) \
-          if query_appfile(app, 'packages-repository') == 'xenial' else \
+          if query_appfile(app, 'package-repository') == 'xenial' else \
         ()
       ))
   )
@@ -447,7 +447,7 @@ build_app_runner_relative_path = lambda app, path: re.sub(r'/\.$', '', os.path.j
 
 build_app_temp_download_path = lambda app, url: build_download_path(get_app_temp_downloads_path(app), url)
 
-build_cached_app_package_data_path = lambda app, timestamp: get_cached_file_path('packages-{}-{}'.format(query_appfile(app, 'packages-repository'), timestamp))
+build_cached_app_package_data_path = lambda app, timestamp: get_cached_file_path('packages-{}-{}'.format(query_appfile(app, 'package-repository'), timestamp))
 
 build_curl_request_arguments = lambda options, is_gzip=False: \
   ('curl', '-#Lf', '-H', 'Accept-Language: en', '-m', '10', '--retry', '2') + \

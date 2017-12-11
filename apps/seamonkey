@@ -12,7 +12,7 @@ icon-url=https://www.seamonkey-project.org/images/seamonkey96.png
 ignored-libraries=
 name=SeaMonkey
 note=
-packages-repository=stretch
+package-repository=stretch
 packages=group-firefox libasound2
 title=All-in-one internet application suite
 version-regex==seamonkey-([^&"]+)

@@ -12,7 +12,7 @@ icon-url=https://www.libreoffice.org/themes/libreofficenew/favicon.ico
 ignored-libraries=
 name=LibreOffice
 note=
-packages-repository=stretch
+package-repository=stretch
 packages=libdbus-glib-1-2 libgtk2.0-0 libsm6
 title=Free office suite
 version-regex=&version=([^&"]+)
