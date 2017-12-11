@@ -7,8 +7,9 @@ import glob
 import os
 import sys
 
-import subprocess
-subprocess.check_call(('git', '-C', os.path.dirname(__file__), 'pull', '-q'))
+if __name__ == '__main__':
+  import subprocess
+  subprocess.check_call(('git', '-C', os.path.dirname(__file__), 'pull', '-q'))
 
 from lib import ( # pylint: disable=wrong-import-position
   generating,
