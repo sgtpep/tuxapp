@@ -104,7 +104,7 @@ query_data = lambda: \
 
 snapshot_data = lambda: os.path.isfile(get_dump_path('before')) or write_data(get_dump_path('before'))
 
-write_data = lambda path: tuxapp.write_file(path, '{}\n'.format('\n'.join(' = '.join(row) for row in query_data())))
+write_data = lambda path: tuxapp.write_file(path, '{}\n'.format('\n'.join('{} = {}'.format(row[0].replace(':', '.'), row[1]) for row in query_data())))
 
 if __name__ == '__main__':
   main()
