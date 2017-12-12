@@ -1475,7 +1475,7 @@ update_app_package_list = \
       )), ({},)) and \
       commit_app_data(app) and \
       remove_file(path) and \
-      update_app_data(app, ('packages', hash_md5(url), 'update-time'), int(time.time()))
+      update_app_data(app, ('packages', hash_md5(url), 'update-timestamp'), int(time.time()))
   ))
 
 update_app_package_list_items = lambda app, items: \
