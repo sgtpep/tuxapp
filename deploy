@@ -23,29 +23,28 @@ UxJuLRgUJTm3GeH4DWoBreciF1EUQ68vdpCTBQmBfCiBuylqMGI/Gw==
 =IeOj
 -----END PGP MESSAGE-----"
 
-if ! ssh root@"$hostname" test -d /home/"$USER"/.ssh; then
-  ssh root@"$hostname" bash -eu -o pipefail -"$-" << EOF
+ssh root@"$hostname" bash -eu -o pipefail -"$-" << EOF
 ! grep -q '^debian:' /etc/passwd || userdel -r debian
 grep -q '^$USER:' /etc/passwd || useradd -m -G adm,sudo -c '$(grep -Po "(?<=^$USER:x:$UID:$UID:)[^,]+" /etc/passwd)' -s /bin/bash '$USER'
-grep -q '^$USER:\$' /etc/shadow || chpasswd -e <<< '$USER:$(sudo grep -Po "(?<=^$USER:)[^:]+" /etc/shadow)'
+grep -q '^$USER:\\$' /etc/shadow || chpasswd -e <<< '$USER:$(sudo grep -Po "(?<=^$USER:)[^:]+" /etc/shadow)'
+
+echo '%sudo ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/nopasswd
+
+sed -i 's/^mesg /#\0/' ~/.profile
 
 cp -r ~/.ssh /home/'$USER'
 chown -R '$USER': /home/'$USER'/.ssh
-
-sed -i 's/^mesg /#\0/' ~/.profile
 EOF
-fi
 
-ssh root@"$hostname" 'echo "%sudo ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/nopasswd'
-( cat << SSH; cat << \SSH ) | ssh "$hostname" bash -eu -o pipefail -"$-"
+( cat << EOF; cat << \EOF2 ) | ssh "$hostname" bash -eu -o pipefail -"$-"
 github_repository='$github_repository'
 hostname='$hostname'
 netrc='$(ssh root@"$hostname" test -f /etc/netrc || gpg -d <(echo "$encrypted_netrc"))'
-SSH
+EOF
 
 [[ -f /etc/netrc ]] || sudo tee /etc/netrc > /dev/null <<< $netrc
 sudo chmod o-r /etc/netrc
-sudo chown "$username": /etc/netrc
+sudo chown "$USER": /etc/netrc
 read _ smtp_hostname _ email _ < /etc/netrc
 
 sudo tee /etc/apt/sources.list > /dev/null << \EOF
@@ -97,7 +96,7 @@ account default
   user $email
 EOF
 sudo chmod o-r /etc/msmtprc
-sudo chown "$username": /etc/msmtprc
+sudo chown "$USER": /etc/msmtprc
 
 checksum=$(md5sum /etc/nginx/sites-enabled/default)
 sudo tee /etc/nginx/sites-enabled/default > /dev/null << EOF
@@ -123,12 +122,12 @@ server {
 }
 EOF
 md5sum -c --status <<< $checksum || sudo systemctl restart nginx
-SSH
 
 sudo chown "$USER": /var/www/html
 sudo rm -fr /var/www/html/{.well-known,index.nginx-debian.html}
 
 [[ -d ~/${github_repository##*/} ]] || git -C ~ clone https://github.com/"$github_repository".git
+EOF2
 
 ssh root@"$hostname" << EOF
 rm /etc/sudoers.d/nopasswd
