@@ -276,6 +276,8 @@ filter_unique = lambda items, reference_items=None: tuple(collections.OrderedDic
 
 get_debian_screenshots_url = lambda package: 'https://screenshots.debian.net/package/{}'.format(package)
 
+is_github_repository_url = lambda url: bool(re.search('{}$'.format(utilities.get_github_url_pattern()), url))
+
 is_github_url = lambda url: bool(re.search(utilities.get_github_url_pattern(), url))
 
 is_image_url = lambda url: \
@@ -322,7 +324,7 @@ parse_app_downloads_url = lambda app, url: \
 
 parse_app_screenshot_urls = lambda app, url: \
   filter_app_screenshot_urls(app, parse_github_screenshot_urls(url)) \
-    if is_github_url(url) else \
+    if is_github_repository_url(url) else \
   filter_app_screenshot_urls(app, parse_screenshot_urls(parse_screenshots_url(url) or url)) + \
   (filter_app_screenshot_urls(app, parse_github_screenshot_urls(utilities.build_github_url(parse_github_repository(url)))) if parse_github_repository(url) else ()) + \
   filter_app_screenshot_urls(app, parse_app_debian_screenshot_urls(app))
