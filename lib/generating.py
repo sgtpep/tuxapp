@@ -46,7 +46,7 @@ def read_added_apps(size):
   for line in lines:
     if line.isdigit() and len(line) >= 10:
       timestamp = int(line)
-    elif os.path.isfile(tuxapp.get_appfile_path(line)):
+    elif os.path.isfile(tuxapp.get_appfile_path(line)) and all(app != line for app, timestamp in result):
       result.append((line, timestamp))
       if len(result) == size:
         return tuple(result)
