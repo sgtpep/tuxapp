@@ -814,13 +814,13 @@ build_tag_attributes = lambda selector, attributes={}: \
     'id': ' '.join(re.findall(r'(?<=#)[^#.]+', selector)) or None,
   }).items()) if value or value is '')
 
-build_thumbnail = lambda text, base_url, image_url, video_url=None: \
+build_thumbnail = lambda text, url, path, video_url=None: \
   join_elements(
     build_tag('a.thumbnail.{}'.format('is-video' if video_url else 'is-screenshot'), None,
       build_tag('video', preload='metadata', src=video_url) \
-        if video_url and not os.path.isfile(image_url) else \
-      build_tag('img', alt=text, src=image_url),
-    href='{}#{}'.format(base_url, os.path.splitext(os.path.basename(tuxapp.parse_url(image_url).path))[0])),
+        if video_url and not os.path.isfile(path) else \
+      build_tag('img', alt=text, src=get_file_url(path)),
+    href='{}#{}'.format(url, os.path.splitext(os.path.basename(path))[0])),
     build_style('''
     .lightbox {
       background: rgba(0, 0, 0, 0.75);
@@ -849,12 +849,12 @@ build_thumbnail = lambda text, base_url, image_url, video_url=None: \
       border: none;
     }
     '''),
-    build_tag('#{}.lightbox'.format(os.path.splitext(os.path.basename(tuxapp.parse_url(image_url).path))[0]), None,
+    build_tag('#{}.lightbox'.format(os.path.splitext(os.path.basename(path))[0]), None,
       build_tag('iframe', allowfullscreen=True, height=480, src='https://www.youtube.com/embed/{}?enablejsapi=1'.format(tuxapp.search(r'(?<=^https://www\.youtube\.com/watch\?v=)[^&]+', video_url)), width=853) \
         if video_url and video_url.startswith('https://www.youtube.com/') else \
       build_tag('video', controls=True, preload='metadata', src=video_url) \
         if video_url else \
-      build_tag('img', alt=text, src=image_url),
+      build_tag('img', alt=text, src=get_file_url(path)),
       build_style('''
       .lightbox-action {
         color: white;
@@ -884,9 +884,9 @@ build_thumbnail = lambda text, base_url, image_url, video_url=None: \
         left: 0;
       }
       '''),
-      build_tag('a.lightbox-action.is-close', '×', href='{}#'.format(base_url), title='Close'),
-      build_tag('a.lightbox-action.is-next', '▸', href='{}#'.format(base_url), title='Next'),
-      build_tag('a.lightbox-action.is-previous', '◂', href='{}#'.format(base_url), title='Previous'),
+      build_tag('a.lightbox-action.is-close', '×', href='{}#'.format(url), title='Close'),
+      build_tag('a.lightbox-action.is-next', '▸', href='{}#'.format(url), title='Next'),
+      build_tag('a.lightbox-action.is-previous', '◂', href='{}#'.format(url), title='Previous'),
     ),
   )
 
