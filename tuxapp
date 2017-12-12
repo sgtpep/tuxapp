@@ -1275,7 +1275,8 @@ remove_app = \
   log_after('Removed {}')(
     lambda app: \
       remove_directory(get_app_path(app)) and \
-      remove_file(get_app_desktop_entry_path(app))
+      remove_file(get_app_desktop_entry_path(app)) and \
+      True
   ))
 
 remove_directory_ascending = lambda path: \

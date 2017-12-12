@@ -203,8 +203,7 @@ test_app = lambda app: \
   test_installed_app(app) \
     if tuxapp.is_app_installed(app) else \
   (tuxapp.install_app(app) or tuxapp.remove_app(app) and False) and \
-  (test_installed_app(app) or True) and \
-  tuxapp.remove_app(app)
+  (tuxapp.remove_app(app) if test_installed_app(app) else tuxapp.remove_app(app) and False)
 
 test_app_process = \
   tuxapp.log('Trying {} on {}')(
