@@ -190,6 +190,7 @@ install_missing_container = lambda distribution: \
     if os.path.isfile(get_install_mark_path(distribution)) else \
   install_container(distribution) and \
   tuxapp.write_file(get_install_mark_path(distribution)) and \
+  utilities.update_data(('container', distribution, 'update-timestamp'), int(time.time())) \
   distribution
 
 request_arch_container_url = lambda: get_arch_mirror_url('iso/latest/') + tuxapp.request_grep_url(get_arch_mirror_url('iso/latest/'), ('-Po', '-m', '1', r'(?<=")archlinux-bootstrap-[^"]+'))
