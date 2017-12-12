@@ -406,7 +406,7 @@ def write_file(path, content='', is_append=False):
 append_file = lambda path, content='': write_file(path, content, True)
 
 backup_app_cache = lambda app: \
-  rename_file(get_app_data_path(app), build_cached_app_package_data_path(app, max(query_app_package_list_update_time(app, url) for url in build_app_package_list_urls(app) if query_app_package_list_update_time(app, url)))) and \
+  (not query_app_package_list_update_timestamps(app) or rename_file(get_app_data_path(app), build_cached_app_package_data_path(app, max(query_app_package_list_update_timestamps(app))))) and \
   all(remove_file(path) for path in glob.iglob(build_cached_app_package_data_path(app, '*')) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * 7) and \
   all(remove_file(path) if os.path.isfile(get_cached_file_path(path)) else rename_file(path, get_cached_file_path(path)) for path in glob.iglob(get_app_cached_file_path(app, '*.deb'))) and \
   all(remove_file(path) for path in glob.iglob(get_cached_file_path('*.deb')) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * 30)
@@ -1225,7 +1225,9 @@ query_app_package_data = \
     lambda app, package, key: query_app_data(app, (package, key), None)
   )
 
-query_app_package_list_update_time = lambda app, url: int(query_app_data(app, ('packages', hash_md5(url), 'update-time'), '0'))
+query_app_package_list_update_timestamp = lambda app, url: int(query_app_data(app, ('packages', hash_md5(url), 'update-timestamp'), '0'))
+
+query_app_package_list_update_timestamps = lambda app: tuple(timestamp for timestamp in (query_app_package_list_update_timestamp(app, url) for url in build_app_package_list_urls(app)) if timestamp)
 
 query_app_package_version = lambda app, package: extract_package_version(parse_url(query_app_package_data(app, package, 'url')).path)
 
@@ -1483,7 +1485,7 @@ update_app_package_list_items = lambda app, items: \
 
 update_app_package_lists = lambda app: \
   (not next(glob.iglob(build_cached_app_package_data_path(app, '*')), None) or copy_file(sorted(glob.iglob(build_cached_app_package_data_path(app, '*')))[-1], get_app_data_path(app))) and \
-  all(update_app_package_list(app, url, download_missing_app_file(app, url, build_app_package_list_download_path(app, url))) for url in build_app_package_list_urls(app) if query_app_package_list_update_time(app, url) < time.time() - 60 * 60 * 6 and request_last_modified(url) > query_app_package_list_update_time(app, url))
+  all(update_app_package_list(app, url, download_missing_app_file(app, url, build_app_package_list_download_path(app, url))) for url in build_app_package_list_urls(app) if query_app_package_list_update_timestamp(app, url) < time.time() - 60 * 60 * 6 and request_last_modified(url) > query_app_package_list_update_timestamp(app, url))
 
 write_app_version = lambda app: write_file(get_app_version_path(app), '{} {}\n'.format(request_app_version(app), hash_app_download_urls(app)))
 
