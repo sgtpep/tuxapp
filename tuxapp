@@ -824,6 +824,7 @@ install_app = \
       install_app_distribution(app) and \
       install_app_packages(app, query_appfile(app, 'packages')) and \
       install_app_runner(app) and \
+      check_app_firejail(app) and \
       install_app_desktop_entry(app) and \
       get_app_path(app)
   )))
@@ -890,7 +891,6 @@ install_app_packages = \
     backup_app_cache(app)
 
 install_app_runner = lambda app: \
-  check_app_firejail(app) and \
   write_bash_script(get_app_runner_path(app), r'''
   declare -r app_path=''' + build_app_runner_relative_path(app, get_app_path(app)) + r'''
   declare -r browser_path=''' + build_app_runner_relative_path(app, install_app_browser(app)) + r'''
