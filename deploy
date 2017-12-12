@@ -70,6 +70,7 @@ packages=(
   nginx-light
   ranger
   rsync
+  sqlite3
   strace
   unattended-upgrades
   xvfb
