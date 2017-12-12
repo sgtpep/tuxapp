@@ -61,6 +61,11 @@ install_package = \
       call_process_verbose('sudo apt update && sudo apt install -y {}'.format(tuxapp.quote_argument(package)))
   ))
 
+open_url = \
+  tuxapp.do(lambda url, *args, **kwargs: url and tuxapp.is_existing_command('xdg-open') and tuxapp.call_process('xdg-open {} > /dev/null 2>&1 &'.format(tuxapp.quote_argument(url))))(
+    lambda url: url
+  )
+
 query_data = lambda key, default='': tuxapp.query_app_data(tuxapp.get_name(), key, default)
 
 update_data = lambda key, value: tuxapp.update_app_data(tuxapp.get_name(), key, value)

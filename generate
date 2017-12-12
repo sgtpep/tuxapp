@@ -8,11 +8,12 @@ import sys
 from lib import (
   generating,
   tuxapp,
+  utilities,
 )
 
 main = \
   tuxapp.handle_exceptions(
-  tuxapp.do(lambda *args, **kwargs: len(sys.argv[1:]) == 1 and tuxapp.is_existing_command('xdg-open') and tuxapp.call_process('xdg-open {} > /dev/null 2>&1 &'.format(tuxapp.quote_argument(generating.get_app_page_path(tuxapp.extract_app(sys.argv[1]))))))(
+  tuxapp.do(lambda *args, **kwargs: len(sys.argv[1:]) == 1 and utilities.open_url(generating.get_app_page_path(tuxapp.extract_app(sys.argv[1]))))(
     lambda: \
       generating.generate_app_page(tuxapp.extract_app(sys.argv[1])) \
         if len(sys.argv[1:]) == 1 else \
