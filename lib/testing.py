@@ -10,6 +10,7 @@ import textwrap
 import time
 
 from lib import (
+  appfile,
   tuxapp,
   utilities,
 )
@@ -97,7 +98,7 @@ configure_debian_container = lambda: \
   tuxapp.write_file(os.path.join(tuxapp.get_app_root_path('debian'), 'etc/apt/sources.list'), textwrap.dedent('''\
   deb http://deb.debian.org/debian {0} main
   deb http://security.debian.org/ {0}/updates main
-  ''').format(tuxapp.get_default_package_repository())) and \
+  ''').format(appfile.get_default_package_repository())) and \
   update_debian_container() and \
   call_root_script('debian', r'''
   packages=(
@@ -135,7 +136,7 @@ get_arch_package_url = lambda package: get_arch_mirror_url(os.path.join('extra' 
 
 get_debian_container_url = lambda: 'https://download.openvz.org/template/precreated/contrib/debian-9.0-{}-minimal.tar.gz'.format(tuxapp.detect_architecture().replace('-', '_'))
 
-get_debian_package_url = lambda package: 'https://packages.debian.org/{}/{}/{}/download'.format(tuxapp.get_default_package_repository(), tuxapp.detect_debian_architecture(), package)
+get_debian_package_url = lambda package: 'https://packages.debian.org/{}/{}/{}/download'.format(appfile.get_default_package_repository(), tuxapp.detect_debian_architecture(), package)
 
 get_default_distribution = lambda: 'debian'
 

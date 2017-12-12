@@ -664,8 +664,6 @@ get_copyright_year = lambda: 2017
 
 get_debian_mirror_url = lambda: 'https://cdn-aws.deb.debian.org/'
 
-get_default_package_repository = lambda: 'stretch'
-
 get_description = lambda: 'Downloads and installs the latest official releases of Linux® applications including dependencies without root permissions and allows to run them sandboxed.'
 
 get_excluded_dependencies = lambda: \

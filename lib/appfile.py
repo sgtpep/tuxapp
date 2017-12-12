@@ -17,6 +17,8 @@ get_categories = lambda: \
     'video',
   )
 
+get_default_package_repository = lambda: 'stretch'
+
 get_groups = lambda: \
   (
     'audio-streaming',
