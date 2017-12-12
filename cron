@@ -92,7 +92,7 @@ process_app = \
       generating.generate_app_page(app)
   )
 
-process_apps = lambda apps: utilities.call_parallel(process_app_worker, apps)
+process_apps = lambda apps: utilities.call_parallel(process_app_worker, apps, 4)
 
 query_data = lambda: \
   (row for rows in iter(utilities.connect_data().execute('SELECT * FROM items WHERE {} ORDER BY key'.format(' AND '.join('key NOT LIKE "{}"'.format(value) for value in (
