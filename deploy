@@ -23,40 +23,40 @@ UxJuLRgUJTm3GeH4DWoBreciF1EUQ68vdpCTBQmBfCiBuylqMGI/Gw==
 =IeOj
 -----END PGP MESSAGE-----"
 
-( cat << SSH; cat << \SSH ) | ssh root@"$hostname" bash -eu -o pipefail -$-
-github_repository="$github_repository"
-home_path=/home/"$USER"
-hostname="$hostname"
-netrc="$(ssh root@"$hostname" test -f /etc/netrc || gpg -d <(echo "$encrypted_netrc"))"
-password='$(ssh root@"$hostname" grep -q "^$USER:[^!]" /etc/shadow || sudo grep -Po "(?<=^$USER:)[^:]+" /etc/shadow)'
-repository_path=/home/"$USER"/"${github_repository##*/}"
-root_path=/var/www/html
-username="$USER"
+if ! ssh root@"$hostname" test -d /home/"$USER"/.ssh; then
+  ssh root@"$hostname" bash -eu -o pipefail -"$-" << EOF
+! grep -q '^debian:' /etc/passwd || userdel -r debian
+grep -q '^$USER:' /etc/passwd || useradd -m -G adm,sudo -c '$(grep -Po "(?<=^$USER:x:$UID:$UID:)[^,]+" /etc/passwd)' -s /bin/bash '$USER'
+grep -q '^$USER:\$' /etc/shadow || chpasswd -e <<< '$USER:$(sudo grep -Po "(?<=^$USER:)[^:]+" /etc/shadow)'
+
+cp -r ~/.ssh /home/'$USER'
+chown -R '$USER': /home/'$USER'/.ssh
+
+sed -i 's/^mesg /#\0/' ~/.profile
+EOF
+fi
+
+ssh root@"$hostname" 'echo "%sudo ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/nopasswd'
+( cat << SSH; cat << \SSH ) | ssh "$hostname" bash -eu -o pipefail -"$-"
+github_repository='$github_repository'
+hostname='$hostname'
+netrc='$(ssh root@"$hostname" test -f /etc/netrc || gpg -d <(echo "$encrypted_netrc"))'
 SSH
 
-! grep -q "^debian:" /etc/passwd || userdel -r debian
-grep -q "^$username:" /etc/passwd || useradd -m -G adm,sudo -s /bin/bash "$username"
-grep -q "^$username:[^!]" /etc/shadow || chpasswd -e <<< "$username:$password"
-
-[[ -f /etc/netrc ]] || echo "$netrc" > /etc/netrc
-chmod o-r /etc/netrc
-chown "$username": /etc/netrc
+[[ -f /etc/netrc ]] || sudo tee /etc/netrc > /dev/null <<< $netrc
+sudo chmod o-r /etc/netrc
+sudo chown "$username": /etc/netrc
 read _ smtp_hostname _ email _ < /etc/netrc
 
-sed -i "s/^mesg /#\0/" ~/.profile
-
-cp -r ~/.ssh "$home_path"
-chown -R "$username": "$home_path"/.ssh
-
-cat > /etc/apt/sources.list << \EOF
+sudo tee /etc/apt/sources.list > /dev/null << \EOF
 deb http://deb.debian.org/debian stretch main
 deb http://security.debian.org/ stretch/updates main
 EOF
 
-if [[ ! $(zgrep " dist-upgrade\b" /var/log/apt/history.log* || :) ]]; then
-  apt update
-  APT_LISTCHANGES_FRONTEND=none DEBIAN_FRONTEND=noninteractive apt -o Dpkg::Options::=--force-confnew dist-upgrade -y
-  apt autoremove -y --purge
+if [[ ! $(zgrep ' dist-upgrade\b' /var/log/apt/history.log* || :) ]]; then
+  sudo apt update
+  sudo APT_LISTCHANGES_FRONTEND=none DEBIAN_FRONTEND=noninteractive apt -o Dpkg::Options::=--force-confnew dist-upgrade -y
+  sudo apt autoremove -y --purge
 fi
 
 packages=(
@@ -75,17 +75,17 @@ packages=(
   unattended-upgrades
   xvfb
 )
-dpkg -s "${packages[@]}" &> /dev/null || DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
+dpkg -s "${packages[@]}" &> /dev/null || sudo DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
 
-echo "default: $email" > /etc/aliases
+sudo tee /etc/aliases > /dev/null <<< "default: $email"
 
-sed -i "s/^[\/ ]*\(Unattended-Upgrade::Automatic-Reboot\) .*/\1 \"true\";/" /etc/apt/apt.conf.d/50unattended-upgrades
+sudo sed -i 's/^[\/ ]*\(Unattended-Upgrade::Automatic-Reboot\) .*/\1 "true";/' /etc/apt/apt.conf.d/50unattended-upgrades
 
-echo "0 3,15 * * * $username $repository_path/update" > /etc/cron.d/update
+sudo tee /etc/cron.d/update > /dev/null <<< "0 */3 * * * $USER ~/${github_repository##*/}/cron"
 
-[[ -d /etc/letsencrypt/live ]] || certbot certonly -d "$hostname" -m "$email" -w "$root_path" --agree-tos --webroot
+[[ -d /etc/letsencrypt/live ]] || sudo certbot certonly -d "$hostname" -m "$email" -w /var/www/html --agree-tos --webroot
 
-cat > /etc/msmtprc << EOF
+sudo tee /etc/msmtprc > /dev/null << EOF
 account default
   aliases /etc/aliases
   auth on
@@ -96,11 +96,11 @@ account default
   tls_trust_file /etc/ssl/certs/ca-certificates.crt
   user $email
 EOF
-chmod o-r /etc/msmtprc
-chown "$username": /etc/msmtprc
+sudo chmod o-r /etc/msmtprc
+sudo chown "$username": /etc/msmtprc
 
 checksum=$(md5sum /etc/nginx/sites-enabled/default)
-cat > /etc/nginx/sites-enabled/default << EOF
+sudo tee /etc/nginx/sites-enabled/default > /dev/null << EOF
 server {
   listen 80 default_server;
   listen [::]:80 default_server;
@@ -108,11 +108,11 @@ server {
 }
 
 server {
-  add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload";
+  add_header Strict-Transport-Security 'max-age=63072000; includeSubDomains; preload';
   gzip on;
   listen 443 ssl default_server;
   listen [::]:443 ssl default_server;
-  root $root_path;
+  root /var/www/html;
   ssl_certificate /etc/letsencrypt/live/$hostname/fullchain.pem;
   ssl_certificate_key /etc/letsencrypt/live/$hostname/privkey.pem;
 
@@ -122,12 +122,15 @@ server {
   }
 }
 EOF
-md5sum -c --status <<< $checksum || systemctl restart nginx
-
-[[ -d $repository_path ]] || sudo -u "$username" git -C "$home_path" clone https://github.com/"$github_repository".git
-
-chown "$username": "$root_path"
-rm -f "$root_path"/{.well-known,index.nginx-debian.html}
-
-[[ ! -f /run/reboot-required ]] || reboot
+md5sum -c --status <<< $checksum || sudo systemctl restart nginx
 SSH
+
+sudo chown "$USER": /var/www/html
+sudo rm -fr /var/www/html/{.well-known,index.nginx-debian.html}
+
+[[ -d ~/${github_repository##*/} ]] || git -C ~ clone https://github.com/"$github_repository".git
+
+ssh root@"$hostname" << EOF
+rm /etc/sudoers.d/nopasswd
+[[ ! -f /run/reboot-required ]] || reboot
+EOF
