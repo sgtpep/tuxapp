@@ -602,36 +602,7 @@ execute_process = lambda arguments, environment=None: \
     if environment else \
   os.execvp(arguments[0], arguments)
 
-expand_package_group = lambda group: \
-  {
-    'group-chromium': (
-      'libasound2',
-      'libgconf-2-4',
-      'libgtk-3-0',
-      'libnss3',
-      'libxss1',
-      'libxtst6',
-    ),
-    'group-electron': (
-      'libasound2',
-      'libgconf-2-4',
-      'libgtk2.0-0',
-      'libnss3',
-      'libpulse0',
-      'libxkbfile1',
-      'libxss1',
-      'libxtst6',
-    ),
-    'group-firefox': (
-      'libdbus-glib-1-2',
-      'libgtk-3-0',
-      'libxt6',
-    ),
-    'group-opengl': (
-      'libgl1-mesa-dri',
-      'libgl1-mesa-glx',
-    ),
-  }.get(group, (group,))
+expand_package_group = lambda group: get_package_groups().get(group, (group,))
 
 expand_package_groups = lambda packages: tuple(package for package in packages for package in expand_package_group(package))
 
@@ -746,6 +717,37 @@ get_package_exclusions = lambda package: \
   ) + \
   (('/bin', '/usr/bin') if package.startswith('lib') and package != 'libarchive-tools' else ()) + \
   (() if package == 'libqt5webengine-data' else ('/usr/share',))
+
+get_package_groups = lambda: \
+  {
+    'group-chromium': (
+      'libasound2',
+      'libgconf-2-4',
+      'libgtk-3-0',
+      'libnss3',
+      'libxss1',
+      'libxtst6',
+    ),
+    'group-electron': (
+      'libasound2',
+      'libgconf-2-4',
+      'libgtk2.0-0',
+      'libnss3',
+      'libpulse0',
+      'libxkbfile1',
+      'libxss1',
+      'libxtst6',
+    ),
+    'group-firefox': (
+      'libdbus-glib-1-2',
+      'libgtk-3-0',
+      'libxt6',
+    ),
+    'group-opengl': (
+      'libgl1-mesa-dri',
+      'libgl1-mesa-glx',
+    ),
+  }
 
 get_package_install_command = lambda package, message='{}': \
   message.format('sudo apt install {}'.format(package)) \
