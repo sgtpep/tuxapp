@@ -211,6 +211,7 @@ test_app_process = \
   check_app_process_timeout(
     lambda app, distribution: \
       utilities.install_missing_package('strace') and \
+      utilities.install_missing_package('xvfb', 'xvfb-run') and \
       tuxapp.read_process(r'''
       output=$({}timeout -s 9 {} {} 2>&1)
       kill -9 $(echo "$output" | grep -Po '(?<= Process )\d+') 2> /dev/null
