@@ -652,7 +652,7 @@ get_app_version_path = lambda app: os.path.join(get_app_path(app), 'version')
 
 get_appfile_path = lambda app: os.path.join(get_project_path(), 'apps', app)
 
-get_cache_path = lambda: os.path.join(os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache')), 'tuxapp')
+get_cache_path = lambda: os.path.join(get_xdg_cache_path(), 'tuxapp')
 
 get_cached_file_path = lambda path: os.path.join(get_cache_path(), os.path.basename(path))
 
@@ -798,7 +798,11 @@ get_ubuntu_mirror_url = lambda: 'http://archive.ubuntu.com/'
 
 get_user_agent = lambda: 'Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'
 
+get_xdg_cache_path = lambda: os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache'))
+
 get_version = lambda: __version__
+
+get_xdg_data_path = lambda: os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
 
 hash_app_download_urls = lambda app: hash_md5(' '.join(query_appfile(app, 'download-urls')))
 
