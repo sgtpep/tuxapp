@@ -75,7 +75,7 @@ main = \
       (
         process_app(tuxapp.extract_app(sys.argv[1]))
           if len(sys.argv[1:]) == 1 else \
-        tuxapp.silence(all)(testing.install_missing_container(distribution) for distribution in testing.get_distributions()) and \
+        tuxapp.silence(all)(testing.install_missing_container(distribution) for distribution in testing.get_test_distributions()) and \
         (process_apps(tuxapp.extract_app(argument) for argument in sys.argv[1:] or glob.iglob(tuxapp.get_appfile_path('*'))) or True) and \
         generating.generate_pages()
       ) and \
