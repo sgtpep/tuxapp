@@ -11,6 +11,7 @@ from lib import (
   generating,
   tuxapp,
   utilities,
+  validation,
 )
 
 try:
@@ -120,6 +121,33 @@ class ChangelogURLParser(BaseParser):
     if tag == 'a':
       self.read_content(tag, attributes)
 
+class DescriptionParser(BaseParser):
+  priority = (
+    'description',
+    'og-description',
+    'schema-org-WebSite',
+    'json-ld-WebSite',
+    'schema-org-Product',
+    'json-ld-Product',
+    'schema-org-SoftwareApplication',
+    'json-ld-SoftwareApplication',
+  )
+
+  def on_json_ld(self, item):
+    if item['@type'] in self.data_types and item.get('description'):
+      self.add_result((self.priority.index('json-ld-{}'.format(item['@type'])), item['description']))
+
+  def on_schema_org(self, data_type, content, tag, attributes):
+    if data_type in self.data_types and attributes['itemprop'] == 'description':
+      self.add_result((self.priority.index('schema-org-{}'.format(data_type)), content))
+
+  def on_tag(self, tag, attributes):
+    if tag == 'meta' and attributes.get('content'):
+      if attributes.get('name') == 'description':
+        self.add_result((self.priority.index('description'), attributes['content']))
+      elif attributes.get('property') == 'og:description':
+        self.add_result((self.priority.index('og-description'), attributes['content']))
+
 class DownloadsURLParser(BaseParser):
   priority = (
     'download',
@@ -140,6 +168,19 @@ class DownloadsURLParser(BaseParser):
     if tag == 'a':
       self.read_content(tag, attributes)
 
+class GitHubNameParser(BaseParser):
+  is_article = False
+
+  def on_content(self, tag, attributes, content):
+    if tag == 'h1':
+      raise ResultException(content.split(' - ', 1)[0])
+
+  def on_tag(self, tag, attributes):
+    if tag == 'article':
+      self.is_article = True
+    elif tag == 'h1' and self.is_article:
+      self.read_content(tag, attributes)
+
 class GitHubScreenshotURLsParser(BaseParser):
   is_article = False
   is_multiple = True
@@ -152,6 +193,24 @@ class GitHubScreenshotURLsParser(BaseParser):
       self.paragraph_number += 1
     elif tag == 'img' and attributes.get('src') and self.previous_tag == 'a' and is_image_url(self.previous_attributes.get('href', '')) and self.is_article and self.paragraph_number > 1:
       self.add_result(attributes['src'])
+
+class IconURLParser(BaseParser):
+  is_head = True
+
+  rels = (
+    'shortcut icon',
+    'apple-touch-icon',
+    'apple-touch-icon-precomposed',
+    'icon',
+  )
+
+  def on_tag(self, tag, attributes):
+    if tag == 'link' and attributes.get('href') and attributes.get('rel') in self.rels:
+      self.add_result((
+        int(attributes.get('sizes', '0x0').split('x', 1)[0]),
+        self.rels.index(attributes['rel']),
+        attributes['href'],
+      ))
 
 class ImageURLParser(BaseParser):
   priority = (
@@ -171,6 +230,40 @@ class ImageURLParser(BaseParser):
   def on_tag(self, tag, attributes):
     if tag == 'meta' and attributes.get('property') in ('og:image', 'og:image:url', 'og:image:secure-url') and attributes.get('content'):
       self.add_result((self.priority.index('og-image'), attributes['content']))
+
+class NameParser(BaseParser):
+  priority = (
+    'heading-anchor',
+    'og-site-name',
+    'schema-org-WebSite',
+    'json-ld-WebSite',
+    'schema-org-Product',
+    'json-ld-Product',
+    'schema-org-SoftwareApplication',
+    'json-ld-SoftwareApplication',
+    'application-name',
+  )
+
+  def on_content(self, tag, attributes, content):
+    if tag in ('a', 'h1'):
+      self.add_result((self.priority.index('heading-anchor'), content))
+
+  def on_json_ld(self, item):
+    if item['@type'] in self.data_types and item.get('name'):
+      self.add_result((self.priority.index('json-ld-{}'.format(item['@type'])), item['name']))
+
+  def on_schema_org(self, data_type, content, tag, attributes):
+    if data_type in self.data_types and attributes['itemprop'] == 'name':
+      self.add_result((self.priority.index('schema-org-{}'.format(data_type)), content))
+
+  def on_tag(self, tag, attributes):
+    if tag == 'a' and self.previous_tag == 'h1' or tag == 'h1' and self.previous_tag == 'a':
+      self.read_content(tag, attributes)
+    elif tag == 'meta' and attributes.get('content'):
+      if attributes.get('name') == 'application-name':
+        self.add_result((self.priority.index('application-name'), attributes['content']))
+      elif attributes.get('property') == 'og:site_name':
+        self.add_result((self.priority.index('og-site-name'), attributes['content']))
 
 class ResultException(Exception):
   pass
@@ -200,6 +293,22 @@ class ScreenshotsURLParser(BaseParser):
     if tag == 'a':
       self.read_content(tag, attributes)
 
+class TitleParser(BaseParser):
+  is_head = True
+
+  priority = (
+    'title',
+    'og-title',
+  )
+
+  def on_data(self, tag, attributes, data):
+    if tag == 'title':
+      self.add_result((self.priority.index('title'), data))
+
+  def on_tag(self, tag, attributes):
+    if tag == 'meta' and attributes.get('property') == 'og:title' and attributes.get('content'):
+      self.add_result((self.priority.index('og-title'), attributes['content']))
+
 class VideoPosterURLsParser(BaseParser):
   is_multiple = True
 
@@ -228,9 +337,16 @@ check_github_releases = lambda repository: \
     if repository and not re.search(r'/releases$', request_url_headers_cached(utilities.build_github_url(repository, 'releases/latest')), re.M) else \
   ''
 
+check_url_name = lambda url, name: \
+  name.title() \
+    if validation.check_page_contains(url, name.title(), True) else \
+  ''
+
 download_missing_app_file = lambda url, pattern: \
   next(glob.iglob(pattern), None) or \
   tuxapp.rename_file(tuxapp.download_missing_app_file(tuxapp.get_name(), url, '{}~'.format(os.path.splitext(pattern)[0])), '{}.{}'.format(os.path.splitext(pattern)[0], utilities.detect_image_extension('{}~'.format(os.path.splitext(pattern)[0]))))
+
+extract_url_name = lambda url: re.sub(r'-+', ' ', re.sub(r'^www\.', '', tuxapp.parse_url(url).netloc).split('.', 1)[0])
 
 filter_app_downloads_url = lambda app, url: \
   '' \
@@ -273,6 +389,11 @@ filter_github_repository = lambda repository: \
 filter_image_url = lambda url: re.sub(r'\.pagespeed\.ce\..+$', '', url)
 
 filter_unique = lambda items, reference_items=None: tuple(collections.OrderedDict((reference_item, item) for reference_item, item in zip(reference_items or items, items)).values())
+
+filter_url_accessibility = lambda url: \
+  url \
+    if validation.check_url(url) else \
+  ''
 
 get_debian_screenshots_url = lambda package: 'https://screenshots.debian.net/package/{}'.format(package)
 
@@ -343,6 +464,11 @@ parse_base_url = lambda url: normalize_url(url, parse_html(BaseURLParser, reques
 
 parse_changelog_url = lambda url: normalize_url(url, parse_html(ChangelogURLParser, request_url_cached(url)))
 
+parse_description = lambda url: \
+  '' \
+    if is_github_repository_url(url) else \
+  parse_html(DescriptionParser, request_url_cached(url))
+
 parse_downloads_url = lambda url: normalize_url(url, parse_html(DownloadsURLParser, request_url_cached(url)))
 
 parse_github_latest_release_url = lambda url: utilities.build_github_url(check_github_releases(parse_github_repository(url)), 'releases/latest')
@@ -355,14 +481,39 @@ parse_github_repository = lambda url: \
 
 parse_github_screenshot_urls = lambda url: tuple(filter_image_url(normalize_url(url, screenshot_url)) for screenshot_url in parse_html(GitHubScreenshotURLsParser, request_url_cached(url)))
 
+parse_icon_url = lambda url: \
+  '' \
+    if is_github_url(url) else \
+  filter_url_accessibility(normalize_url(url, parse_html(IconURLParser, request_url_cached(url)) or '/favicon.ico'))
+
 parse_image_url = lambda url: \
   '' \
     if is_github_url(url) else \
   filter_image_url(normalize_url(url, parse_html(ImageURLParser, request_url_cached(url))))
 
+parse_name = lambda url: \
+  check_url_name(url, tuxapp.parse_url(url).path.lstrip('/').split('/', 1)[0]) \
+    if tuxapp.parse_url(url).netloc.endswith('.github.io') and tuxapp.parse_url(url).path.lstrip('/') else \
+  parse_html(GitHubNameParser, request_url_cached(url)) \
+    if is_github_repository_url(url) else \
+  parse_html(NameParser, request_url_cached(url)) or \
+  check_url_name(url, extract_url_name(url))
+
 parse_screenshot_urls = lambda url: tuple(filter_image_url(normalize_url(url, screenshot_url)) for screenshot_url in parse_html(ScreenshotURLsParser, request_url_cached(url)))
 
 parse_screenshots_url = lambda url: normalize_url(url, parse_html(ScreenshotsURLParser, request_url_cached(url)))
+
+parse_title = lambda url: \
+  re.sub(r'^.+ - ', '', parse_html(DescriptionParser, request_url_cached(url))) \
+    if is_github_repository_url(url) else \
+  parse_html(TitleParser, request_url_cached(url))
+
+parse_version_url = lambda url: \
+  '{}/releases/latest'.format(url) \
+    if is_github_repository_url(url) else \
+  utilities.build_github_url(parse_github_repository(url), 'releases/latest') \
+    if parse_github_repository(url) else \
+  ''
 
 parse_video_poster_urls = lambda url: tuple(filter_image_url(normalize_url(url, poster_url)) or '-' for video_url, poster_url in zip(parse_html(VideoURLsParser, request_url_cached(url)), parse_html(VideoPosterURLsParser, request_url_cached(url))))
 

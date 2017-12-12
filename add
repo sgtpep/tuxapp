@@ -1,225 +1,114 @@
 #!/usr/bin/env python
-from __future__ import print_function
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, print_function, unicode_literals
+
 import functools
-import imp
+import glob
 import os
 import re
 import sys
 
-generate = imp.load_source('generate', os.path.join(os.path.dirname(__file__), 'generate'))
-parse = imp.load_source('parse', os.path.join(os.path.dirname(__file__), 'parse'))
-test = imp.load_source('test', os.path.join(os.path.dirname(__file__), 'test'))
-tuxapp = imp.load_source('tuxapp', os.path.join(os.path.dirname(__file__), 'tuxapp'))
-validate = imp.load_source('validate', os.path.join(os.path.dirname(__file__), 'validate'))
+from lib import (
+  appfile,
+  generating,
+  parsing,
+  testing,
+  tuxapp,
+  utilities,
+  validation,
+)
 
-def validates(validate_function):
+def validate(validate_function):
   def decorator(function):
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
-      result = None
+      if is_repl():
+        args = args + ('',)
       while True:
-        previous_result = result
-        if sys.argv[0]:
-          result = function(*args[:-1] + (args[-1] if result is None else result,), **kwargs)
-        else:
-          result = function(*args, prefill=result, **kwargs)
-        try:
-          if sys.argv[0]:
-            validate_function(*args[:-1] + (args[-1] if previous_result is None else previous_result,), result=result, **kwargs)
-          else:
-            validate_function(*args, prefill=previous_result, result=result, **kwargs)
-        except AssertionError as exception:
-          if exception.args:
-            print(exception.args[0], file=sys.stderr)
-        else:
+        result = function(*args, **kwargs)
+        if result and result == args[-1]:
           return result
+        else:
+          try:
+            validate_function(*args, result=result, **kwargs)
+          except AssertionError as exception:
+            if exception.args:
+              print(exception.args[0], file=sys.stderr)
+            args = args[:-1] + (result,)
+          else:
+            return result
     return wrapper
   return decorator
-
-class DescriptionParser(parse.BaseParser):
-  priority = (
-    'description',
-    'og-description',
-    'schema-org-WebSite',
-    'json-ld-WebSite',
-    'schema-org-Product',
-    'json-ld-Product',
-    'schema-org-SoftwareApplication',
-    'json-ld-SoftwareApplication',
-  )
-
-  def on_json_ld(self, item):
-    if item['@type'] in self.data_types and item.get('description'):
-      self.add_result((self.priority.index('json-ld-{}'.format(item['@type'])), item['description']))
-
-  def on_schema_org(self, type, content, tag, attributes):
-    if type in self.data_types and attributes['itemprop'] == 'description':
-      self.add_result((self.priority.index('schema-org-{}'.format(type)), content))
-
-  def on_tag(self, tag, attributes):
-    if tag == 'meta' and attributes.get('content'):
-      if attributes.get('name') == 'description':
-        self.add_result((self.priority.index('description'), attributes['content']))
-      elif attributes.get('property') == 'og:description':
-        self.add_result((self.priority.index('og-description'), attributes['content']))
-
-class GitHubNameParser(parse.BaseParser):
-  is_article = False
-
-  def on_content(self, tag, attributes, content):
-    if tag == 'h1':
-      raise parse.ResultException(content.split(" - ", 1)[0])
-
-  def on_tag(self, tag, attributes):
-    if tag == 'article':
-      self.is_article = True
-    elif tag == 'h1' and self.is_article:
-      self.read_content(tag, attributes)
-
-class IconURLParser(parse.BaseParser):
-  is_head = True
-
-  rels = (
-    "shortcut icon",
-    'apple-touch-icon',
-    'apple-touch-icon-precomposed',
-    'icon',
-  )
-
-  def on_tag(self, tag, attributes):
-    if tag == 'link' and attributes.get('href') and attributes.get('rel') in self.rels:
-      self.add_result((
-        int(attributes.get('sizes', "0x0").split('x', 1)[0]),
-        self.rels.index(attributes['rel']),
-        attributes['href'],
-      ))
-
-class NameParser(parse.BaseParser):
-  priority = (
-    'heading-anchor',
-    'og-site-name',
-    'schema-org-WebSite',
-    'json-ld-WebSite',
-    'schema-org-Product',
-    'json-ld-Product',
-    'schema-org-SoftwareApplication',
-    'json-ld-SoftwareApplication',
-    'application-name',
-  )
-
-  def on_content(self, tag, attributes, content):
-    if tag in ('a', 'h1'):
-      self.add_result((self.priority.index('heading-anchor'), content))
-
-  def on_json_ld(self, item):
-    if item['@type'] in self.data_types and item.get('name'):
-      self.add_result((self.priority.index('json-ld-{}'.format(item['@type'])), item['name']))
-
-  def on_schema_org(self, type, content, tag, attributes):
-    if type in self.data_types and attributes['itemprop'] == 'name':
-      self.add_result((self.priority.index('schema-org-{}'.format(type)), content))
-
-  def on_tag(self, tag, attributes):
-    if tag == 'a' and self.previous_tag == 'h1' or tag == 'h1' and self.previous_tag == 'a':
-      self.read_content(tag, attributes)
-    elif tag == 'meta' and attributes.get('content'):
-      if attributes.get('name') == 'application-name':
-        self.add_result((self.priority.index('application-name'), attributes['content']))
-      elif attributes.get('property') == 'og:site_name':
-        self.add_result((self.priority.index('og-site-name'), attributes['content']))
-
-class TitleParser(parse.BaseParser):
-  is_head = True
-
-  priority = (
-    'title',
-    'og-title',
-  )
-
-  def on_data(self, tag, attributes, data):
-    if tag == 'title':
-      self.add_result((self.priority.index('title'), data))
-
-  def on_tag(self, tag, attributes):
-    if tag == 'meta' and attributes.get('property') == 'og:title' and attributes.get('content'):
-      self.add_result((self.priority.index('og-title'), attributes['content']))
 
 def detect_app_library_packages(app, packages=()):
   tuxapp.install_app_runner(app)
   try:
-    tuxapp.install_app_appfile_packages(app, tuxapp.expand_packages(packages))
+    tuxapp.install_app_packages(app, tuxapp.expand_package_groups(packages))
   except AssertionError as exception:
     if exception.args:
       print(exception.args[0], file=sys.stderr)
     return packages
-  for distribution in test.get_test_distributions():
-    filenames = test.detect_missing_app_libraries(app, distribution)
-    package = next((get_library_package(filename) for filename in filenames if get_library_package(filename)), None)
+  for distribution in testing.get_test_distributions():
+    filenames = testing.detect_missing_app_libraries(app, distribution)
+    package = next((package for package in (get_library_package(filename) for filename in filenames) if package), None)
     if package:
       return detect_app_library_packages(app, packages + (package,))
     else:
       for filename in filenames:
         try:
-          package = tuxapp.fetch_grep_url("https://packages.debian.org/search?suite={}&arch={}&searchon=contents&keywords=/{}".format(
-            tuxapp.get_debian_release(),
-            tuxapp.detect_debian_architecture(),
-            filename,
-          ), ('-Po', '-m', '1', r"(?<=\"/{}/)[^\"]+".format(tuxapp.get_debian_release())))
+          package = tuxapp.request_grep_url('https://{}/search?arch={}&keywords=/{}&searchon=contents&suite={}'.format('packages.ubuntu.com' if tuxapp.query_appfile(app, 'package-repository') == 'xenial' else 'packages.debian.org', tuxapp.detect_debian_architecture(), filename, tuxapp.query_appfile(app, 'package-repository')), ('-Po', '-m', '1', r'(?<="/{}/)[^"]+'.format(re.escape(tuxapp.query_appfile(app, 'package-repository')))))
         except AssertionError as exception:
           if exception.args:
             print(exception.args[0], file=sys.stderr)
           return packages
-        if package and package not in packages:
+        if package and not package.endswith('-dev') and package not in packages:
           return detect_app_library_packages(app, packages + (package,))
   return packages
 
 def execute_app(app):
-  for distribution in test.get_test_distributions():
-    print("Executing {} on {}".format(app, distribution), file=sys.stderr)
-    tuxapp.call_process(test.build_bwrap_arguments(distribution, app))
-    if not input_boolean("Continue?"):
+  for distribution in testing.get_test_distributions():
+    print('Executing {} on {}'.format(app, distribution), file=sys.stderr)
+    tuxapp.call_process(testing.build_bwrap_arguments(distribution, app))
+    if not confirm_message('Continue?'):
       raise KeyboardInterrupt
-  print("Executing {} with firejail".format(app), file=sys.stderr)
-  test.install_missing_package('firejail')
+  print('Executing {} with firejail'.format(app), file=sys.stderr)
+  utilities.install_missing_package('firejail')
   tuxapp.call_process((tuxapp.get_app_runner_path(app),))
-  if not input_boolean("Continue?"):
+  if not confirm_message('Continue?'):
     raise KeyboardInterrupt
   return True
 
-def input_text(prompt, prefill='', choices=(), is_whitespacy=False):
+def input_text(message, prefill='', choices=(), is_whitespacy=False):
   try:
     import readline
-    readline.set_startup_hook(lambda: readline.insert_text(getattr(validates, 'prefill', filter_text(prefill, is_whitespacy)).encode('utf-8')))
-    history_path = os.path.expanduser("~/.python_history")
-    if hasattr(sys, 'ps1') and os.path.isfile(history_path):
-      readline.write_history_file(history_path)
+    readline.set_startup_hook(lambda: readline.insert_text(filter_text(prefill, is_whitespacy).encode('utf-8')))
+    path = os.path.expanduser('~/.python_history')
+    if is_repl() and os.path.isfile(path):
+      readline.write_history_file(path)
     completer = readline.get_completer()
-    readline.set_completer(choices if hasattr(choices, '__call__') else lambda text, state: tuple(choice for choice in choices if choice.startswith(text))[state])
+    readline.set_completer(choices if callable(choices) else lambda text, state: tuple(choice for choice in choices if choice.startswith(text))[state])
     delimeters = readline.get_completer_delims()
     readline.set_completer_delims(' ')
     try:
       import builtins
     except ImportError:
       import __builtin__ as builtins
-    return filter_text(getattr(builtins, 'raw_input', input)("{}: ".format(prompt)).decode('utf-8'), is_whitespacy)
+    return filter_text(getattr(builtins, 'raw_input', input)('{}: '.format(message)).decode('utf-8'), is_whitespacy)
   finally:
     readline.set_startup_hook()
-    if hasattr(sys, 'ps1') and os.path.isfile(history_path):
+    if is_repl() and os.path.isfile(path):
       readline.clear_history()
-      readline.read_history_file(history_path)
+      readline.read_history_file(path)
     readline.set_completer(completer)
     readline.set_completer_delims(delimeters)
 
-@tuxapp.handles_exceptions
-def main(arguments=tuple(sys.argv[1:])):
-  appfile = \
-    dict(validate.parse_appfile(tuxapp.extract_app(arguments[0])), app=tuxapp.extract_app(arguments[0])) \
-      if arguments else \
-    {'app': get_default_app()}
+@tuxapp.handle_exceptions
+def main():
+  data = dict(tuxapp.parse_appfile(tuxapp.extract_app(sys.argv[1])), app=tuxapp.extract_app(sys.argv[1])) if sys.argv[1:] else {'app': get_default_app()}
   step = 0
   while True:
     try:
-      appfile = get_update_appfile_functions()[step](appfile)
+      data = get_update_appfile_functions()[step](data)
       step += 1
       if step == len(get_update_appfile_functions()):
         break
@@ -232,25 +121,45 @@ def main(arguments=tuple(sys.argv[1:])):
       print()
   return True
 
-check_name = lambda url, name: name.title() if validate.check_page_contains(url, name.title(), True) else ''
+check_appfile_existence = lambda app: \
+  app \
+    if not os.path.isfile(tuxapp.get_appfile_path(app)) or sys.argv[1:] and tuxapp.extract_app(sys.argv[1]) == app or confirm_message('Overwrite an existing file?') else \
+  ''
 
-check_url_protocol = lambda url: url.replace("http://", "https://", 1) if validate.is_url_valid(url) and not validate.check_url_protocol(url) else url
+check_url_protocol = lambda url: \
+  url.replace('http://', 'https://', 1) \
+    if validation.is_url_valid(url) and not validation.check_url_protocol(url) else \
+  url
 
-complete_packages = lambda text, state: \
+complete_app_packages = lambda app, text, state: \
   (
-    tuple(item for item in tuxapp.get_package_groups().keys() if text and item.startswith(text)) + \
-    tuple(tuxapp.read_process(('grep', '-Pho', '-m', '10', r"(?<=/){}[^/_]*(?=_)".format(tuxapp.quote_argument(text))) + tuxapp.update_package_lists()).splitlines())
+    tuple(group for group in tuxapp.get_package_groups().keys() if text and group.startswith(text)) + \
+    tuple(row[0].split(':', 1)[0] for row in tuxapp.connect_app_data(app).execute('SELECT key FROM items WHERE key LIKE ? LIMIT 100', ('{}%:url'.format(text),)).fetchall())
   )[state]
+
+confirm_message = lambda message, is_no=False: \
+  not re.match(r'($|n)', input_text('{} [y/N]'.format(message)), re.I) \
+    if is_no else \
+  bool(re.match(r'($|y)', input_text('{} [Y/n]'.format(message)), re.I))
+
+detect_app_distribution_executable = lambda app, prefix='': \
+  detect_app_distribution_executables(app, prefix)[0] \
+    if len(detect_app_distribution_executables(app, prefix)) == 1 else \
+  detect_app_distribution_executables(app, prefix, True)[0] \
+    if len(detect_app_distribution_executables(app, prefix, True)) == 1 else \
+  ''
+
+detect_app_distribution_executables = lambda app, prefix='', is_all=False: tuple(path.replace(tuxapp.get_app_distribution_path(app), '.') for path in glob.iglob(os.path.join(tuxapp.get_app_distribution_path(app), prefix, '*')) if tuxapp.is_file_executable(path) and (is_all or os.path.basename(path).lower() == app.lower()))
 
 detect_app_executable = lambda app: \
   tuxapp.install_app_distribution(app) and \
-  strip_bin_path(tuxapp.unasserts('')(tuxapp.detect_app_executable)(app))
+  detect_installed_app_executable(app)
 
 detect_app_package_groups = lambda filenames: \
   ('group-chromium',) \
-    if "nw_100_percent.pak" in filenames else \
+    if 'nw_100_percent.pak' in filenames else \
   ('group-electron',) \
-    if "atom.asar" in filenames or "cef.pak" in filenames or "electron.asar" in filenames or "nw.pak" in filenames else \
+    if any(filename in filenames for filename in get_electron_filenames()) else \
   ()
 
 detect_app_packages = lambda app, packages='', installed_packages='': \
@@ -259,11 +168,20 @@ detect_app_packages = lambda app, packages='', installed_packages='': \
   (packages and set(packages.split()) >= set(installed_packages.split()) or tuxapp.remove_directory(tuxapp.get_app_root_path(app))) and \
   ' '.join(detect_app_library_packages(app, tuple(packages.split()) or detect_app_package_groups(set(os.path.basename(path) for path in tuxapp.list_app_distribution(app)))))
 
+detect_installed_app_executable = lambda app: \
+  './AppRun' \
+    if tuxapp.is_file_executable(os.path.join(tuxapp.get_app_distribution_path(app), 'AppRun')) else \
+  detect_app_distribution_executable(app, 'usr/bin') \
+    if os.path.isdir(os.path.join(tuxapp.get_app_distribution_path(app), 'usr/bin')) else \
+  detect_app_distribution_executable(app, 'opt/*') \
+    if os.path.isdir(os.path.join(tuxapp.get_app_distribution_path(app), 'opt')) else \
+  detect_app_distribution_executable(app)
+
 detect_version_regex = lambda html: \
-  r"/download/v([^/]+)" \
-    if re.search(r"/releases/download/v\d", html) else \
-  r"/download/([^/]+)" \
-    if re.search(r"/releases/download/\d", html) else \
+  r'/download/v([^/]+)' \
+    if re.search(r'/releases/download/v\d', html) else \
+  r'/download/([^/]+)' \
+    if re.search(r'/releases/download/\d', html) else \
   r'"softwareVersion"\s*:\s*"([^"]+)' \
     if re.search(r'"softwareVersion"\s*:\s*"', html) else \
   r'"softwareVersion" content="([^"]+)' \
@@ -272,244 +190,229 @@ detect_version_regex = lambda html: \
     if '"softwareVersion">' in html else \
   ''
 
-extract_url_name = lambda url: re.sub(r"-+", ' ', re.sub(r"^www\.", '', tuxapp.parse_url(url).netloc).split('.', 1)[0])
+filter_app = lambda app: re.sub(r'[^a-z0-9]+', '-', app.lower()).strip('-')
 
-filter_app = lambda app: re.sub(r"[^a-z0-9]+", '-', app.lower()).strip('-')
+filter_app_download_url = lambda app, urls, prefill: \
+  urls \
+    if urls == prefill else \
+  ' '.join(filter_url(url) for url in urls.split()).replace(tuxapp.request_app_version(app), '{version}')
 
 filter_description = lambda description: \
-  description and u"{}{}{}".format(
-    description[0].upper(),
-    description[1:],
-    '' if description[-1] in validate.get_punctuation() else '.',
-  )
+  description and \
+  description[0].upper() + \
+  description[1:] + \
+  ('' if description[-1] in validation.get_punctuation() else '.')
 
-filter_download_url = lambda app, urls: ' '.join(filter_url(url) for url in urls.split()).replace(tuxapp.fetch_app_version(app), "{version}")
+filter_executable = lambda executable: \
+  executable \
+    if './' in executable else \
+  './{}'.format(executable)
 
-filter_executable = lambda app, command: '' if strip_bin_path(command.lstrip('/')) == detect_app_executable(app) else command
-
-filter_name = lambda name: name.rstrip(''.join(validate.get_punctuation()))
+filter_name = lambda name: name.rstrip(''.join(validation.get_punctuation()))
 
 filter_packages = lambda packages: ' '.join(sorted(set(packages.split())))
 
 filter_text = lambda string, is_whitespacy=False: \
   string.strip() \
     if is_whitespacy else \
-  re.sub(r"\s+", ' ', string.replace('\t', ' ')).strip()
+  re.sub(r'\s+', ' ', string.replace('\t', ' ')).strip()
 
-filter_title = lambda title: title and u"{}{}".format(title[0].upper(), title[1:]).rstrip(''.join(validate.get_punctuation()))
+filter_title = lambda title: \
+  title and \
+  (title[0].upper() + title[1:]).rstrip(''.join(validation.get_punctuation()))
 
 filter_url = lambda url: check_url_protocol(filter_url_path(url.split('#', 1)[0]))
 
-filter_url_accessibility = lambda url: url if validate.check_url(url) else ''
+filter_url_path = lambda url: \
+  '{}/'.format(url) \
+    if validation.is_url_valid(url) and not tuxapp.parse_url(url).path else \
+  url
 
-filter_url_path = lambda url: "{}/".format(url) if validate.is_url_valid(url) and not tuxapp.parse_url(url).path else url
+filter_version_url = lambda url: re.sub(r'^.+({}/releases\b).*$'.format(utilities.get_github_url_pattern()), r'https://\1/latest', url, 1)
 
-filter_version_url = lambda homepage_url, url: \
-  '' \
-    if url == homepage_url else \
-  re.sub(r"\bgithub\.com/[\w-]+/[\w-]+/releases(?!/latest$).*", r"\g<0>/latest", url)
-
-generate_app_page = lambda app: \
-  parse.update_app(app) and \
-  generate.generate_app_page(app) and \
-  open_url(generate.get_app_page_path(app))
-
-generate_appfile = lambda appfile: ''.join(u"{}={}\n".format(key, appfile[key]) for key in sorted(appfile) if key != 'app')
+generate_appfile = lambda data: ''.join('{}={}\n'.format(key, data[key]) for key in sorted(data) if key != 'app')
 
 get_default_app = lambda: 'temp'
 
+get_electron_filenames = lambda: \
+  (
+    'atom.asar',
+    'cef.pak',
+    'electron.asar',
+    'nw.pak',
+  )
+
 get_library_package = lambda filename: \
   {
-    "libatomic.so.1": 'libatomic1',
-    "libgobject-2.0.so.0": 'libgtk2.0-0',
+    'libatomic.so.1': 'libatomic1',
+    'libgobject-2.0.so.0': 'libgtk2.0-0',
   }.get(filename)
 
 get_update_appfile_functions = lambda: \
   (
-    update_appfile_homepage_url,
-    update_appfile_name,
-    update_appfile_app,
-    update_appfile_category,
-    update_appfile_group,
-    update_appfile_free_license,
-    update_appfile_icon_url,
-    update_appfile_title,
-    update_appfile_description,
-    update_appfile_version_url,
-    update_appfile_version_regex,
-    update_appfile_download_x86_64_url,
-    update_appfile_download_x86_url,
-    update_appfile_executable,
-    update_appfile_packages,
-    update_appfile_finish,
+#     update_appfile_homepage_url,
+#     update_appfile_name,
+#     update_appfile_app,
+#     update_appfile_version_url,
+#     update_appfile_version_regex,
+#     update_appfile_download_x86_64_url,
+#     update_appfile_download_x86_url,
+#     update_appfile_executable,
+#     update_appfile_package_repository,
+#     update_appfile_packages,
+#     update_appfile_category,
+#     update_appfile_group,
+#     update_appfile_free_license,
+#     update_appfile_icon_url,
+#     update_appfile_title,
+#     update_appfile_description,
+#     update_appfile_execute,
+    update_appfile_generate,
   )
 
-input_app = validates(lambda *args, **kwargs: \
-  validate.validate_app(kwargs['result']) and \
-  tuxapp.asserts("Provide another identifier")(lambda app: not os.path.isfile(tuxapp.get_appfile_path(app)) or input_boolean("Overwrite an existing file?"))(kwargs['result'])
-)(
-  lambda prefill='': filter_app(input_text("Identifier", prefill))
-)
+input_app = \
+  validate(lambda *args, **kwargs: validation.validate_app(kwargs['result']))(
+    lambda prefill='': check_appfile_existence(filter_app(input_text('Identifier', prefill)))
+  )
 
-input_boolean = lambda question, is_no=False: \
-  ('' if re.match(r"($|n)", input_text("{} [y/N]".format(question)), re.I) else 'yes') \
-    if is_no else \
-  ('yes' if re.match(r"($|y)", input_text("{} [Y/n]".format(question)), re.I) else '')
+input_app_description = \
+  validate(lambda app, *args, **kwargs: validation.validate_app_description(app, kwargs['result']))(
+    lambda app, prefill='': filter_description(input_text('Description', prefill))
+  )
+
+input_app_download_url = \
+  validate(lambda app, architecture, *args, **kwargs: validation.validate_app_download_url(app, architecture, kwargs['result']))(
+    lambda app, architecture, prefill='': filter_app_download_url(app, input_text('Download URL ({}){}'.format(architecture, '' if architecture == 'x86-64' else ' (optional)'), prefill), prefill)
+  )
+
+input_app_executable = \
+  tuxapp.log(lambda app, *args, **kwargs: 'Executables: {}'.format(', '.join(list_app_executables(app))))(
+  validate(lambda app, *args, **kwargs: validation.validate_executable(kwargs['result']))(
+    lambda app, prefill='': filter_executable(input_text('Executable', prefill, list_app_executables(app) + tuple('./{}'.format(path) for path in list_app_executables(app))))
+  ))
+
+input_app_name = \
+  validate(lambda app, *args, **kwargs: validation.validate_app_name(app, kwargs['result']))(
+    lambda app, prefill='': filter_name(input_text('Name', prefill))
+  )
+
+input_app_packages = \
+  validate(lambda app, prefill='', *args, **kwargs: \
+    validation.validate_app_packages(app, kwargs['result']) and \
+    tuxapp.check('Checked for missing packages')(lambda packages, installed_packages: packages == installed_packages)(kwargs['result'], prefill)
+  )(
+    lambda app, prefill='': filter_packages(detect_app_packages(app, filter_packages(input_text('Packages', prefill, lambda text, state: complete_app_packages(app, text, state))), prefill))
+  )
+
+input_app_title = \
+  validate(lambda app, *args, **kwargs: validation.validate_app_title(app, kwargs['result']))(
+    lambda app, prefill='': filter_title(input_text('Title', prefill))
+  )
+
+input_app_version_regex = \
+  validate(lambda app, *args, **kwargs: validation.validate_app_version_regex(app, kwargs['result']))(
+  tuxapp.log_result(lambda app, prefill='', *args, **kwargs: sys.argv[1:] or 'Detected version: {}'.format(tuxapp.request_app_version(app, kwargs['result'])))(
+    lambda app, prefill='': input_text('Version regex', prefill, (), True)
+  ))
+
+input_boolean = lambda message, is_no=False: \
+  'yes' \
+    if confirm_message(message, is_no) else \
+  'no'
 
 input_category = \
-  validates(lambda *args, **kwargs: validate.validate_category(kwargs['result']))(
-  tuxapp.logs(lambda *args, **kwargs: "Categories: {}".format(", ".join(validate.get_categories())))(
-    lambda prefill='': input_text("Category", prefill, validate.get_categories())
+  tuxapp.log(lambda *args, **kwargs: 'Categories: {}'.format(', '.join(appfile.get_categories())))(
+  validate(lambda *args, **kwargs: validation.validate_category(kwargs['result']))(
+    lambda prefill='': input_text('Category', prefill, appfile.get_categories())
   ))
 
-input_description = validates(lambda app, *args, **kwargs: validate.validate_description(app, kwargs['result']))(
-  lambda app, prefill='': filter_description(input_text("Description", prefill))
-)
-
-input_download_url = \
-  tuxapp.logs_result(lambda *args, **kwargs: kwargs['result'] and not tuxapp.search(r"\bContent-Type:\s*application/", tuxapp.fetch_headers(kwargs['result']), re.I) and "Improper Content-Type")(
-  validates(lambda app, architecture, *args, **kwargs: validate.validate_download_url(app, architecture, kwargs['result']))(
-    lambda app, architecture, prefill='': filter_download_url(app, input_text("Download URL ({}){}".format(architecture, '' if architecture == 'x86-64' else " (optional)"), prefill))
-  ))
-
-input_executable = \
-  validates(
-    lambda app, *args, **kwargs: \
-      (detect_app_executable(app) or validate.validate_text(kwargs['result'])) and \
-      validate.validate_executable(kwargs['result']) and \
-      (not kwargs['result'] or tuxapp.resolve_app_executable(app, kwargs['result']))
-  )(
-  tuxapp.logs(lambda app, *args, **kwargs: "Executables: {}".format(", ".join(list_app_executables(app))))(
-    lambda app, prefill='': filter_executable(app, input_text("Executable{}".format(" (default: {})".format(detect_app_executable(app)) if detect_app_executable(app) else ''), prefill, list_app_executables(app)))
-  ))
-
-input_free_license = validates(lambda *args, **kwargs: validate.validate_free_license(kwargs['result']))(
-  lambda prefill='': input_boolean("Is license free?", not prefill)
-)
-
-input_group = \
-  validates(lambda *args, **kwargs: validate.validate_group(kwargs['result'], True))(
-  tuxapp.logs(lambda *args, **kwargs: "Groups: {}".format(", ".join(validate.get_groups())))(
-    lambda prefill='': input_text("Group", prefill, validate.get_groups())
-  ))
-
-input_homepage_url = validates(lambda *args, **kwargs: validate.validate_homepage_url(kwargs['result']))(
-  lambda prefill='': filter_url(input_text("Homepage URL", prefill))
-)
-
-input_icon_url = validates(lambda *args, **kwargs: validate.validate_icon_url(kwargs['result']))(
-  lambda prefill='': filter_url(input_text("Icon URL", prefill))
-)
-
-input_name = validates(lambda app, *args, **kwargs: validate.validate_name(app, kwargs['result']))(
-  lambda app, prefill='': filter_name(input_text("Name", prefill))
-)
-
-input_packages = \
-  validates(
-    lambda app, prefill='', *args, **kwargs: \
-      validate.validate_packages(kwargs['result']) and \
-      tuxapp.asserts("Checked for missing packages")(lambda packages, installed_packages: packages == installed_packages)(kwargs['result'], prefill)
-  )(
-    lambda app, prefill='': filter_packages(detect_app_packages(app, filter_packages(input_text("Packages", prefill, complete_packages)), prefill))
+input_free_license = \
+  validate(lambda *args, **kwargs: validation.validate_free_license(kwargs['result']))(
+    lambda prefill='': input_boolean('Is license free?', prefill == 'no')
   )
 
-input_title = validates(lambda app, *args, **kwargs: validate.validate_title(app, kwargs['result']))(
-  lambda app, prefill='': filter_title(input_text("Title", prefill))
-)
-
-input_version_regex = \
-  tuxapp.logs_result(lambda app, *args, **kwargs: "Detected version: {}".format(tuxapp.fetch_app_version(app, kwargs['result'])))(
-  validates(lambda app, *args, **kwargs: validate.validate_version_regex(app, kwargs['result']))(
-    lambda app, prefill='': input_text("Version regex", prefill, (), True)
+input_group = \
+  tuxapp.log(lambda *args, **kwargs: 'Groups: {}'.format(', '.join(appfile.get_groups())))(
+  validate(lambda *args, **kwargs: validation.validate_group(kwargs['result'], True))(
+    lambda prefill='': input_text('Group', prefill, appfile.get_groups())
   ))
 
-input_version_url = validates(lambda *args, **kwargs: validate.validate_version_url(kwargs['result']))(
-  lambda homepage_url, prefill='': filter_version_url(homepage_url, filter_url(input_text("Version URL (default: {})".format(homepage_url), prefill)))
-)
+input_homepage_url = \
+  validate(lambda *args, **kwargs: validation.validate_homepage_url(kwargs['result']))(
+    lambda prefill='': filter_url(input_text('Homepage URL', prefill))
+  )
+
+input_icon_url = \
+  validate(lambda *args, **kwargs: validation.validate_icon_url(kwargs['result']))(
+    lambda prefill='': filter_url(input_text('Icon URL', prefill))
+  )
+
+input_package_repository = \
+  validate(lambda *args, **kwargs: validation.validate_package_repository(kwargs['result']))(
+    lambda prefill='': input_text('Package repository', prefill, appfile.get_package_repositories())
+  )
+
+input_version_url = \
+  validate(lambda *args, **kwargs: validation.validate_version_url(kwargs['result']))(
+    lambda prefill='': filter_version_url(filter_url(input_text('Version URL', prefill)))
+  )
+
+is_repl = lambda: hasattr(sys, 'ps1')
 
 list_app_executables = lambda app: \
   tuxapp.install_app_distribution(app) and \
-  tuple(sorted(set(strip_bin_path(path.replace("{}/".format(tuxapp.get_app_distribution_path(app)), '', 1)).replace(' ', r"\ ") for path in tuxapp.list_app_distribution(app) if tuxapp.is_file_executable(path))))
+  tuple(sorted(path.replace('{}/'.format(tuxapp.get_app_distribution_path(app)), '', 1).replace(' ', r'\ ') for path in tuxapp.list_app_distribution(app) if tuxapp.is_file_executable(path)))
 
-open_url = tuxapp.does(lambda url, *args, **kwargs: url and input_boolean("Open {} in the browser?".format(url)) and tuxapp.call_process("xdg-open {} > /dev/null 2>&1 &".format(tuxapp.quote_argument(url))))(lambda url: url)
+update_appfile = \
+  tuxapp.log_result(lambda *args, **kwargs: '> {}:\n{}'.format(tuxapp.get_appfile_path(kwargs['result']['app']).replace(os.path.expanduser('~'), '~', 1), '\n'.join('> {}'.format(line) for line in generate_appfile(kwargs['result']).splitlines())))(
+    lambda data, key, value: \
+      write_appfile(dict(data, **{key: value})) and \
+      dict(data, **{key: value})
+  )
 
-parse_description = lambda url: \
-  '' \
-    if re.search(r"\bgithub\.com/[\w-]+/[\w-]+$", url) else \
-  parse.parse_html(DescriptionParser, parse.fetch_url_cached(url))
+update_appfile_app = lambda data: update_appfile(data, 'app', input_app(filter_app(data['name']) if data['app'] == get_default_app() else data['app']))
 
-parse_icon_url = lambda url: \
-  '' \
-    if re.search(r"\bgithub\.com/[\w-]+/[\w-]+$", url) else \
-  filter_url_accessibility(parse.normalize_url(url, parse.parse_html(IconURLParser, parse.fetch_url_cached(url)) or "/favicon.ico"))
+update_appfile_category = lambda data: update_appfile(data, 'category', input_category(data.get('category', '')))
 
-parse_name = lambda url: \
-  check_name(url, tuxapp.parse_url(url).path.lstrip('/').split('/', 1)[0]) \
-    if ".github.io/" in url and tuxapp.parse_url(url).path.lstrip('/') else \
-  parse.parse_html(GitHubNameParser, parse.fetch_url_cached(url)) \
-    if re.search(r"\bgithub\.com/[\w-]+/[\w-]+$", url) else \
-  parse.parse_html(NameParser, parse.fetch_url_cached(url)) or check_name(url, extract_url_name(url))
+update_appfile_description = lambda data: update_appfile(data, 'description', input_app_description(data['app'], data['description'] if 'description' in data else filter_description(parsing.parse_description(data['homepage-url']))))
 
-parse_title = lambda url: \
-  re.sub(r"^.+ - ", '', parse.parse_html(DescriptionParser, parse.fetch_url_cached(url))) \
-    if re.search(r"\bgithub\.com/[\w-]+/[\w-]+$", url) else \
-  parse.parse_html(TitleParser, parse.fetch_url_cached(url))
+update_appfile_download_x86_64_url = lambda data: update_appfile(data, 'download-x86-64-url', input_app_download_url(data['app'], 'x86-64', data.get('download-x86-64-url', '')))
 
-parse_version_url = lambda url: \
-  "https://{}/releases/latest".format(tuxapp.search(r"\bgithub\.com/[\w-]+/[\w-]+$", url)) \
-    if re.search(r"\bgithub\.com/[\w-]+/[\w-]+$", url) else \
-  ''
+update_appfile_download_x86_url = lambda data: update_appfile(data, 'download-x86-url', input_app_download_url(data['app'], 'x86', data.get('download-x86-url', '')))
 
-strip_bin_path = lambda command: re.sub(r"^usr/bin/", '', command)
+update_appfile_executable = lambda data: update_appfile(data, 'executable', input_app_executable(data['app'], data['executable'] if 'executable' in data else detect_app_executable(data['app'])))
 
-update_appfile = tuxapp.logs_result(
-  lambda *args, **kwargs: \
-    u"> {}:\n{}".format(
-      tuxapp.get_appfile_path(kwargs['result']['app']).replace(os.path.expanduser('~'), '~', 1),
-      '\n'.join(u"> {}".format(line) for line in generate_appfile(kwargs['result']).splitlines()),
-    )
-)(
-  lambda appfile, key, value: \
-    write_appfile(dict(appfile, **{key: value})) and \
-    dict(appfile, **{key: value})
-)
+update_appfile_execute = lambda data: execute_app(data['app'])
 
-update_appfile_app = lambda appfile: update_appfile(appfile, 'app', input_app(filter_app(appfile['name']) if appfile['app'] == get_default_app() else appfile['app']))
+update_appfile_free_license = lambda data: update_appfile(data, 'free-license', input_free_license(data.get('free-license', 'yes')))
 
-update_appfile_category = lambda appfile: update_appfile(appfile, 'category', input_category(appfile.get('category', '')))
+update_appfile_generate = lambda data: \
+  parsing.parse_app(data['app']) and \
+  utilities.open_url(generating.generate_app_page(data['app']))
 
-update_appfile_description = lambda appfile: update_appfile(appfile, 'description', input_description(appfile['app'], appfile['description'] if 'description' in appfile else filter_description(parse_description(appfile['homepage-url']))))
+update_appfile_group = lambda data: update_appfile(data, 'group', input_group(data.get('group', '')))
 
-update_appfile_download_x86_64_url = lambda appfile: update_appfile(appfile, 'download-x86-64-url', input_download_url(appfile['app'], 'x86-64', appfile.get('download-x86-64-url', '')))
+update_appfile_homepage_url = lambda data: update_appfile(data, 'homepage-url', input_homepage_url(data.get('homepage-url', '')))
 
-update_appfile_download_x86_url = lambda appfile: update_appfile(appfile, 'download-x86-url', input_download_url(appfile['app'], 'x86', appfile.get('download-x86-url', '')))
+update_appfile_icon_url = lambda data: update_appfile(data, 'icon-url', input_icon_url(data['icon-url'] if 'icon-url' in data else utilities.open_url(filter_url(parsing.parse_icon_url(data['homepage-url'])))))
 
-update_appfile_executable = lambda appfile: update_appfile(appfile, 'executable', input_executable(appfile['app'], appfile.get('executable', '')))
+update_appfile_name = lambda data: update_appfile(data, 'name', input_app_name(data['app'], data['name'] if 'name' in data else filter_name(parsing.parse_name(data['homepage-url']))))
 
-update_appfile_finish = lambda appfile: execute_app(appfile['app']) and generate_app_page(appfile['app'])
+update_appfile_package_repository = lambda data: update_appfile(data, 'package-repository', input_package_repository(data['package-repository'] if 'package-repository' in data else appfile.get_default_package_repository()))
 
-update_appfile_free_license = lambda appfile: update_appfile(appfile, 'free-license', input_free_license(appfile.get('free-license', 'yes')))
+update_appfile_packages = lambda data: \
+  tuxapp.update_app_package_lists(data['app']) and \
+  update_appfile(data, 'packages', input_app_packages(data['app'], data['packages'] if 'packages' in data else filter_packages(detect_app_packages(data['app']))))
 
-update_appfile_group = lambda appfile: update_appfile(appfile, 'group', input_group(appfile.get('group', '')))
+update_appfile_title = lambda data: update_appfile(data, 'title', input_app_title(data['app'], data['title'] if 'title' in data else filter_title(parsing.parse_title(data['homepage-url']))))
 
-update_appfile_homepage_url = lambda appfile: update_appfile(appfile, 'homepage-url', input_homepage_url(appfile.get('homepage-url', '')))
+update_appfile_version_regex = lambda data: update_appfile(data, 'version-regex', input_app_version_regex(data['app'], data['version-regex'] if 'version-regex' in data else detect_version_regex(parsing.request_url_cached(data.get('version-url') or data['homepage-url']))))
 
-update_appfile_icon_url = lambda appfile: update_appfile(appfile, 'icon-url', input_icon_url(appfile['icon-url'] if 'icon-url' in appfile else open_url(filter_url(parse_icon_url(appfile['homepage-url'])))))
+update_appfile_version_url = lambda data: update_appfile(data, 'version-url', input_version_url(data['version-url'] if 'version-url' in data else parsing.parse_version_url(data['homepage-url'])))
 
-update_appfile_name = lambda appfile: update_appfile(appfile, 'name', input_name(appfile['app'], appfile['name'] if 'name' in appfile else filter_name(parse_name(appfile['homepage-url']))))
-
-update_appfile_packages = lambda appfile: update_appfile(appfile, 'packages', input_packages(appfile['app'], appfile['packages'] if 'packages' in appfile else filter_packages(detect_app_packages(appfile['app']))))
-
-update_appfile_title = lambda appfile: update_appfile(appfile, 'title', input_title(appfile['app'], appfile['title'] if 'title' in appfile else filter_title(parse_title(appfile['homepage-url']))))
-
-update_appfile_version_regex = lambda appfile: update_appfile(appfile, 'version-regex', input_version_regex(appfile['app'], appfile['version-regex'] if 'version-regex' in appfile else detect_version_regex(parse.fetch_url_cached(appfile.get('version-url') or appfile['homepage-url']))))
-
-update_appfile_version_url = lambda appfile: update_appfile(appfile, 'version-url', input_version_url(appfile['homepage-url'], appfile['version-url'] if 'version-url' in appfile else parse_version_url(appfile['homepage-url'])))
-
-write_appfile = lambda appfile: \
+write_appfile = lambda data: \
   tuxapp.remove_file(tuxapp.get_appfile_path(get_default_app())) and \
-  tuxapp.write_file(tuxapp.get_appfile_path(appfile['app']), generate_appfile(dict(dict.fromkeys(validate.get_appfile_keys(), ''), **appfile)))
+  tuxapp.write_file(tuxapp.get_appfile_path(data['app']), generate_appfile(dict(dict.fromkeys(appfile.get_keys(), ''), **data)))
 
 if __name__ == '__main__':
   main()
