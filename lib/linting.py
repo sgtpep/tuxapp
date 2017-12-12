@@ -7,8 +7,8 @@ def register(linter):
     import pylint.interfaces
     __implements__ = (pylint.interfaces.IAstroidChecker,)
     msgs = {
-      'W0001': ('%s %s is misplaced', 'misplaced-item', ''),
-      'W0002': ('%s %s is not defined in sorted order', 'unordered-item', ''),
+      'W0001': ('%s %r is misplaced', 'misplaced-item', ''),
+      'W0002': ('%s %r is not defined in sorted order', 'unordered-item', ''),
     }
     name = 'order-checker'
 
