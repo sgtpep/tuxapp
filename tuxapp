@@ -408,7 +408,7 @@ append_file = lambda path, content='': write_file(path, content, True)
 backup_app_cache = lambda app: \
   (not query_app_package_list_update_timestamps(app) or rename_file(get_app_data_path(app), build_cached_app_package_data_path(app, max(query_app_package_list_update_timestamps(app))))) and \
   all(remove_file(path) for path in glob.iglob(build_cached_app_package_data_path(app, '*')) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * 7) and \
-  all(remove_file(path) if os.path.isfile(get_cached_file_path(path)) else rename_file(path, get_cached_file_path(path)) for path in glob.iglob(get_app_cached_file_path(app, '*.deb'))) and \
+  all(remove_file(path) if os.path.isfile(get_cached_file_path(path)) else rename_file(path, get_cached_file_path(path)) for path in glob.iglob(get_app_temp_file_path(app, '*.deb'))) and \
   all(remove_file(path) for path in glob.iglob(get_cached_file_path('*.deb')) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * 30)
 
 build_app_bsdtar_arguments = lambda app: \
@@ -579,12 +579,8 @@ download_app_files_wget = lambda app, urls, path: \
   ))
 
 download_app_packages = lambda app, packages: \
-  tuple(copy_file(path, get_app_cached_file_path(app, path)) for path in (get_cached_file_path(parse_url(query_app_package_data(app, package, 'url')).path) for package in packages) if os.path.isfile(path)) + \
-  download_missing_app_cache_files(app, set(query_app_package_data(app, package, 'url') for package in packages))
-
-download_missing_app_cache_file = lambda app, url: download_missing_app_file(app, url, build_download_path(get_app_cache_path(app), url))
-
-download_missing_app_cache_files = lambda app, urls: download_missing_app_files(app, urls, get_app_cache_path(app))
+  tuple(copy_file(path, get_app_temp_file_path(app, path)) for path in (get_cached_file_path(parse_url(query_app_package_data(app, package, 'url')).path) for package in packages) if os.path.isfile(path)) + \
+  download_missing_app_temp_files(app, set(query_app_package_data(app, package, 'url') for package in packages))
 
 download_missing_app_file = lambda app, url, path: \
   path \
@@ -594,6 +590,10 @@ download_missing_app_file = lambda app, url, path: \
 download_missing_app_files = lambda app, urls, path: \
   tuple(path for path in (build_download_path(path, url) for url in urls) if os.path.isfile(path)) + \
   download_app_files(app, tuple(url for url in urls if not os.path.isfile(build_download_path(path, url))), path)
+
+download_missing_app_temp_file = lambda app, url: download_missing_app_file(app, url, build_download_path(get_app_temp_path(app), url))
+
+download_missing_app_temp_files = lambda app, urls: download_missing_app_files(app, urls, get_app_temp_path(app))
 
 execute_app = lambda app, arguments=(): execute_process((get_app_runner_path(app),) + arguments)
 
@@ -614,17 +614,13 @@ extract_package_version = lambda path: path.split('_', 2)[1]
 
 filter_app_download_url = lambda app, url: url.replace('{debian}', '{}debian/pool'.format(get_debian_mirror_url())).replace('{ubuntu}', '{}ubuntu/pool'.format(get_ubuntu_mirror_url())).replace('{version}', request_app_version(app))
 
-get_app_cache_path = lambda app: os.path.join(get_app_path(app), 'cache')
+get_app_data_path = lambda app: get_app_temp_file_path(app, 'data')
 
-get_app_cached_file_path = lambda app, path: os.path.join(get_app_cache_path(app), os.path.basename(path))
-
-get_app_data_path = lambda app: get_app_cached_file_path(app, 'data')
-
-get_app_desktop_entry_path = lambda app: os.path.join(os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share')), 'applications/{}-{}.desktop'.format(get_name(), app))
+get_app_desktop_entry_path = lambda app: os.path.join(get_xdg_data_path(), 'applications/{}-{}.desktop'.format(get_name(), app))
 
 get_app_distribution_binary_path = lambda app, filename: os.path.join(get_app_distribution_path(app), 'usr/bin', filename)
 
-get_app_distribution_download_path = lambda app, suffix: get_app_cached_file_path(app, 'download-{}'.format(suffix))
+get_app_distribution_download_path = lambda app, suffix: get_app_temp_file_path(app, 'download-{}'.format(suffix))
 
 get_app_distribution_path = lambda app: os.path.join(get_app_path(app), 'dist')
 
@@ -634,7 +630,7 @@ get_app_icon_path = lambda app: os.path.join(get_app_path(app), 'icon')
 
 get_app_lock_path = lambda app: os.path.join(get_app_path(app), 'lock')
 
-get_app_package_list_download_path = lambda app, suffix: get_app_cached_file_path(app, 'packages-{}'.format(suffix))
+get_app_package_list_download_path = lambda app, suffix: get_app_temp_file_path(app, 'packages-{}'.format(suffix))
 
 get_app_package_version_path = lambda app, package: os.path.join(get_app_root_path(app), 'var/lib/packages', package)
 
@@ -646,7 +642,11 @@ get_app_root_path = lambda app: os.path.join(get_app_path(app), 'root')
 
 get_app_runner_path = lambda app: os.path.join(get_app_path(app), 'run')
 
-get_app_temp_downloads_path = lambda app: os.path.join(get_app_cache_path(app), 'downloads')
+get_app_temp_downloads_path = lambda app: os.path.join(get_app_temp_path(app), 'downloads')
+
+get_app_temp_file_path = lambda app, path: os.path.join(get_app_temp_path(app), os.path.basename(path))
+
+get_app_temp_path = lambda app: os.path.join(get_app_path(app), 'temp')
 
 get_app_version_path = lambda app: os.path.join(get_app_path(app), 'version')
 

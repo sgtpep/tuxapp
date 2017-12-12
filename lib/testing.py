@@ -59,7 +59,7 @@ build_root_bwrap_arguments = lambda distribution: \
   utilities.install_missing_package('bubblewrap', 'bwrap') and \
   ('bwrap', '--bind', tuxapp.get_app_root_path(distribution), '/',
     '--bind', '/etc/resolv.conf', '/etc/resolv.conf',
-    '--bind', tuxapp.make_directories(tuxapp.get_app_cache_path(distribution)), '/var/cache/pacman/pkg' if distribution == 'arch' else '/var/cache/apt/archives',
+    '--bind', tuxapp.make_directories(tuxapp.get_app_temp_path(distribution)), '/var/cache/pacman/pkg' if distribution == 'arch' else '/var/cache/apt/archives',
     '--dev', '/dev',
     '--proc', '/proc',
     '--tmpfs', '/tmp',
@@ -158,13 +158,13 @@ get_test_distributions = lambda: \
 get_xauthority_path = lambda: os.path.expanduser('~/.Xauthority')
 
 install_arch_container = lambda: \
-  tuxapp.unpack_tarball(tuxapp.download_missing_app_cache_file('arch', request_arch_container_url()), tuxapp.get_app_root_path('arch'), ('--strip-components=1',)) and \
+  tuxapp.unpack_tarball(tuxapp.download_missing_app_temp_file('arch', request_arch_container_url()), tuxapp.get_app_root_path('arch'), ('--strip-components=1',)) and \
   tuxapp.change_file_mode(os.path.join(tuxapp.get_app_root_path('arch'), 'etc/ca-certificates/extracted/cadir'), lambda mode: mode | stat.S_IWUSR) and \
   all(install_arch_container_package(package) for package in ('fakechroot', 'fakeroot', 'sed')) and \
   configure_arch_container()
 
 install_arch_container_package = lambda package: \
-  tuxapp.silence(tuxapp.unpack_tarball)(tuxapp.download_missing_app_cache_file('arch', request_arch_package_url(package)), tuxapp.get_app_root_path('arch'), ('--exclude=.*', '--warning=no-unknown-keyword')) and \
+  tuxapp.silence(tuxapp.unpack_tarball)(tuxapp.download_missing_app_temp_file('arch', request_arch_package_url(package)), tuxapp.get_app_root_path('arch'), ('--exclude=.*', '--warning=no-unknown-keyword')) and \
   package
 
 install_container = \
@@ -176,12 +176,12 @@ install_container = \
   )
 
 install_debian_container = lambda: \
-  tuxapp.unpack_tarball(tuxapp.download_missing_app_cache_file('debian', get_debian_container_url()), tuxapp.get_app_root_path('debian'), ('--exclude=./dev',)) and \
+  tuxapp.unpack_tarball(tuxapp.download_missing_app_temp_file('debian', get_debian_container_url()), tuxapp.get_app_root_path('debian'), ('--exclude=./dev',)) and \
   all(install_debian_container_package(package) for package in ('fakeroot', 'libfakeroot')) and \
   configure_debian_container()
 
 install_debian_container_package = lambda package: \
-  tuxapp.silence(tuxapp.unpack_package)(tuxapp.download_missing_app_cache_file('debian', request_debian_package_url(package)), tuxapp.get_app_root_path('debian')) and \
+  tuxapp.silence(tuxapp.unpack_package)(tuxapp.download_missing_app_temp_file('debian', request_debian_package_url(package)), tuxapp.get_app_root_path('debian')) and \
   package
 
 install_missing_container = lambda distribution: \
