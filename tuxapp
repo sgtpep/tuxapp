@@ -713,6 +713,7 @@ get_package_exclusions = lambda package: \
     '/var',
   ) + \
   (('/bin', '/usr/bin') if package.startswith('lib') and package != 'libarchive-tools' else ()) + \
+  (('/lib',) if package == 'libdbus-1-3' else ()) + \
   (() if package == 'libqt5webengine-data' else ('/usr/share',))
 
 get_package_groups = lambda: \
