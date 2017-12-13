@@ -539,7 +539,7 @@ download_app_file = \
   log('Downloading {1}')(
   check('Failed to download {1}')(
     lambda app, url, path: \
-      rename_file(build_app_temp_download_path(app, path), path) \
+      rename_file_ascending(build_app_temp_download_path(app, path), path) \
         if uncheck()(call_process)(build_request_arguments(
           (('-Ss',) if is_silent() else ()) + \
           ('-o', make_file_directories(build_app_temp_download_path(app, path)), url),
@@ -556,7 +556,7 @@ download_app_files = \
     lambda app, urls, path: \
       () \
         if not urls else \
-      tuple(rename_file(build_app_temp_download_path(app, url), build_download_path(path, url)) for url in urls if os.path.isfile(build_app_temp_download_path(app, url))) \
+      tuple(rename_file_ascending(build_app_temp_download_path(app, url), build_download_path(path, url)) for url in urls if os.path.isfile(build_app_temp_download_path(app, url))) \
         if (download_app_files_curl(app, urls, path) if get_request_command() == 'curl' else download_app_files_wget(app, urls, path)) else \
       all(remove_file_ascending(build_app_temp_download_path(app, url)) for url in urls) and \
       None
@@ -1303,6 +1303,11 @@ remove_file_ascending = lambda path: \
   remove_empty_directories(os.path.dirname(path))
 
 remove_old_files = lambda pattern, days=30: all(remove_file(path) for path in glob.iglob(pattern) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * days)
+
+rename_file_ascending = lambda path, destination_path: \
+  rename_file(path, destination_path) and \
+  remove_empty_directories(os.path.dirname(path)) and \
+  destination_path
 
 request_app_version = lambda app, pattern=None: request_app_version_memoized(app, query_appfile(app, 'version-url'), pattern or query_appfile(app, 'version-regex'))
 
