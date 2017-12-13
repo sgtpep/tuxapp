@@ -546,7 +546,7 @@ download_app_file = \
           (('-q',) if is_silent() else ('--show-progress',)) + \
           ('-O', make_file_directories(build_app_temp_download_path(app, path)), url),
         )) else \
-      remove_file(build_app_temp_download_path(app, path)) and \
+      remove_file_ascending(build_app_temp_download_path(app, path)) and \
       None
   ))
 
@@ -556,10 +556,9 @@ download_app_files = \
     lambda app, urls, path: \
       () \
         if not urls else \
-      all(remove_file(path) for url in urls if not os.path.isfile(build_app_temp_download_path(app, url)) for path in glob.iglob('{}.*'.format(build_app_temp_download_path(app, url)))) and \
       tuple(rename_file(build_app_temp_download_path(app, url), build_download_path(path, url)) for url in urls if os.path.isfile(build_app_temp_download_path(app, url))) \
         if (download_app_files_curl(app, urls, path) if get_request_command() == 'curl' else download_app_files_wget(app, urls, path)) else \
-      all(remove_file(build_app_temp_download_path(app, url)) for url in urls) and \
+      all(remove_file_ascending(build_app_temp_download_path(app, url)) for url in urls) and \
       None
   ))
 
