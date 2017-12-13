@@ -579,7 +579,7 @@ download_app_files_wget = lambda app, urls, path: \
 
 download_app_packages = lambda app, packages: \
   tuple(copy_file(path, get_app_temp_file_path(app, path)) for path in (get_app_cached_file_path(app, parse_url(query_app_package_data(app, package, 'url')).path) for package in packages) if os.path.isfile(path)) + \
-  download_missing_app_temp_files(app, set(query_app_package_data(app, package, 'url') for package in packages))
+  download_missing_app_temp_files(app, set(url for url in (query_app_package_data(app, package, 'url') for package in packages) if not os.path.isfile(get_app_cached_file_path(app, parse_url(url).path))))
 
 download_missing_app_file = lambda app, url, path: \
   path \
