@@ -209,11 +209,11 @@ request_arch_package_url = lambda package: get_arch_package_url(package) + tuxap
 
 request_debian_package_url = lambda package: tuxapp.get_debian_mirror_url() + tuxapp.request_grep_url(get_debian_package_url(package), ('-o', '-m', '1', r'[^/]*/pool/[^"]*'))
 
-test_app = lambda app: \
-  test_installed_app(app) \
+test_app = lambda app, distribution=None: \
+  test_installed_app(app, distribution) \
     if tuxapp.is_app_installed(app) else \
   (tuxapp.install_app(app) or tuxapp.remove_app(app) and False) and \
-  (tuxapp.remove_app(app) if test_installed_app(app) else tuxapp.remove_app(app) and False)
+  (tuxapp.remove_app(app) if test_installed_app(app, distribution) else tuxapp.remove_app(app) and False)
 
 test_app_process = \
   tuxapp.log('Trying {} on {}')(
@@ -234,7 +234,7 @@ test_app_process = \
 
 test_apps = lambda apps: utilities.call_parallel(test_app_worker, apps, 4)
 
-test_installed_app = lambda app: all(not detect_missing_app_libraries(app, distribution) for distribution in get_test_distributions())
+test_installed_app = lambda app, distribution=None: all(not detect_missing_app_libraries(app, distribution) for distribution in ((distribution,) if distribution else get_test_distributions()))
 
 update_arch_container = lambda: call_root_script('arch', r'pacman -Syu --noconfirm')
 

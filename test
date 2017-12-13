@@ -31,7 +31,7 @@ main = \
         if parse_arguments().root else \
       testing.execute_shell(parse_distribution_argument()) \
         if parse_arguments().shell else \
-      testing.test_app(tuxapp.extract_app(parse_arguments().arguments[0])) \
+      testing.test_app(tuxapp.extract_app(parse_arguments().arguments[0]), parse_arguments().distribution) \
         if len(parse_arguments().arguments) == 1 else \
       testing.test_apps(tuxapp.extract_app(argument) for argument in parse_arguments().arguments or glob.iglob(tuxapp.get_appfile_path('*')))
   )
