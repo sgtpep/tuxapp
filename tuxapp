@@ -408,8 +408,8 @@ append_file = lambda path, content='': write_file(path, content, True)
 backup_app_cache = lambda app: \
   (not query_app_package_list_update_timestamps(app) or rename_file(get_app_data_path(app), build_cached_app_package_data_path(app, max(query_app_package_list_update_timestamps(app))))) and \
   all(remove_file(path) for path in glob.iglob(build_cached_app_package_data_path(app, '*')) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * 7) and \
-  all(remove_file(path) if os.path.isfile(get_cached_file_path(path)) else rename_file(path, get_cached_file_path(path)) for path in glob.iglob(get_app_temp_file_path(app, '*.deb'))) and \
-  all(remove_file(path) for path in glob.iglob(get_cached_file_path('*.deb')) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * 30)
+  all(remove_file(path) if os.path.isfile(get_app_cached_file_path(app, path)) else rename_file(path, get_app_cached_file_path(app, path)) for path in glob.iglob(get_app_temp_file_path(app, '*.deb'))) and \
+  all(remove_file(path) for path in glob.iglob(get_app_cached_file_path(app, '*.deb')) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * 30)
 
 build_app_bsdtar_arguments = lambda app: \
   ('bsdtar',) \
@@ -447,7 +447,7 @@ build_app_runner_relative_path = lambda app, path: re.sub(r'/\.$', '', os.path.j
 
 build_app_temp_download_path = lambda app, url: build_download_path(get_app_temp_downloads_path(app), url)
 
-build_cached_app_package_data_path = lambda app, timestamp: get_cached_file_path('packages-{}-{}'.format(query_appfile(app, 'package-repository'), timestamp))
+build_cached_app_package_data_path = lambda app, timestamp: get_app_cached_file_path(app, 'packages-{}'.format(timestamp))
 
 build_curl_request_arguments = lambda options, is_gzip=False: \
   ('curl', '-#Lf', '-H', 'Accept-Language: en', '-m', '10', '--retry', '2') + \
@@ -578,7 +578,7 @@ download_app_files_wget = lambda app, urls, path: \
   ))
 
 download_app_packages = lambda app, packages: \
-  tuple(copy_file(path, get_app_temp_file_path(app, path)) for path in (get_cached_file_path(parse_url(query_app_package_data(app, package, 'url')).path) for package in packages) if os.path.isfile(path)) + \
+  tuple(copy_file(path, get_app_temp_file_path(app, path)) for path in (get_app_cached_file_path(app, parse_url(query_app_package_data(app, package, 'url')).path) for package in packages) if os.path.isfile(path)) + \
   download_missing_app_temp_files(app, set(query_app_package_data(app, package, 'url') for package in packages))
 
 download_missing_app_file = lambda app, url, path: \
@@ -612,6 +612,8 @@ extract_package_name = lambda path: os.path.basename(path).split('_', 1)[0]
 extract_package_version = lambda path: path.split('_', 2)[1]
 
 filter_app_download_url = lambda app, url: url.replace('{debian}', '{}debian/pool'.format(get_debian_mirror_url())).replace('{ubuntu}', '{}ubuntu/pool'.format(get_ubuntu_mirror_url())).replace('{version}', request_app_version(app))
+
+get_app_cached_file_path = lambda app, path: os.path.join(get_cache_path(), query_appfile(app, 'package-repository'), os.path.basename(path))
 
 get_app_data_path = lambda app: get_app_temp_file_path(app, 'data')
 
@@ -652,8 +654,6 @@ get_app_version_path = lambda app: os.path.join(get_app_path(app), 'version')
 get_appfile_path = lambda app: os.path.join(get_project_path(), 'apps', app)
 
 get_cache_path = lambda: os.path.join(get_xdg_cache_path(), 'tuxapp')
-
-get_cached_file_path = lambda path: os.path.join(get_cache_path(), os.path.basename(path))
 
 get_copyright = lambda: '(c) {} Danil Semelenov'.format(get_copyright_range())
 
