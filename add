@@ -128,7 +128,7 @@ check_appfile_existence = lambda app: \
 
 check_url_protocol = lambda url: \
   url.replace('http://', 'https://', 1) \
-    if validation.is_url_valid(url) and not validation.check_url_protocol(url) else \
+    if validation.is_url_valid(url) and not validation.check_url_https(url) else \
   url
 
 complete_app_packages = lambda app, text, state: \

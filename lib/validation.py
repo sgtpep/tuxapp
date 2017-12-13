@@ -52,9 +52,19 @@ def validate_regex(pattern):
 check_page_contains = lambda url, string, is_case_sensitive=False: \
   bool(re.search(r'\b{}\b'.format(re.escape(re.sub(r'\s+', ' ', re.sub(r'\W+', ' ', string)))), request_url_text(url), 0 if is_case_sensitive else re.I | re.U))
 
-check_url_protocol = lambda url: \
+check_url_http = lambda url: \
+  not is_http_domain(url) or \
+  url.startswith('http://')
+
+check_url_https = lambda url: \
   url.startswith('https://') or \
+  is_http_domain(url) or \
   not check_url(url.replace('http://', 'https://', 1))
+
+is_http_domain = lambda url: \
+  tuxapp.parse_url(url).netloc in (
+    'downloads.sourceforge.net',
+  )
 
 get_punctuation = lambda: ('.', '!', '?')
 
@@ -286,7 +296,8 @@ validate_url = lambda url: \
   tuxapp.check('No path')(lambda: bool(tuxapp.parse_url(url).path))() and \
   tuxapp.check('Contains a fragment')(lambda: not tuxapp.parse_url(url).fragment)() and \
   tuxapp.check('Failed to request URL')(lambda: check_url(url))() and \
-  tuxapp.check('Accessible by HTTPS')(lambda: check_url_protocol(url))()
+  tuxapp.check('Accessible by HTTPS')(lambda: check_url_https(url))() and \
+  tuxapp.check('Only accessible by HTTP')(lambda: check_url_http(url))()
 
 validate_version_url = lambda url: \
   validate_url(url) and \

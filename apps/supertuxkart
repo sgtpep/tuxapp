@@ -1,8 +1,8 @@
 category=game
 description=SuperTuxKart is a 3D open-source arcade racer with a variety characters, tracks, and modes to play.
 desktop-entry=
-download-x86-64-url=https://downloads.sourceforge.net/project/supertuxkart/SuperTuxKart/{version}/supertuxkart-{version}-linux.tar.xz
-download-x86-url=https://downloads.sourceforge.net/project/supertuxkart/SuperTuxKart/{version}/supertuxkart-{version}-linux.tar.xz
+download-x86-64-url=http://downloads.sourceforge.net/project/supertuxkart/SuperTuxKart/{version}/supertuxkart-{version}-linux.tar.xz
+download-x86-url=http://downloads.sourceforge.net/project/supertuxkart/SuperTuxKart/{version}/supertuxkart-{version}-linux.tar.xz
 executable=./run_game.sh
 firejail=
 free-license=yes
