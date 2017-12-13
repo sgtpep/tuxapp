@@ -15,16 +15,18 @@ from lib import (
   utilities,
 )
 
-def check_app_process_timeout(function):
+def check_app_process_output(function):
   @functools.wraps(function)
   def wrapper(app, *args, **kwargs):
     timestamp = time.time()
-    result = function(app, *args, **kwargs)
-    if time.time() - timestamp < get_process_timeout() - 0.5 and not any(extract_app_library(app, line) for line in result.splitlines()) and not is_app_process_output_ignored(app, result):
-      print('\n{}'.format(result), file=sys.stderr)
+    output = function(app, *args, **kwargs)
+    if any(extract_app_library(app, line) for line in output.splitlines()):
+      if not tuxapp.is_silent():
+        print(output, file=sys.stderr)
+    elif time.time() - timestamp < get_process_timeout() - 0.5 and not is_app_process_output_ignored(app, output):
+      print('\n{}'.format(output), file=sys.stderr)
       raise AssertionError('{} exited unexpectedly'.format(app))
-    else:
-      return result
+    return output
   return wrapper
 
 def test_app_worker(app):
@@ -215,7 +217,7 @@ test_app = lambda app: \
 
 test_app_process = \
   tuxapp.log('Trying {} on {}')(
-  check_app_process_timeout(
+  check_app_process_output(
     lambda app, distribution: \
       utilities.install_missing_package('strace') and \
       utilities.install_missing_package('xvfb', 'xvfb-run') and \
