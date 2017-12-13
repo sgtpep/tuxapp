@@ -13,7 +13,7 @@ from lib import (
 def parse_arguments(arguments=None):
   import argparse
   parser = argparse.ArgumentParser()
-  parser.add_argument('-a', '--arch', action='store_true')
+  parser.add_argument('-d', '--distribution', choices=testing.get_distributions())
   parser.add_argument('-e', '--execute', action='store_true')
   parser.add_argument('-r', '--root', action='store_true')
   parser.add_argument('-s', '--shell', action='store_true')
@@ -36,9 +36,8 @@ main = \
       testing.test_apps(tuxapp.extract_app(argument) for argument in parse_arguments().arguments or glob.iglob(tuxapp.get_appfile_path('*')))
   )
 
-parse_distribution_argument = lambda arguments=None: \
-  'arch' \
-    if parse_arguments(arguments).arch else \
+parse_distribution_argument = lambda: \
+  parse_arguments().distribution or \
   testing.get_default_distribution()
 
 if __name__ == '__main__':
