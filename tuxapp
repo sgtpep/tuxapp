@@ -407,9 +407,9 @@ append_file = lambda path, content='': write_file(path, content, True)
 
 backup_app_cache = lambda app: \
   (not query_app_package_list_update_timestamps(app) or rename_file(get_app_data_path(app), build_cached_app_package_data_path(app, max(query_app_package_list_update_timestamps(app))))) and \
-  all(remove_file(path) for path in glob.iglob(build_cached_app_package_data_path(app, '*')) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * 7) and \
+  remove_old_files(build_cached_app_package_data_path(app, '*'), 7) and \
   all(remove_file(path) if os.path.isfile(get_app_cached_file_path(app, path)) else rename_file(path, get_app_cached_file_path(app, path)) for path in glob.iglob(get_app_temp_file_path(app, '*.deb'))) and \
-  all(remove_file(path) for path in glob.iglob(get_app_cached_file_path(app, '*.deb')) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * 30)
+  remove_old_files(get_app_cached_file_path(app, '*.deb'))
 
 build_app_bsdtar_arguments = lambda app: \
   ('bsdtar',) \
@@ -1290,6 +1290,8 @@ remove_directory_ascending = lambda path: \
 remove_file_ascending = lambda path: \
   remove_file(path) and \
   remove_empty_directories(os.path.dirname(path))
+
+remove_old_files = lambda pattern, days=30: all(remove_file(path) for path in glob.iglob(pattern) if os.path.getatime(path) < time.time() - 60 * 60 * 24 * days)
 
 request_app_version = lambda app, pattern=None: request_app_version_memoized(app, query_appfile(app, 'version-url'), pattern or query_appfile(app, 'version-regex'))
 
