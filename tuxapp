@@ -894,11 +894,6 @@ install_app_packages = \
     backup_app_cache(app)
 
 install_app_runner = lambda app: \
-  write_bash_script(get_app_root_binary_path(app, 'dbus-launch'), r'''
-  readarray -t < <(which -a dbus-launch)
-  export -n LD_LIBRARY_PATH
-  exec "${MAPFILE[1]}" "$@"
-  ''') and \
   write_bash_script(get_app_runner_path(app), r'''
   declare -r app_path=''' + build_app_runner_relative_path(app, get_app_path(app)) + r'''
   declare -r browser_path=''' + build_app_runner_relative_path(app, install_app_browser(app)) + r'''
@@ -1056,6 +1051,16 @@ install_app_runner = lambda app: \
     readonly result_strace_arguments
   }
 
+  function check_dbus {
+    if type dbus-launch &> /dev/null; then
+      declare -r paths=("$root_path"/lib/*-linux-gnu/libdbus-1.so.3)
+      [[ ! -f ${paths-} ]] || mv "${paths[0]}"{,~}
+    else
+      declare -r paths=("$root_path"/lib/*-linux-gnu/libdbus-1.so.3~)
+      [[ ! -f ${paths-} ]] || mv "${paths[0]}" "${paths[0]%\~}"
+    fi
+  }
+
   function check_firejail {
     if type firejail &> /dev/null; then
       declare app_firejail_options
@@ -1092,6 +1097,7 @@ install_app_runner = lambda app: \
   }
 
   function main {
+    check_dbus
     check_firejail
 
     declare -A environment
