@@ -863,7 +863,7 @@ install_app_distribution = lambda app: \
   get_app_distribution_path(app) \
     if is_app_updated(app) else \
   all(remove_file(path) for pattern in (os.path.join(get_app_distribution_path(app), '*'), get_app_distribution_binary_path(app, '*')) for path in glob.iglob(pattern) if is_file_executable(path)) and \
-  all(unpack_app_distribution(app, path) for path in (download_missing_app_file(app, url, build_app_distribution_download_path(app, url)) for url in query_appfile(app, 'download-urls'))) and \
+  all(unpack_app_distribution(app, path) for path in tuple(download_missing_app_file(app, url, build_app_distribution_download_path(app, url)) for url in query_appfile(app, 'download-urls'))) and \
   all(remove_file(path) for path in glob.iglob(get_app_distribution_download_path(app, '*'))) and \
   write_app_version(app) and \
   get_app_distribution_path(app) \
