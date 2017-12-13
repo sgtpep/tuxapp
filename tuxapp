@@ -797,9 +797,9 @@ get_ubuntu_mirror_url = lambda: 'http://archive.ubuntu.com/'
 
 get_user_agent = lambda: 'Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'
 
-get_xdg_cache_path = lambda: os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache'))
-
 get_version = lambda: __version__
+
+get_xdg_cache_path = lambda: os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache'))
 
 get_xdg_data_path = lambda: os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
 
