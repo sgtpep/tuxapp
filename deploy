@@ -81,7 +81,7 @@ sudo tee /etc/aliases > /dev/null <<< "default: $email"
 
 sudo sed -i 's/^[\/ ]*\(Unattended-Upgrade::Automatic-Reboot\) .*/\1 "true";/' /etc/apt/apt.conf.d/50unattended-upgrades
 
-sudo tee /etc/cron.d/cron > /dev/null <<< "0 */3 * * * $USER ~/${github_repository##*/}/cron"
+sudo tee /etc/cron.d/"${github_repository##*/}" > /dev/null <<< "0 */3 * * * $USER ~/${github_repository##*/}/cron"
 
 [[ -d /etc/letsencrypt/live ]] || sudo certbot certonly -d "$hostname" -m "$email" -w /var/www/html --agree-tos --webroot
 
