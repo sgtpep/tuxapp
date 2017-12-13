@@ -20,7 +20,7 @@ def check_app_process_timeout(function):
   def wrapper(app, *args, **kwargs):
     timestamp = time.time()
     result = function(app, *args, **kwargs)
-    if time.time() - timestamp < get_process_timeout() - 0.5 and not any(extract_app_library(app, line) for line in result.splitlines()):
+    if time.time() - timestamp < get_process_timeout() - 0.5 and not any(extract_app_library(app, line) for line in result.splitlines()) and 'Could not initialize GLX' not in result:
       print('\n{}'.format(result), file=sys.stderr)
       raise AssertionError('{} exited unexpectedly'.format(app))
     else:
