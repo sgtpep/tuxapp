@@ -61,12 +61,12 @@ check_url_https = lambda url: \
   is_http_domain(url) or \
   not check_url(url.replace('http://', 'https://', 1))
 
+get_punctuation = lambda: ('.', '!', '?')
+
 is_http_domain = lambda url: \
   tuxapp.parse_url(url).netloc in (
     'downloads.sourceforge.net',
   )
-
-get_punctuation = lambda: ('.', '!', '?')
 
 is_library = lambda string: bool(re.match(r'^[\w.-]+\.so\b[\w.]*$', string))
 
