@@ -26,7 +26,7 @@ UxJuLRgUJTm3GeH4DWoBreciF1EUQ68vdpCTBQmBfCiBuylqMGI/Gw==
 ssh root@"$hostname" bash -eu -o pipefail -"$-" << EOF
 ! grep -q '^debian:' /etc/passwd || userdel -r debian
 grep -q '^$USER:' /etc/passwd || useradd -m -G adm,sudo -c '$(grep -Po "(?<=^$USER:x:$UID:$UID:)[^,]+" /etc/passwd)' -s /bin/bash '$USER'
-grep -q '^$USER:\\$' /etc/shadow || chpasswd -e <<< '$USER:$(sudo grep -Po "(?<=^$USER:)[^:]+" /etc/shadow)'
+grep -q '^$USER:[^!]' /etc/shadow || chpasswd -e <<< '$USER:$(ssh root@"$hostname" grep -q "^$USER:[^!]" /etc/shadow || sudo grep -Po "(?<=^$USER:)[^:]+" /etc/shadow)'
 
 echo '%sudo ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/nopasswd
 
