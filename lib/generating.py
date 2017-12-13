@@ -851,7 +851,7 @@ build_thumbnail = lambda text, url, path, video_url=None: \
     '''),
     build_tag('#{}.lightbox'.format(os.path.splitext(os.path.basename(path))[0]), None,
       build_tag('iframe', allowfullscreen=True, height=480, src='https://www.youtube.com/embed/{}?enablejsapi=1'.format(tuxapp.search(r'(?<=^https://www\.youtube\.com/watch\?v=)[^&]+', video_url)), width=853) \
-        if video_url and video_url.startswith('https://www.youtube.com/') else \
+        if video_url and tuxapp.parse_url(video_url).netloc == 'www.youtube.com' else \
       build_tag('video', controls=True, preload='metadata', src=video_url) \
         if video_url else \
       build_tag('img', alt=text, src=get_file_url(path)),

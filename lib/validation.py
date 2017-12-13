@@ -54,10 +54,10 @@ check_page_contains = lambda url, string, is_case_sensitive=False: \
 
 check_url_http = lambda url: \
   not is_http_domain(url) or \
-  url.startswith('http://')
+  tuxapp.parse_url(url).scheme == 'http'
 
 check_url_https = lambda url: \
-  url.startswith('https://') or \
+  tuxapp.parse_url(url).scheme == 'https' or \
   is_http_domain(url) or \
   not check_url(url.replace('http://', 'https://', 1))
 
