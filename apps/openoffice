@@ -1,8 +1,8 @@
 category=office
 description=OpenOffice Writer, Calc, Impress, Draw and Base.
 desktop-entry=
-download-x86-64-url=https://downloads.sourceforge.net/project/openofficeorg.mirror/{version}/binaries/en-US/Apache_OpenOffice_{version}_Linux_x86-64_install-deb_en-US.tar.gz
-download-x86-url=https://downloads.sourceforge.net/project/openofficeorg.mirror/{version}/binaries/en-US/Apache_OpenOffice_{version}_Linux_x86_install-deb_en-US.tar.gz
+download-x86-64-url=http://downloads.sourceforge.net/project/openofficeorg.mirror/{version}/binaries/en-US/Apache_OpenOffice_{version}_Linux_x86-64_install-deb_en-US.tar.gz
+download-x86-url=http://downloads.sourceforge.net/project/openofficeorg.mirror/{version}/binaries/en-US/Apache_OpenOffice_{version}_Linux_x86_install-deb_en-US.tar.gz
 executable=./usr/bin/soffice
 firejail=
 free-license=yes
