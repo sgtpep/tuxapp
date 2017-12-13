@@ -20,7 +20,7 @@ def check_app_process_timeout(function):
   def wrapper(app, *args, **kwargs):
     timestamp = time.time()
     result = function(app, *args, **kwargs)
-    if time.time() - timestamp < get_process_timeout() - 0.5 and not any(extract_app_library(app, line) for line in result.splitlines()) and 'Could not initialize GLX' not in result:
+    if time.time() - timestamp < get_process_timeout() - 0.5 and not any(extract_app_library(app, line) for line in result.splitlines()) and not is_app_process_output_ignored(app, result):
       print('\n{}'.format(result), file=sys.stderr)
       raise AssertionError('{} exited unexpectedly'.format(app))
     else:
@@ -193,6 +193,13 @@ install_missing_container = lambda distribution: \
   tuxapp.write_file(get_install_mark_path(distribution)) and \
   utilities.update_data(('container', distribution, 'update-timestamp'), int(time.time())) and \
   distribution
+
+is_app_process_output_ignored = lambda app, output: \
+  {
+    'subsurface': 'Could not initialize GLX',
+    'supertuxkart': 'Fatal error, could not get visual.',
+    'viber': 'Could not initialize GLX',
+  }.get(app, r'\0') in output
 
 request_arch_container_url = lambda: get_arch_mirror_url('iso/latest/') + tuxapp.request_grep_url(get_arch_mirror_url('iso/latest/'), ('-Po', '-m', '1', r'(?<=")archlinux-bootstrap-[^"]+'))
 
