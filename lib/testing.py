@@ -22,8 +22,9 @@ def check_app_process_timeout(function):
     result = function(app, *args, **kwargs)
     if time.time() - timestamp < get_process_timeout() - 0.5 and not any(extract_app_library(app, line) for line in result.splitlines()):
       print('\n{}'.format(result), file=sys.stderr)
-      print('{} exited unexpectedly'.format(app), file=sys.stderr)
-    return result
+      raise AssertionError('{} exited unexpectedly'.format(app))
+    else:
+      return result
   return wrapper
 
 def test_app_worker(app):
