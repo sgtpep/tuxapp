@@ -242,6 +242,7 @@ update_debian_container = lambda: \
 
 update_old_container = lambda distribution: \
   update_container(distribution) and \
+  tuxapp.remove_old_files(tuxapp.get_app_temp_file_path(distribution, '*'), 30) and \
   utilities.update_data(('container', distribution, 'update-timestamp'), int(time.time())) \
     if int(utilities.query_data(('container', distribution, 'update-timestamp'), '0')) < time.time() - 60 * 60 * 12 else \
   True
