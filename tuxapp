@@ -641,7 +641,7 @@ get_app_lock_path = lambda app: os.path.join(get_app_path(app), 'lock')
 
 get_app_package_data_path = lambda app: os.path.join(get_cache_path(), query_appfile(app, 'package-repository'), 'packages')
 
-get_app_package_version_path = lambda app, package: os.path.join(get_app_path(app), 'packages', package)
+get_app_package_version_path = lambda app, package: os.path.join(get_app_root_path(app), 'var/lib/packages', package)
 
 get_app_path = lambda app: os.path.join(os.path.expanduser('~/.{}'.format(get_name())), app)
 
