@@ -1143,7 +1143,7 @@ is_file_executable = lambda path: \
   not is_file_library(path)
 
 is_file_library = lambda path: \
-  os.path.splitext(path)[1] == '.so' or \
+  os.path.splitext(path)[1] in ('.node', '.so') or \
   '.so.' in path
 
 is_file_list_nested = lambda paths: all(path.lstrip('./').split('/', 1)[0] == paths[0].lstrip('./').split('/', 1)[0] for path in paths)
