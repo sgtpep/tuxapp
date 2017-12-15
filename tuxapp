@@ -1508,8 +1508,7 @@ update_app_package_list = \
 
 update_app_package_lists = \
   lock_app_package_data(
-    lambda app: \
-      all(update_app_package_list(app, url, download_missing_app_temp_file(app, url)) for url in build_app_package_list_urls(app) if query_app_package_data_url_timestamp(app, url) < time.time() - 60 * 60 * 24 and request_url_timestamp(url) > query_app_package_data_url_timestamp(app, url))
+    lambda app: all(update_app_package_list(app, url, download_missing_app_temp_file(app, url)) for url in build_app_package_list_urls(app) if query_app_package_data_url_timestamp(app, url) < time.time() - 60 * 60 * 24 and request_url_timestamp(url) > query_app_package_data_url_timestamp(app, url))
   )
 
 unpack_app_tarball_distribution = \
