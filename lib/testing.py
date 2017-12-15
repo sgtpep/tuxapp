@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function, unicode_literals
 
+import glob
 import functools
 import os
 import stat
@@ -42,10 +43,18 @@ build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_trace=Fa
     '--tmpfs', '/tmp',
   ) + \
   (('--bind', tuxapp.get_app_path(app), tuxapp.get_app_path(app)) if app else ()) + \
-  (('--ro-bind', get_xauthority_path(), get_xauthority_path()) if tuxapp.is_existing_command('xvfb-run') and os.path.isfile(get_xauthority_path()) else ()) + \
+  tuple(option for path in build_bwrap_readonly_bind_paths() for option in ('--ro-bind', path, path)) + \
   (('--setenv', 'TUXAPP_TRACE', '1') if is_trace else ()) + \
   ('bash', '-l') + \
   ((tuxapp.get_app_runner_path(app),) + arguments if app else ())
+
+build_bwrap_readonly_bind_paths = lambda: \
+  tuple(path for pattern in (
+    '/usr/lib/*-linux-gnu/alsa-lib',
+    '/usr/lib/*-linux-gnu/pulseaudio',
+    '/usr/share/alsa',
+    get_xauthority_path(),
+  ) for path in glob.iglob(pattern))
 
 build_root_bwrap_arguments = lambda distribution: \
   utilities.install_missing_package('bubblewrap', 'bwrap') and \
