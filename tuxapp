@@ -69,24 +69,29 @@ def handle_exceptions(function):
 def lock_app(function):
   @functools.wraps(function)
   def wrapper(app, *args, **kwargs):
-    if read_file(get_app_lock_path(app)) == os.getpid():
+    if read_app_lock(app) == os.getpid():
       return function(app, *args, **kwargs)
     else:
-      previous_pid = None
-      while True:
-        pid = read_file(get_app_lock_path(app))
-        if pid and os.path.isdir(os.path.join('/proc', pid)):
-          if pid != previous_pid and not is_silent():
-            previous_pid = pid
-            print('Waiting for the process {}'.format(pid), file=sys.stderr)
-          time.sleep(1)
-        else:
-          break
+      wait_pid(lambda: read_app_lock(app))
       try:
         write_file(get_app_lock_path(app), str(os.getpid()))
         return function(app, *args, **kwargs)
       finally:
         remove_file_ascending(get_app_lock_path(app))
+  return wrapper
+
+def lock_app_package_data(function):
+  @functools.wraps(function)
+  def wrapper(app, *args, **kwargs):
+    if query_app_package_data_lock(app) == os.getpid():
+      return function(app, *args, **kwargs)
+    else:
+      wait_pid(lambda: query_app_package_data_lock(app))
+      try:
+        update_app_package_data(app, 'lock', os.getpid())
+        return function(app, *args, **kwargs)
+      finally:
+        update_app_package_data(app, 'lock', '')
   return wrapper
 
 def log(message):
@@ -315,7 +320,7 @@ def quote_argument(string):
     from shlex import quote
   except ImportError:
     from pipes import quote
-  return quote(str(string))
+  return quote(string)
 
 def read_file(path, size=-1, is_binary=False):
   if os.path.isfile(path):
@@ -363,7 +368,7 @@ def rename_file(path, destination_path):
   os.rename(path, make_file_directories(destination_path))
   return destination_path
 
-def request_last_modified(url):
+def request_url_timestamp(url):
   import email.utils
   return time.mktime(email.utils.parsedate(search(r'(?<=\bLast-Modified: ).+$', request_url_headers(url), re.I | re.M)) or time.gmtime())
 
@@ -397,6 +402,19 @@ def unpack_zip_file(path, output_path):
   except Exception as exception: # pylint: disable=broad-except
     print_exception(exception)
 
+def wait_pid(get_pid):
+  previous_pid = None
+  while True:
+    pid = get_pid()
+    if pid and os.path.isdir(os.path.join('/proc', str(pid))):
+      if pid != previous_pid:
+        previous_pid = pid
+        if not is_silent():
+          print('Waiting for the process {}'.format(pid), file=sys.stderr)
+      time.sleep(1)
+    else:
+      break
+
 def write_file(path, content='', is_append=False):
   import io
   with io.open(make_file_directories(path), 'a' if is_append else 'w') as file:
@@ -405,24 +423,14 @@ def write_file(path, content='', is_append=False):
 
 append_file = lambda path, content='': write_file(path, content, True)
 
-backup_app_cache = lambda app: \
-  (not query_app_package_list_update_timestamps(app) or rename_file(get_app_data_path(app), build_cached_app_package_data_path(app, max(query_app_package_list_update_timestamps(app))))) and \
-  remove_old_files(build_cached_app_package_data_path(app, '*'), 7) and \
-  all(remove_file(path) if os.path.isfile(get_app_cached_file_path(app, path)) else rename_file(path, get_app_cached_file_path(app, path)) for path in glob.iglob(get_app_temp_file_path(app, '*.deb'))) and \
-  remove_old_files(get_app_cached_file_path(app, '*.deb'))
+build_app_download_path = lambda app, url: build_download_path(get_app_downloads_path(app), url)
 
-build_app_bsdtar_arguments = lambda app: \
-  ('bsdtar',) \
-    if is_existing_command('bsdtar') else \
-  install_app_packages(app, ('libarchive-tools', 'liblzo2-2')) and \
-  (('firejail', '--quiet', '--env={}'.format(build_app_library_variable(app))) if is_existing_command('firejail') else ('env', build_app_library_variable(app))) + \
-  (get_app_root_binary_path(app, 'bsdtar'),)
+build_app_library_path = lambda app: ':'.join(os.path.join(get_app_root_path(app), path, detect_library_directory_name()) for path in ('lib', 'usr/lib'))
 
-build_app_distribution_download_path = lambda app, url: get_app_distribution_download_path(app, '{}-{}'.format(request_app_version(app), hash_md5(url)))
-
-build_app_library_variable = lambda app: 'LD_LIBRARY_PATH={}'.format(':'.join(path for pattern in ('lib/*-linux-gnu', 'usr/lib/*-linux-gnu') for path in glob.iglob(os.path.join(get_app_root_path(app), pattern))))
-
-build_app_package_list_download_path = lambda app, url: get_app_package_list_download_path(app, hash_md5(url))
+build_app_library_path_arguments = lambda app: \
+  ('firejail', '--quiet', '--env=LD_LIBRARY_PATH={}'.format(build_app_library_path(app))) \
+    if is_existing_command('firejail') else \
+  ('env', 'LD_LIBRARY_PATH={}'.format(build_app_library_path(app)))
 
 build_app_package_list_urls = \
   check(lambda app, *args, **kwargs: 'Unknown package repository: {}'.format(query_appfile(app, 'package-repository')))(
@@ -443,19 +451,16 @@ build_app_package_list_urls = \
       ))
   )
 
-build_app_runner_relative_path = lambda app, path: re.sub(r'/\.$', '', os.path.join('${0%/*}', quote_argument(os.path.relpath(path, os.path.dirname(get_app_runner_path(app))))))
-
-build_app_temp_download_path = lambda app, url: build_download_path(get_app_temp_downloads_path(app), url)
-
-build_cached_app_package_data_path = lambda app, timestamp: get_app_cached_file_path(app, 'packages-{}'.format(timestamp))
-
 build_curl_request_arguments = lambda options, is_gzip=False: \
   ('curl', '-#Lf', '-H', 'Accept-Language: en', '-m', '10', '--retry', '2') + \
   (() if parse_url(options[-1]).netloc == 'downloads.sourceforge.net' else ('-A', get_user_agent())) + \
   (('-H', 'Accept-Encoding: gzip') if is_gzip else ()) + \
   options
 
-build_data_key = lambda components: ':'.join(str(component) for component in components)
+build_data_key = lambda components: \
+  components \
+    if isinstance(components, type('')) else \
+  ':'.join(components)
 
 build_decorator_message = lambda string, *args, **kwargs: \
   string(*args, **kwargs) \
@@ -535,18 +540,24 @@ detect_debian_architecture = \
       }.get(detect_architecture())
   )
 
+detect_library_directory_name = lambda: \
+  '{}-linux-gnu'.format({
+    'amd64': 'x86_64',
+    'i386': 'i386',
+  }.get(detect_debian_architecture()))
+
 download_app_file = \
   log('Downloading {1}')(
   check('Failed to download {1}')(
     lambda app, url, path: \
-      rename_file_ascending(build_app_temp_download_path(app, path), path) \
-        if uncheck()(call_process)(build_request_arguments(
+      rename_file_ascending(build_app_download_path(app, path), path) \
+        if uncheck(call_process)(build_request_arguments(
           (('-Ss',) if is_silent() else ()) + \
-          ('-o', make_file_directories(build_app_temp_download_path(app, path)), url),
+          ('-o', make_file_directories(build_app_download_path(app, path)), url),
           (('-q',) if is_silent() else ('--show-progress',)) + \
-          ('-O', make_file_directories(build_app_temp_download_path(app, path)), url),
+          ('-O', make_file_directories(build_app_download_path(app, path)), url),
         )) else \
-      remove_file_ascending(build_app_temp_download_path(app, path)) and \
+      remove_file_ascending(build_app_download_path(app, path)) and \
       None
   ))
 
@@ -596,10 +607,7 @@ download_missing_app_temp_files = lambda app, urls: download_missing_app_files(a
 
 execute_app = lambda app, arguments=(): execute_process((get_app_runner_path(app),) + arguments)
 
-execute_process = lambda arguments, environment=None: \
-  os.execvpe(arguments[0], arguments, dict(os.environ, **environment)) \
-    if environment else \
-  os.execvp(arguments[0], arguments)
+execute_process = lambda arguments: os.execvp(arguments[0], arguments)
 
 expand_package_group = lambda group: get_package_groups().get(group, (group,))
 
@@ -615,15 +623,15 @@ filter_app_download_url = lambda app, url: url.replace('{debian}', '{}debian/poo
 
 get_app_cached_file_path = lambda app, path: os.path.join(get_cache_path(), query_appfile(app, 'package-repository'), os.path.basename(path))
 
-get_app_data_path = lambda app: get_app_temp_file_path(app, 'data')
-
 get_app_desktop_entry_path = lambda app: os.path.join(get_xdg_data_path(), 'applications/{}-{}.desktop'.format(get_name(), app))
 
 get_app_distribution_binary_path = lambda app, filename: os.path.join(get_app_distribution_path(app), 'usr/bin', filename)
 
-get_app_distribution_download_path = lambda app, suffix: get_app_temp_file_path(app, 'download-{}'.format(suffix))
-
 get_app_distribution_path = lambda app: os.path.join(get_app_path(app), 'dist')
+
+get_app_downloads_path = lambda app: os.path.join(get_app_path(app), 'downloads')
+
+get_app_dynamic_linker_path = lambda app: next(glob.iglob(os.path.join(get_app_root_path(app), 'lib', detect_library_directory_name(), 'ld-linux*.so.2')))
 
 get_app_firejail_options_path = lambda app: os.path.join(get_app_path(app), 'firejail')
 
@@ -631,9 +639,9 @@ get_app_icon_path = lambda app: os.path.join(get_app_path(app), 'icon')
 
 get_app_lock_path = lambda app: os.path.join(get_app_path(app), 'lock')
 
-get_app_package_list_download_path = lambda app, suffix: get_app_temp_file_path(app, 'packages-{}'.format(suffix))
+get_app_package_data_path = lambda app: os.path.join(get_cache_path(), query_appfile(app, 'package-repository'), 'packages')
 
-get_app_package_version_path = lambda app, package: os.path.join(get_app_root_path(app), 'var/lib/packages', package)
+get_app_package_version_path = lambda app, package: os.path.join(get_app_path(app), 'packages', package)
 
 get_app_path = lambda app: os.path.join(os.path.expanduser('~/.{}'.format(get_name())), app)
 
@@ -642,8 +650,6 @@ get_app_root_binary_path = lambda app, filename: os.path.join(get_app_root_path(
 get_app_root_path = lambda app: os.path.join(get_app_path(app), 'root')
 
 get_app_runner_path = lambda app: os.path.join(get_app_path(app), 'run')
-
-get_app_temp_downloads_path = lambda app: os.path.join(get_app_temp_path(app), 'downloads')
 
 get_app_temp_file_path = lambda app, path: os.path.join(get_app_temp_path(app), os.path.basename(path))
 
@@ -664,12 +670,6 @@ get_copyright_year = lambda: 2017
 get_debian_mirror_url = lambda: 'https://cdn-aws.deb.debian.org/'
 
 get_description = lambda: 'Downloads and installs the latest official releases of Linux® applications including dependencies without root permissions and allows to run them sandboxed.'
-
-get_excluded_dependencies = lambda: \
-  (
-    'dpkg',
-    'libc6',
-  )
 
 get_file_mtime = lambda path: \
   os.path.getmtime(path) \
@@ -731,6 +731,7 @@ get_package_groups = lambda: \
       'libgtk2.0-0',
       'libnss3',
       'libpulse0',
+      'libudev1',
       'libxkbfile1',
       'libxss1',
       'libxtst6',
@@ -825,7 +826,7 @@ install_app = \
   )(
     lambda app: \
       install_app_distribution(app) and \
-      install_app_packages(app, query_appfile(app, 'packages')) and \
+      install_app_packages(app) and \
       install_app_runner(app) and \
       check_app_firejail(app) and \
       install_app_desktop_entry(app) and \
@@ -863,48 +864,47 @@ install_app_distribution = lambda app: \
   get_app_distribution_path(app) \
     if is_app_updated(app) else \
   all(remove_file(path) for pattern in (os.path.join(get_app_distribution_path(app), '*'), get_app_distribution_binary_path(app, '*')) for path in glob.iglob(pattern) if is_file_executable(path)) and \
-  all(unpack_app_distribution(app, path) for path in tuple(download_missing_app_file(app, url, build_app_distribution_download_path(app, url)) for url in query_appfile(app, 'download-urls'))) and \
-  all(remove_file(path) for path in glob.iglob(get_app_distribution_download_path(app, '*'))) and \
+  all(unpack_app_distribution(app, path) for path in tuple(download_missing_app_file(app, url, get_app_temp_file_path(app, '{}-{}'.format(app, request_app_version(app)))) for url in query_appfile(app, 'download-urls'))) and \
+  patch_app_executables(app, get_app_distribution_path(app)) and \
   write_app_version(app) and \
-  get_app_distribution_path(app) \
+  all(remove_file(path) for path in glob.iglob(get_app_temp_file_path(app, '{}-*'.format(app)))) and \
+  get_app_distribution_path(app)
 
 install_app_icon = lambda app: \
-  uncheck('')(download_app_file)(app, query_appfile(app, 'icon-url'), get_app_icon_path(app)) and \
+  uncheck(download_app_file)(app, query_appfile(app, 'icon-url'), get_app_icon_path(app)) and \
   touch_file(get_app_icon_path(app)) \
     if is_file_newer(get_app_version_path(app), get_app_icon_path(app)) else \
   get_app_icon_path(app)
 
 install_app_package_file = lambda app, path: \
   silence(unpack_package)(path, get_app_root_path(app), tuple('--exclude=.{}'.format(exclusion) for exclusion in get_package_exclusions(extract_package_name(path)))) and \
-  patch_app_package(app, extract_package_name(path)) and \
-  write_file(get_app_package_version_path(app, extract_package_name(path)), '{}\n'.format(extract_package_version(path))) and \
+  write_app_package_file_version(app, path) and \
   extract_package_name(path)
 
 install_app_package_files = \
   log(lambda app, paths, *args, **kwargs: paths and 'Installing packages: {}'.format(', '.join(extract_package_name(path) for path in paths)))(
     lambda app, paths: \
       all(install_app_package_file(app, path) for path in paths) and \
-      True
+      (not paths or patch_app_executables(app, get_app_root_path(app)))
   )
 
-install_app_packages = \
-  lambda app, packages: \
-    (not packages or update_app_package_lists(app)) and \
-    install_app_package_files(app, download_app_packages(app, resolve_outdated_app_packages(app, packages))) and \
-    backup_app_cache(app)
+install_app_packages = lambda app, packages=None: \
+  update_app_package_lists(app) and \
+  install_app_package_files(app, download_app_packages(app, resolve_outdated_app_packages(app, packages or query_appfile(app, 'packages')))) and \
+  all(remove_file(path) if os.path.isfile(get_app_cached_file_path(app, path)) else rename_file(path, get_app_cached_file_path(app, path)) for path in glob.iglob(get_app_temp_file_path(app, '*.deb'))) and \
+  remove_old_files(get_app_cached_file_path(app, '*.deb'))
 
 install_app_runner = lambda app: \
   write_bash_script(get_app_runner_path(app), r'''
-  declare -r app_path=''' + build_app_runner_relative_path(app, get_app_path(app)) + r'''
-  declare -r browser_path=''' + build_app_runner_relative_path(app, install_app_browser(app)) + r'''
+  declare -r app_path=''' + tildify_path(get_app_path(app)) + r'''
+  declare -r browser_path=''' + tildify_path(install_app_browser(app)) + r'''
   declare -r cache_path=${XDG_CACHE_HOME-~/.cache}/''' + quote_argument(os.path.relpath(get_cache_path(), get_xdg_cache_path())) + r'''
-  declare -r distribution_path=''' + build_app_runner_relative_path(app, get_app_distribution_path(app)) + r'''
+  declare -r distribution_path=''' + tildify_path(get_app_distribution_path(app)) + r'''
   declare -r executable_arguments=(''' + sanitize_app_command(app, sanitize_command(query_appfile(app, 'executable'))) + r''')
   declare -r firejail_options=(''' + sanitize_command(query_appfile(app, 'firejail')) + r''')
-  declare -r firejail_options_path=''' + build_app_runner_relative_path(app, get_app_firejail_options_path(app)) + r'''
-  declare -r root_path=''' + build_app_runner_relative_path(app, get_app_root_path(app)) + r'''
-  declare -r temp_path=''' + build_app_runner_relative_path(app, get_app_temp_path(app)) + r'''
-  declare -r urls_path=''' + build_app_runner_relative_path(app, os.path.join(get_app_path(app), 'urls')) + r'''
+  declare -r firejail_options_path=''' + tildify_path(get_app_firejail_options_path(app)) + r'''
+  declare -r root_path=''' + tildify_path(get_app_root_path(app)) + r'''
+  declare -r urls_path=''' + tildify_path(os.path.join(get_app_path(app), 'urls')) + r'''
 
   # shellcheck disable=SC2088
   declare -r firejail_blacklisted_paths=(
@@ -929,7 +929,7 @@ install_app_runner = lambda app: \
       IFS=$ifs
     fi
 
-    readonly result_directory_list 2> /dev/null
+    readonly result_directory_list
   }
 
   function build_environment {
@@ -938,12 +938,17 @@ install_app_runner = lambda app: \
 
     result_environment=()
 
-    build_directory_list result_environment\[PYTHONPATH\] "$distribution_path"/usr/lib/python*/dist-packages "$root_path"/usr/lib/python*{,/dist-packages,/plat-*}
-    build_library_path result_environment\[LD_LIBRARY_PATH\]
-    result_environment[PATH]=$PATH:$root_path/usr/bin:$root_path/bin
+    result_environment[PATH]=$root_path/usr/bin:$root_path/bin:$PATH
     result_environment[PYTHONHOME]=$root_path/usr
 
-    LD_LIBRARY_PATH=${result_environment[LD_LIBRARY_PATH]-} build_gdk_pixbuf_path result_environment\[GDK_PIXBUF_MODULE_FILE\]
+    build_directory_list python_path "$distribution_path"/usr/lib/python*/dist-packages "$root_path"/usr/lib/python*{,/dist-packages,/plat-*}
+    [[ ! ${python_path-} ]] || result_environment[PYTHONPATH]=$python_path
+
+    build_library_path library_path
+    [[ ! ${library_path-} ]] || result_environment[LD_LIBRARY_PATH]=$library_path
+
+    LD_LIBRARY_PATH=${result_environment[LD_LIBRARY_PATH]-} build_gdk_pixbuf_path gdk_pixbuf_path
+    [[ ! ${gdk_pixbuf_path-} ]] || result_environment[GDK_PIXBUF_MODULE_FILE]=$gdk_pixbuf_path
 
     [[ ${executable_path-} ]] || get_executable_path executable_path
     [[ $executable_path != ./AppRun ]] || result_environment[APPDIR]=$distribution_path
@@ -973,7 +978,7 @@ install_app_runner = lambda app: \
     result_firejail_arguments+=(--read-only="$root_path")
 
     declare path
-    for path in "${app_path%/*}"/* "$cache_path" "$temp_path"; do
+    for path in "$cache_path" "${app_path%/*}"/*; do
       [[ ! -d $path || $path == "$app_path" ]] || result_firejail_arguments+=(--blacklist="$path")
     done
 
@@ -999,7 +1004,7 @@ install_app_runner = lambda app: \
     declare app_firejail_options
     read_firejail_options app_firejail_options
 
-    result_firejail_arguments+=("${firejail_options[@]}" "${app_firejail_options[@]}")
+    result_firejail_arguments+=(${firejail_options+"${firejail_options[@]}"} ${app_firejail_options+"${app_firejail_options[@]}"})
 
     readonly result_firejail_arguments
   }
@@ -1008,18 +1013,16 @@ install_app_runner = lambda app: \
     declare -n result_gdk_pixbuf_path=$1
     shift
 
-    declare -r gdk_pixbuf_paths=(/usr/lib/*-linux-gnu/gdk-pixbuf-2.0)
-    if [[ ! -d ${gdk_pixbuf_paths[0]} ]]; then
-      declare path
-      for path in "$root_path"/usr/lib/*-linux-gnu/gdk-pixbuf-2.0/*; do
-        if [[ -d $path ]]; then
-          result_gdk_pixbuf_path=$path/loaders.cache
-          [[ -f $result_gdk_pixbuf_path ]] || "${path%/*}"/gdk-pixbuf-query-loaders "$path"/loaders/* > "$result_gdk_pixbuf_path"
-        fi
-      done
-    fi
+    declare path
+    for path in "$root_path"/usr/lib/*-linux-gnu/gdk-pixbuf-2.0/*; do
+      if [[ -d $path ]]; then
+        result_gdk_pixbuf_path=$path/loaders.cache
+        [[ -f $result_gdk_pixbuf_path ]] || "${path%/*}"/gdk-pixbuf-query-loaders "$path"/loaders/* > "$result_gdk_pixbuf_path"
+        break
+      fi
+    done
 
-    readonly result_gdk_pixbuf_path 2> /dev/null
+    readonly result_gdk_pixbuf_path
   }
 
   function build_library_path {
@@ -1028,18 +1031,17 @@ install_app_runner = lambda app: \
     shift
 
     declare library_paths=()
-    declare path
-    for path in "$distribution_path"{,/opt/*} "$root_path" ''; do
-      if [[ -d $path ]]; then
-        declare relative_path
-        for relative_path in {,/usr}/lib{,32,64} {,/usr}/lib/{i386,x86_64}-linux-gnu /usr/lib/{i386,x86_64}-linux-gnu/{alsa-lib,mesa,pulseaudio}; do
-          library_paths+=("$path$relative_path")
-        done
-      fi
+    declare base_path
+    for base_path in "$distribution_path" "$root_path"; do
+      declare path
+      for path in "$base_path"{,/usr}/lib/*-linux-gnu{,/{alsa-lib,mesa,pulseaudio}}; do
+        [[ ! -d $path ]] || library_paths+=("$path")
+      done
     done
     readonly library_paths
 
-    build_directory_list result_library_path "${library_paths[@]}"
+    # shellcheck disable=SC2086
+    build_directory_list result_library_path ${library_paths+"${library_paths[@]}"}
   }
 
   function build_strace_arguments {
@@ -1049,16 +1051,6 @@ install_app_runner = lambda app: \
     result_strace_arguments=()
     [[ ! ${TUXAPP_TRACE-} ]] || result_strace_arguments+=(strace -f -e open,openat)
     readonly result_strace_arguments
-  }
-
-  function check_dbus {
-    if type dbus-launch &> /dev/null; then
-      declare -r paths=("$root_path"/lib/*-linux-gnu/libdbus-1.so.3)
-      [[ ! -f ${paths-} ]] || mv "${paths[0]}"{,~}
-    else
-      declare -r paths=("$root_path"/lib/*-linux-gnu/libdbus-1.so.3~)
-      [[ ! -f ${paths-} ]] || mv "${paths[0]}" "${paths[0]%\~}"
-    fi
   }
 
   function check_firejail {
@@ -1077,7 +1069,6 @@ install_app_runner = lambda app: \
     declare -n result_executable_path=$1
     shift
 
-    result_executable_path=/dev/null
     declare argument
     for argument in "${executable_arguments[@]}"; do
       if [[ $argument == ./* ]]; then
@@ -1097,7 +1088,6 @@ install_app_runner = lambda app: \
   }
 
   function main {
-    check_dbus
     check_firejail
 
     declare -A environment
@@ -1121,7 +1111,8 @@ install_app_runner = lambda app: \
     build_strace_arguments strace_arguments
 
     cd "$distribution_path"
-    exec "${firejail_arguments[@]}" "${strace_arguments[@]}" "${executable_arguments[@]}" "$@"
+    # shellcheck disable=SC2086
+    exec ${firejail_arguments+"${firejail_arguments[@]}"} ${strace_arguments+"${strace_arguments[@]}"} ${executable_arguments+"${executable_arguments[@]}"} "$@"
   }
 
   function read_firejail_options {
@@ -1148,7 +1139,11 @@ is_app_updated = lambda app: \
 is_file_executable = lambda path: \
   os.path.isfile(path) and \
   os.access(path, os.X_OK) and \
-  os.path.splitext(path)[1] != '.so'
+  not is_file_library(path)
+
+is_file_library = lambda path: \
+  os.path.splitext(path)[1] == '.so' or \
+  '.so.' in path
 
 is_file_list_nested = lambda paths: all(path.lstrip('./').split('/', 1)[0] == paths[0].lstrip('./').split('/', 1)[0] for path in paths)
 
@@ -1170,6 +1165,8 @@ list_all_apps = \
   )
 
 list_app_distribution = lambda app: (os.path.join(path, filename) for path, directories, filenames in os.walk(get_app_distribution_path(app)) if '/node_modules/' not in path for filename in filenames)
+
+list_executables = lambda path: tuple(path for path in (os.path.join(path, filename) for path, directories, filenames in os.walk(path) for filename in filenames) if is_file_executable(path) and is_file_magic_number(path, b'\x7fELF'))
 
 list_installed_apps = \
   output(lambda *args, **kwargs: '\n'.join('{} {}'.format(app, version) for app, version in kwargs['result']))(
@@ -1210,6 +1207,18 @@ move_directory = lambda path, destination_path: \
 
 parse_appfile = lambda app: dict(line.split('=', 1) for line in read_appfile(app).splitlines())
 
+patch_app_executable = lambda app, path: \
+  path == get_app_root_binary_path(app, 'patchelf') or \
+  (uncheck(call_process)('{} > /dev/null 2>&1'.format(join_arguments(
+    (('firejail', '--quiet') if is_existing_command('firejail') else ()) + \
+    (get_app_dynamic_linker_path(app), '--library-path', build_app_library_path(app)) + \
+    (get_app_root_binary_path(app, 'patchelf'), '--set-interpreter', get_app_dynamic_linker_path(app), path)
+  ))) or True)
+
+patch_app_executables = lambda app, path: \
+  (read_app_package_version(app, 'patchelf') or install_app_packages(app, ('patchelf',))) and \
+  all(patch_app_executable(app, path) for path in list_executables(path))
+
 patch_app_package = lambda app, package: \
   write_bash_script(get_app_root_binary_path(app, 'lsb_release'), r'''
   [[ ! -x /usr/bin/lsb_release ]] || exec /usr/bin/lsb_release "$@"
@@ -1223,8 +1232,8 @@ patch_app_package = lambda app, package: \
   Plugins = qt5/plugins
   Prefix = {}
   Translations = ../../share/qt5/translations
-  ''').format(next(glob.iglob(os.path.join(get_app_root_path(app), 'usr/lib/*-linux-gnu'))))) and \
-  symlink_file(get_app_root_binary_path(app, 'qt.conf'), os.path.join(next(glob.iglob(os.path.join(get_app_root_path(app), 'usr/lib/*-linux-gnu'))), 'qt5/libexec/qt.conf')) \
+  ''').format(os.path.join(get_app_root_path(app), 'usr/lib', detect_library_directory_name()))) and \
+  symlink_file(get_app_root_binary_path(app, 'qt.conf'), os.path.join(os.path.join(get_app_root_path(app), 'usr/lib', detect_library_directory_name()), 'qt5/libexec/qt.conf')) \
     if package in ('python-pyqt5', 'python3-pyqt5') else \
   True
 
@@ -1233,18 +1242,16 @@ purge_cache = \
     lambda: remove_directory(get_cache_path())
   )
 
-query_app_data = lambda app, key, default='': (connect_app_data(app).execute('SELECT value FROM items WHERE key = ?', (build_data_key(key),)).fetchone() or (default,))[0]
+query_app_package_data = lambda app, key: query_data(get_app_package_data_path(app), key)
 
-query_app_package_data = \
-  check(lambda app, package, *args, **kwargs: kwargs['result'] is None and 'Unknown package: {}'.format(package))(
-    lambda app, package, key: query_app_data(app, (package, key), None)
+query_app_package_data_lock = lambda app: int(query_app_package_data(app, 'lock') or '0')
+
+query_app_package_data_url_timestamp = lambda app, url: int(query_app_package_data(app, ('timestamp', hash_md5(url))) or '0')
+
+query_app_package_url = \
+  check('Unknown package: {1}')(
+    lambda app, package: query_app_package_data(app, (package, 'url'))
   )
-
-query_app_package_list_update_timestamp = lambda app, url: int(query_app_data(app, ('packages', hash_md5(url), 'update-timestamp'), '0'))
-
-query_app_package_list_update_timestamps = lambda app: tuple(timestamp for timestamp in (query_app_package_list_update_timestamp(app, url) for url in build_app_package_list_urls(app)) if timestamp)
-
-query_app_package_version = lambda app, package: extract_package_version(parse_url(query_app_package_data(app, package, 'url')).path)
 
 query_appfile = lambda app, key: \
   query_appfile_download_urls(app) \
@@ -1273,7 +1280,9 @@ query_package_data_header = lambda path, key: parse_package_data_header(path).ge
 
 read_app_download_urls_hash = lambda app: read_app_version_components(app)[-1]
 
-read_app_firejail_options = lambda app: read_file(get_app_firejail_options_path(app))
+read_app_firejail_options = lambda app: read_file(get_app_firejail_options_path(app)).rstrip()
+
+read_app_lock = lambda app: int(read_file(get_app_lock_path(app)) or '0')
 
 read_app_package_version = lambda app, package: read_file(get_app_package_version_path(app, package)).rstrip()
 
@@ -1281,7 +1290,9 @@ read_app_version = lambda app: read_app_version_components(app)[0]
 
 read_app_version_components = lambda app: tuple(read_file(get_app_version_path(app)).rstrip().rsplit(None, 1)) or ('',)
 
-read_appfile = lambda app: read_file(get_appfile_path(app)) or request_appfile(app)
+read_appfile = lambda app: \
+  read_file(get_appfile_path(app)) or \
+  request_appfile(app)
 
 read_file_binary = lambda path, size=-1: read_file(path, size, True)
 
@@ -1383,13 +1394,19 @@ sanitize_command = lambda command: join_arguments(split_command(command))
 
 search = lambda pattern, string, flags=0, group=0: getattr(re.search(pattern, string, flags), 'group', lambda *args, **kwargs: '')(group)
 
+tildify_path = lambda path: \
+  path.replace(os.path.expanduser('~'), '~', 1) \
+    if path.startswith(os.path.expanduser('~/')) or path == os.path.expanduser('~') else \
+  path
+
 unpack_app_appimage1_distribution = \
   log(lambda app, path, *args, **kwargs: 'Unpacking {}'.format(os.path.basename(path)))(
   check(lambda app, path, *args, **kwargs: 'Failed to unpack {}'.format(os.path.basename(path)))(
     lambda app, path: \
-      uncheck()(call_process)(
-        build_app_bsdtar_arguments(app) + \
-        ('-x', '-C', make_directories(get_app_distribution_path(app)), '-f', path)
+      install_app_packages(app, ('libarchive-tools', 'liblzo2-2')) and \
+      uncheck(call_process)(
+        build_app_library_path_arguments(app) + \
+        (get_app_root_binary_path(app, 'bsdtar'), '-x', '-C', make_directories(get_app_distribution_path(app)), '-f', path)
       ) and \
       get_app_distribution_path(app)
   ))
@@ -1398,8 +1415,8 @@ unpack_app_appimage2_distribution = \
   log(lambda app, path, *args, **kwargs: 'Unpacking {}'.format(os.path.basename(path)))(
   check(lambda app, path, *args, **kwargs: 'Failed to unpack {}'.format(os.path.basename(path)))(
     lambda app, path: \
-      uncheck()(call_process)('cd {} && {} 2> /dev/null'.format(quote_argument(make_directories(get_app_path(app))), join_arguments(
-        (('firejail', '--quiet') if is_existing_command('firejail') else ()) + \
+      uncheck(call_process)('cd {} && {} 2> /dev/null'.format(quote_argument(make_directories(get_app_path(app))), join_arguments(
+        build_app_library_path_arguments(app) + \
         (change_file_mode(path, lambda mode: mode | stat.S_IXUSR), '--appimage-extract')
       ))) and \
       move_directory(os.path.join(get_app_path(app), 'squashfs-root'), get_app_distribution_path(app))
@@ -1426,13 +1443,6 @@ unpack_app_package_distribution = lambda app, path: \
   all(symlink_file(os.path.relpath(os.path.join(get_app_distribution_path(app), os.readlink(path).lstrip('/')), os.path.dirname(path)), path) for path in glob.iglob(get_app_distribution_binary_path(app, '*')) if os.path.islink(path) and os.readlink(path).startswith('/')) and \
   get_app_distribution_path(app)
 
-unpack_app_tarball_distribution = \
-  log(lambda app, path, *args, **kwargs: 'Preparing to unpack {}'.format(os.path.basename(path)))(
-    lambda app, path: \
-      unpack_tarball(path, get_app_distribution_path(app), ('--strip-components=1',) if is_tarball_nested(path) else ()) and \
-      unpack_nested_app_distributions(app)
-  )
-
 unpack_app_zip_distribution = lambda app, path: \
   (move_directory(next(glob.iglob(os.path.join(unpack_zip_file(path, os.path.join(get_app_path(app), 'unpack')), '*'))), get_app_distribution_path(app)) if is_zip_file_nested(path) else unpack_zip_file(path, get_app_distribution_path(app))) and \
   unpack_nested_app_distributions(app)
@@ -1454,41 +1464,29 @@ unpack_package = \
       output_path
   )))
 
-unpack_tarball = \
-  log(lambda path, *args, **kwargs: 'Unpacking {}'.format(os.path.basename(path)))(
-  check(lambda path, *args, **kwargs: 'Failed to unpack {}'.format(os.path.basename(path)))(
-  output(' ')(
-    lambda path, output_path, options=(): \
-      uncheck()(call_process)(
-        ('tar', '-x', '-C', make_directories(output_path), '-f', path) + \
-        get_tar_progress_options() + \
-        options
-      ) and \
-      output_path
-  )))
+update_app_package_data = lambda app, key, value='', is_deferred=False: update_data(get_app_package_data_path(app), key, value, is_deferred)
 
-update_app_data = lambda app, key, value, is_deferred=False: \
-  connect_app_data(app).execute('REPLACE INTO items (key, value) VALUES (?, ?)', (build_data_key(key), value)) and \
-  (is_deferred or commit_app_data(app))
+update_app_package_data_items = lambda app, items, is_deferred=False: update_data_items(get_app_package_data_path(app), items, is_deferred)
 
-update_app_data_items = lambda app, items, is_deferred=False: \
-  connect_app_data(app).executemany('REPLACE INTO items (key, value) VALUES (?, ?)', ((build_data_key(key), value) for key, value in items)) and \
-  (is_deferred or commit_app_data(app))
+update_app_package_data_list_items = lambda app, items: \
+  (not any('Provides' in item for item in items) or update_app_package_data_list_items(app, tuple(dict(((key, value) for key, value in item.items() if key != 'Provides'), **{'Package': package}) for item in items if 'Provides' in item for package in item['Provides'].split()))) and \
+  update_app_package_data_items(app, (((item['Package'], 'dependencies'), ' '.join(item[key] for key in ('Depends', 'Pre-Depends') if item.get(key))) for item in items), True) and \
+  update_app_package_data_items(app, (((item['Package'], 'url'), item['Filename']) for item in items), True)
 
 update_app_package_list = \
-  log('Updating the package list from {1}')(
-  check('Failed to update the package list from {1}')(
+  log('Updating the package data from {1}')(
+  check('Failed to update the package data from {1}')(
     lambda app, url, path: \
       functools.reduce(lambda items, line: \
         # pylint: disable=undefined-variable
-        update_app_package_list_items(app, items[:-1]) and \
+        update_app_package_data_list_items(app, items[:-1]) and \
         ({},) \
           if line == 'EOF' else \
         items[:-1] + (dict(items[-1], **dict((line.split(': ', 1),))),) \
           if line else \
         items + ({},) \
           if len(items) < 100 else \
-        update_app_package_list_items(app, items) and \
+        update_app_package_data_list_items(app, items) and \
         ({},),
       uncheck(read_process_lines)(r'''
       xzgrep '^\($\|\(Depends\|Filename\|Package\|Pre-Depends\|Provides\): \)' {} | \
@@ -1498,19 +1496,46 @@ update_app_package_list = \
         quote_argument(path),
         quote_argument('/'.join(url.split('/', 4)[:-1])),
       )), ({},)) and \
-      commit_app_data(app) and \
+      commit_data(get_app_package_data_path(app)) and \
       remove_file(path) and \
-      update_app_data(app, ('packages', hash_md5(url), 'update-timestamp'), int(time.time()))
+      update_app_package_data(app, ('timestamp', hash_md5(url)), int(time.time()))
   ))
 
-update_app_package_list_items = lambda app, items: \
-  (not any('Provides' in item for item in items) or update_app_package_list_items(app, tuple(dict(((key, value) for key, value in item.items() if key != 'Provides'), **{'Package': package}) for item in items if 'Provides' in item for package in item['Provides'].split()))) and \
-  update_app_data_items(app, (((item['Package'], 'dependencies'), ' '.join(item[key] for key in ('Depends', 'Pre-Depends') if item.get(key))) for item in items), True) and \
-  update_app_data_items(app, (((item['Package'], 'url'), item['Filename']) for item in items), True)
+update_app_package_lists = \
+  lock_app_package_data(
+    lambda app: \
+      all(update_app_package_list(app, url, download_missing_app_temp_file(app, url)) for url in build_app_package_list_urls(app) if query_app_package_data_url_timestamp(app, url) < time.time() - 60 * 60 * 24 and request_url_timestamp(url) > query_app_package_data_url_timestamp(app, url))
+  )
 
-update_app_package_lists = lambda app: \
-  (not next(glob.iglob(build_cached_app_package_data_path(app, '*')), None) or copy_file(sorted(glob.iglob(build_cached_app_package_data_path(app, '*')))[-1], get_app_data_path(app))) and \
-  all(update_app_package_list(app, url, download_missing_app_file(app, url, build_app_package_list_download_path(app, url))) for url in build_app_package_list_urls(app) if query_app_package_list_update_timestamp(app, url) < time.time() - 60 * 60 * 6 and request_last_modified(url) > query_app_package_list_update_timestamp(app, url))
+unpack_app_tarball_distribution = \
+  log(lambda app, path, *args, **kwargs: 'Preparing to unpack {}'.format(os.path.basename(path)))(
+    lambda app, path: \
+      unpack_tarball(path, get_app_distribution_path(app), ('--strip-components=1',) if is_tarball_nested(path) else ()) and \
+      unpack_nested_app_distributions(app)
+  )
+
+update_data = lambda path, key, value='', is_deferred=False: \
+  connect_data(path).execute('REPLACE INTO items (key, value) VALUES (?, ?)', (build_data_key(key), value)) and \
+  (is_deferred or commit_data(path))
+
+update_data_items = lambda path, items, is_deferred=False: \
+  connect_data(path).executemany('REPLACE INTO items (key, value) VALUES (?, ?)', ((build_data_key(key), value) for key, value in items)) and \
+  (is_deferred or commit_data(path))
+
+unpack_tarball = \
+  log(lambda path, *args, **kwargs: 'Unpacking {}'.format(os.path.basename(path)))(
+  check(lambda path, *args, **kwargs: 'Failed to unpack {}'.format(os.path.basename(path)))(
+  output(' ')(
+    lambda path, output_path, options=(): \
+      uncheck(call_process)(
+        ('tar', '-x', '-C', make_directories(output_path), '-f', path) + \
+        get_tar_progress_options() + \
+        options
+      ) and \
+      output_path
+  )))
+
+write_app_package_file_version = lambda app, path: write_file(get_app_package_version_path(app, extract_package_name(path)), '{}\n'.format(extract_package_version(path)))
 
 write_app_version = lambda app: write_file(get_app_version_path(app), '{} {}\n'.format(request_app_version(app), hash_app_download_urls(app)))
 
