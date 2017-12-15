@@ -52,6 +52,7 @@ build_bwrap_readonly_bind_paths = lambda: \
   tuple(path for pattern in (
     '/usr/lib/*-linux-gnu/alsa-lib',
     '/usr/lib/*-linux-gnu/pulseaudio',
+    '/usr/lib/locale',
     '/usr/share/alsa',
     get_xauthority_path(),
   ) for path in glob.iglob(pattern))
