@@ -29,7 +29,7 @@ def handle_failed_app_requests(function):
       return result
     except AssertionError as exception:
       if exception.args and ' failed to request ' in exception.args[0]:
-        count = int(utilities.query_data((app, 'request-failures'), '0')) + 1
+        count = int(utilities.query_data((app, 'request-failures')) or '0') + 1
         utilities.update_data((app, 'request-failures'), count)
         if count >= 3:
           utilities.update_data((app, 'request-failures'), '0')

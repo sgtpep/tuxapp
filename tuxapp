@@ -211,14 +211,14 @@ def check_app_firejail(app):
       print(get_firejail_message('missing'), file=sys.stderr)
   return True
 
-def commit_app_data(app):
-  connect_app_data(app).commit()
+def commit_data(path):
+  connect_data(path).commit()
   return True
 
 @memoize
-def connect_app_data_memoized(app):
+def connect_data_memoized(path):
   import sqlite3
-  connection = sqlite3.connect(make_file_directories(get_app_data_path(app)))
+  connection = sqlite3.connect(make_file_directories(path))
   connection.execute('CREATE TABLE IF NOT EXISTS items (key TEXT PRIMARY KEY, value TEXT)')
   return connection
 
@@ -513,9 +513,9 @@ check_apps_updated = \
     lambda apps: tuple((app, check_app_updated(app)) for app in apps)
   )
 
-connect_app_data = lambda app: \
-  (os.path.isfile(get_app_data_path(app)) or connect_app_data_memoized.remove(app)) and \
-  connect_app_data_memoized(app)
+connect_data = lambda path: \
+  (os.path.isfile(path) or connect_data_memoized.remove(path)) and \
+  connect_data_memoized(path)
 
 detect_architecture = \
   check(lambda *args, **kwargs: 'Unknown architecture: {}'.format(platform.machine()))(
@@ -558,30 +558,30 @@ download_app_files = \
     lambda app, urls, path: \
       () \
         if not urls else \
-      tuple(rename_file_ascending(build_app_temp_download_path(app, url), build_download_path(path, url)) for url in urls if os.path.isfile(build_app_temp_download_path(app, url))) \
+      tuple(rename_file_ascending(build_app_download_path(app, url), build_download_path(path, url)) for url in urls if os.path.isfile(build_app_download_path(app, url))) \
         if (download_app_files_curl(app, urls, path) if get_request_command() == 'curl' else download_app_files_wget(app, urls, path)) else \
-      all(remove_file_ascending(build_app_temp_download_path(app, url)) for url in urls) and \
+      all(remove_file_ascending(build_app_download_path(app, url)) for url in urls) and \
       None
   ))
 
 download_app_files_curl = lambda app, urls, path: \
-  uncheck()(call_process)(build_curl_request_arguments(
+  uncheck(call_process)(build_curl_request_arguments(
     (('-Ss',) if is_silent() else ()) + \
-    tuple(argument for url in urls for argument in ('-o', make_file_directories(build_app_temp_download_path(app, url)), url))
+    tuple(argument for url in urls for argument in ('-o', make_file_directories(build_app_download_path(app, url)), url))
   )) and \
-  all(os.path.isfile(build_app_temp_download_path(app, url)) for url in urls)
+  all(os.path.isfile(build_app_download_path(app, url)) for url in urls)
 
 download_app_files_wget = lambda app, urls, path: \
-  all(remove_file(build_app_temp_download_path(app, url)) for url in urls) and \
-  uncheck()(call_process)(build_wget_request_arguments(
+  all(remove_file(build_app_download_path(app, url)) for url in urls) and \
+  uncheck(call_process)(build_wget_request_arguments(
     (('-q',) if is_silent() else ('--show-progress',)) + \
-    ('-P', make_directories(get_app_temp_downloads_path(app))) + \
+    ('-P', make_directories(get_app_downloads_path(app))) + \
     urls
   ))
 
 download_app_packages = lambda app, packages: \
-  tuple(copy_file(path, get_app_temp_file_path(app, path)) for path in (get_app_cached_file_path(app, parse_url(query_app_package_data(app, package, 'url')).path) for package in packages) if os.path.isfile(path)) + \
-  download_missing_app_temp_files(app, set(url for url in (query_app_package_data(app, package, 'url') for package in packages) if not os.path.isfile(get_app_cached_file_path(app, parse_url(url).path))))
+  tuple(copy_file(path, get_app_temp_file_path(app, path)) for path in (get_app_cached_file_path(app, parse_url(query_app_package_url(app, package)).path) for package in packages) if os.path.isfile(path)) + \
+  download_missing_app_temp_files(app, set(url for url in (query_app_package_url(app, package) for package in packages) if not os.path.isfile(get_app_cached_file_path(app, parse_url(url).path))))
 
 download_missing_app_file = lambda app, url, path: \
   path \
@@ -1269,6 +1269,8 @@ query_appfile_value = \
     lambda app, key: parse_appfile(app).get(key)
   )
 
+query_data = lambda path, key: (connect_data(path).execute('SELECT value FROM items WHERE key = ?', (build_data_key(key),)).fetchone() or ('',))[0]
+
 query_package_data_header = lambda path, key: parse_package_data_header(path).get(key)
 
 read_app_download_urls_hash = lambda app: read_app_version_components(app)[-1]
@@ -1366,16 +1368,16 @@ request_url_headers = \
       ), get_request_command() == 'wget')
   ))
 
-resolve_app_packages = lambda app, packages: tuple(sorted(set(extract_package_name(query_app_package_data(app, package, 'url')) for package in resolve_app_packages_recursive(app, packages))))
+resolve_app_packages = lambda app, packages: tuple(sorted(set(extract_package_name(query_app_package_url(app, package)) for package in resolve_app_packages_recursive(app, packages))))
 
 resolve_app_packages_recursive = lambda app, packages, resolved_packages=set(): \
   functools.reduce(lambda packages, package: \
     packages | \
     {package} | \
-    resolve_app_packages_recursive(app, tuple(dependency for dependency in query_app_package_data(app, package, 'dependencies').split() if (dependency.startswith('lib') or not package.startswith('lib')) and dependency not in get_excluded_dependencies() and dependency not in resolved_packages), # pylint: disable=undefined-variable
+    resolve_app_packages_recursive(app, tuple(dependency for dependency in query_app_package_data(app, (package, 'dependencies')).split() if (dependency.startswith('lib') or not package.startswith('lib')) and dependency not in resolved_packages), # pylint: disable=undefined-variable
   packages | {package}), packages, set())
 
-resolve_outdated_app_packages = lambda app, packages: tuple(package for package in resolve_app_packages(app, packages) if not query_app_package_version(app, package) == read_app_package_version(app, package))
+resolve_outdated_app_packages = lambda app, packages: tuple(package for package in resolve_app_packages(app, packages) if not extract_package_version(parse_url(query_app_package_url(app, package)).path) == read_app_package_version(app, package))
 
 sanitize_app_command = lambda app, command: join_arguments(os.path.realpath(os.path.join(get_app_distribution_path(app), argument)).replace(get_app_distribution_path(app), '.', 1) if argument.startswith('./') else argument for argument in split_command(command))
 

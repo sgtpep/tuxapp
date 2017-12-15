@@ -44,7 +44,9 @@ call_process_verbose = \
     lambda arguments: tuxapp.call_process(arguments)
   )
 
-connect_data = lambda: tuxapp.connect_app_data(tuxapp.get_name())
+connect_data = lambda: tuxapp.connect_data(get_data_path())
+
+get_data_path = lambda: os.path.join(tuxapp.get_app_path(tuxapp.get_name()), 'data')
 
 get_github_url_pattern = lambda: r'\bgithub\.com/([\w-]+/[\w-]+)'
 
@@ -66,8 +68,8 @@ open_url = \
     lambda url: url
   )
 
-query_data = lambda key, default='': tuxapp.query_app_data(tuxapp.get_name(), key, default)
+query_data = lambda key: tuxapp.query_data(get_data_path(), key)
 
-update_data = lambda key, value: tuxapp.update_app_data(tuxapp.get_name(), key, value)
+update_data = lambda key, value='': tuxapp.update_data(get_data_path(), key, value)
 
-update_data_items = lambda items: tuxapp.update_app_data_items(tuxapp.get_name(), items)
+update_data_items = lambda items: tuxapp.update_data_items(get_data_path(), items)

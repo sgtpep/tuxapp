@@ -131,7 +131,7 @@ check_url_protocol = lambda url: \
 complete_app_packages = lambda app, text, state: \
   (
     tuple(group for group in tuxapp.get_package_groups().keys() if text and group.startswith(text)) + \
-    tuple(row[0].split(':', 1)[0] for row in tuxapp.connect_app_data(app).execute('SELECT key FROM items WHERE key LIKE ? LIMIT 100', ('{}%:url'.format(text),)).fetchall())
+    tuple(row[0].split(':', 1)[0] for row in tuxapp.connect_data(tuxapp.get_app_package_data_path(app)).execute('SELECT key FROM items WHERE key LIKE ? LIMIT 100', ('{}%:url'.format(text),)).fetchall())
   )[state]
 
 confirm_message = lambda message, is_no=False: \
