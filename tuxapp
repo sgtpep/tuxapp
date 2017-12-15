@@ -1384,8 +1384,12 @@ resolve_app_packages_recursive = lambda app, packages, resolved_packages=set(): 
   functools.reduce(lambda packages, package: \
     packages | \
     {package} | \
-    resolve_app_packages_recursive(app, tuple(dependency for dependency in query_app_package_data(app, (package, 'dependencies')).split() if (dependency.startswith('lib') or not package.startswith('lib')) and dependency not in resolved_packages), # pylint: disable=undefined-variable
+    resolve_app_packages_recursive(app, tuple(dependency for dependency in query_app_package_data(app, (package, 'dependencies')).split() if (is_library_package(dependency) or not package.startswith('lib')) and dependency not in resolved_packages), # pylint: disable=undefined-variable
   packages | {package}), packages, set())
+
+is_library_package = lambda package: \
+  package.startswith('lib') or \
+  package == 'zlib1g'
 
 resolve_outdated_app_packages = lambda app, packages: tuple(package for package in resolve_app_packages(app, packages) if not extract_package_version(parse_url(query_app_package_url(app, package)).path) == read_app_package_version(app, package))
 
