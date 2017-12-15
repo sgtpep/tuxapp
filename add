@@ -32,8 +32,7 @@ def validate(validate_function):
           try:
             validate_function(*args, result=result, **kwargs)
           except AssertionError as exception:
-            if exception.args:
-              print(exception.args[0], file=sys.stderr)
+            tuxapp.print_exception(exception)
             args = args[:-1] + (result,)
           else:
             return result
@@ -45,8 +44,7 @@ def detect_app_library_packages(app, packages=()):
   try:
     tuxapp.install_app_packages(app, tuxapp.expand_package_groups(packages))
   except AssertionError as exception:
-    if exception.args:
-      print(exception.args[0], file=sys.stderr)
+    tuxapp.print_exception(exception)
     return packages
   for distribution in testing.get_test_distributions():
     filenames = testing.detect_missing_app_libraries(app, distribution)
@@ -58,8 +56,7 @@ def detect_app_library_packages(app, packages=()):
         try:
           package = tuxapp.request_grep_url('https://{}/search?arch={}&keywords=/{}&searchon=contents&suite={}'.format('packages.ubuntu.com' if tuxapp.query_appfile(app, 'package-repository') == 'xenial' else 'packages.debian.org', tuxapp.detect_debian_architecture(), filename, tuxapp.query_appfile(app, 'package-repository')), ('-Po', '-m', '1', r'(?<="/{}/)[^"]+'.format(re.escape(tuxapp.query_appfile(app, 'package-repository')))))
         except AssertionError as exception:
-          if exception.args:
-            print(exception.args[0], file=sys.stderr)
+          tuxapp.print_exception(exception)
           return packages
         if package and not package.endswith('-dev') and package not in packages:
           return detect_app_library_packages(app, packages + (package,))

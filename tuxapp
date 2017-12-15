@@ -59,8 +59,7 @@ def handle_exceptions(function):
       if not result:
         sys.exit(1)
     except AssertionError as exception:
-      if exception.args:
-        print(exception.args[0], file=sys.stderr)
+      print_exception(exception)
       sys.exit(1)
     except KeyboardInterrupt:
       print(file=sys.stderr)
@@ -309,6 +308,10 @@ def pipe_process_stdin(file, arguments, offset=0, size=None):
   else:
     return False
 
+def print_exception(exception):
+  if exception.args:
+    print(exception.args[0], file=sys.stderr)
+
 def quote_argument(string):
   try:
     from shlex import quote
@@ -394,8 +397,7 @@ def unpack_zip_file(path, output_path):
         os.chmod(os.path.join(output_path, info.filename), info.external_attr >> 16)
       return output_path
   except Exception as exception: # pylint: disable=broad-except
-    if exception.args:
-      print(exception.args[0], file=sys.stderr)
+    print_exception(exception)
 
 def write_file(path, content='', is_append=False):
   import io
