@@ -2,7 +2,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import functools
-import glob
 import os
 import stat
 import sys
@@ -10,7 +9,6 @@ import textwrap
 import time
 
 from lib import (
-  appfile,
   tuxapp,
   utilities,
 )
@@ -43,32 +41,25 @@ build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_trace=Fa
     '--setenv', 'TUXAPP_TEST', '1',
     '--tmpfs', '/tmp',
   ) + \
-  tuple(option for path in build_bwrap_readonly_bind_paths() for option in ('--ro-bind', path, path)) + \
+  (('--bind', tuxapp.get_app_path(app), tuxapp.get_app_path(app)) if app else ()) + \
+  (('--ro-bind', get_xauthority_path(), get_xauthority_path()) if tuxapp.is_existing_command('xvfb-run') and os.path.isfile(get_xauthority_path()) else ()) + \
   (('--setenv', 'TUXAPP_TRACE', '1') if is_trace else ()) + \
-  (('--bind', tuxapp.get_app_path(app), tuxapp.get_app_path(app)) if app else ('--bind', os.path.expanduser('~'), os.path.expanduser('~'))) + \
   ('bash', '-l') + \
   ((tuxapp.get_app_runner_path(app),) + arguments if app else ())
-
-build_bwrap_readonly_bind_paths = lambda: \
-  tuple(path for pattern in (
-    '/usr/lib/*-linux-gnu/alsa-lib',
-    '/usr/lib/*-linux-gnu/pulseaudio',
-    '/usr/lib/locale',
-    '/usr/share/alsa',
-  ) for path in glob.iglob(pattern)) + \
-  ((get_xauthority_path(),) if tuxapp.is_existing_command('xvfb-run') and os.path.isfile(get_xauthority_path()) else ())
 
 build_root_bwrap_arguments = lambda distribution: \
   utilities.install_missing_package('bubblewrap', 'bwrap') and \
   ('bwrap', '--bind', tuxapp.get_app_root_path(distribution), '/',
     '--bind', '/etc/resolv.conf', '/etc/resolv.conf',
-    '--bind', tuxapp.make_directories(tuxapp.get_app_temp_path(distribution)), '/var/cache/pacman/pkg' if distribution == 'arch' else '/var/cache/apt/archives',
+    '--bind', tuxapp.make_directories(tuxapp.get_app_temp_path(distribution)), get_distribution_cache_path(distribution),
     '--dev', '/dev',
     '--proc', '/proc',
     '--tmpfs', '/tmp',
   ) + \
+  (('--ro-bind', '/etc/machine-id', '/etc/machine-id') if distribution == 'xenial' else ()) + \
   ('env', '-u', 'LANG') + \
-  (('fakechroot', 'fakeroot') if distribution == 'arch' else ('fakeroot-sysv',)) + \
+  (() if is_debian_distribution(distribution) else ('PATH=/usr/sbin:/usr/bin:/sbin:/bin',)) + \
+  get_distribution_fakeroot_arguments(distribution) + \
   ('bash', '-l')
 
 call_root_script = lambda distribution, script: \
@@ -96,14 +87,14 @@ configure_arch_container = lambda: \
   pacman -Sy --force --needed --noconfirm "${packages[@]}"
   ''')
 
-configure_debian_container = lambda: \
-  tuxapp.write_file(os.path.join(tuxapp.get_app_root_path('debian'), 'etc/apt/apt.conf.d/50keep-downloaded-packages'), 'Binary::apt::APT::Keep-Downloaded-Packages "true";\n') and \
-  tuxapp.write_file(os.path.join(tuxapp.get_app_root_path('debian'), 'etc/apt/sources.list'), textwrap.dedent('''\
+configure_debian_container = lambda distribution: \
+  tuxapp.write_file(os.path.join(tuxapp.get_app_root_path(distribution), 'etc/apt/apt.conf.d/50keep-downloaded-packages'), 'Binary::apt::APT::Keep-Downloaded-Packages "true";\n') and \
+  (not is_debian_distribution(distribution) or tuxapp.write_file(os.path.join(tuxapp.get_app_root_path(distribution), 'etc/apt/sources.list'), textwrap.dedent('''\
   deb http://deb.debian.org/debian {0} main
-  deb http://security.debian.org/ {0}/updates main
-  ''').format(appfile.get_default_package_repository())) and \
-  update_debian_container() and \
-  call_root_script('debian', r'''
+  deb http://deb.debian.org/debian-security {0}/updates main
+  ''').format(distribution))) and \
+  update_debian_container(distribution) and \
+  call_root_script(distribution, r'''
   packages=(
     fontconfig-config
     fonts-dejavu-core
@@ -124,7 +115,10 @@ execute_root_shell = lambda distribution: tuxapp.execute_process(build_root_bwra
 
 execute_shell = lambda distribution: tuxapp.execute_process(build_bwrap_arguments(install_missing_container(distribution)))
 
-extract_app_library = lambda app, string: '' if extract_library(string) == 'libGL.so.1' or extract_library(string) in tuxapp.query_appfile(app, 'ignored-libraries').split() else extract_library(string)
+extract_app_library = lambda app, string: \
+  '' \
+    if extract_library(string) == 'libGL.so.1' or extract_library(string) in tuxapp.query_appfile(app, 'ignored-libraries').split() else \
+  extract_library(string)
 
 extract_library = lambda string: \
   'libqxcb.so' \
@@ -137,26 +131,49 @@ get_arch_mirror_url = lambda path='': os.path.join('https://mirrors.kernel.org/a
 
 get_arch_package_url = lambda package: get_arch_mirror_url(os.path.join('extra' if package == 'fakechroot' else 'core', 'os/x86_64/'))
 
-get_debian_container_url = lambda: 'https://download.openvz.org/template/precreated/contrib/debian-9.0-{}-minimal.tar.gz'.format(tuxapp.detect_architecture().replace('-', '_'))
+get_debian_container_url = lambda distribution: \
+  'http://cdimage.ubuntu.com/ubuntu-base/releases/17.10/release/ubuntu-base-17.10-base-amd64.tar.gz' \
+    if distribution == 'artful' else \
+  'https://download.openvz.org/template/precreated/debian-8.0-x86_64-minimal.tar.gz' \
+    if distribution == 'jessie' else \
+  'https://download.openvz.org/template/precreated/contrib/debian-9.0-x86_64-minimal.tar.gz' \
+    if distribution == 'stretch' else \
+  'http://cdimage.ubuntu.com/ubuntu-base/releases/16.04/release/ubuntu-base-16.04.3-base-amd64.tar.gz' \
+    if distribution == 'xenial' else \
+  None
 
-get_debian_package_url = lambda package: 'https://packages.debian.org/{}/{}/{}/download'.format(appfile.get_default_package_repository(), tuxapp.detect_debian_architecture(), package)
+get_debian_package_url = lambda distribution, package: 'https://{}/{}/{}/{}/download'.format('packages.debian.org' if is_debian_distribution(distribution) else 'packages.ubuntu.com', distribution, tuxapp.detect_debian_architecture(), package)
 
-get_default_distribution = lambda: 'debian'
+get_default_distribution = lambda: 'stretch'
+
+get_distribution_cache_path = lambda distribution: \
+  '/var/cache/pacman/pkg' \
+    if distribution == 'arch' else \
+  '/var/cache/apt/archives'
+
+get_distribution_fakeroot_arguments = lambda distribution: \
+  ('fakechroot', 'fakeroot') \
+    if distribution == 'arch' else \
+  ('fakeroot-sysv',)
 
 get_distributions = lambda: \
   (
     'arch',
-    'debian',
+    'artful',
+    'jessie',
+    'stretch',
+    'xenial',
   )
 
-get_install_mark_path = lambda distribution: os.path.join(tuxapp.get_app_root_path(distribution), 'var/lib', tuxapp.get_name())
+get_install_flag_path = lambda distribution: os.path.join(tuxapp.get_app_root_path(distribution), 'var/lib', tuxapp.get_name())
 
 get_process_timeout = lambda: 3
 
 get_test_distributions = lambda: \
-  (get_default_distribution(),) + \
-  get_distributions()[:get_distributions().index(get_default_distribution())] + \
-  get_distributions()[get_distributions().index(get_default_distribution()) + 1:]
+  (
+    'stretch',
+    'arch',
+  )
 
 get_xauthority_path = lambda: os.path.expanduser('~/.Xauthority')
 
@@ -175,25 +192,25 @@ install_container = \
     lambda distribution: \
       install_arch_container() \
         if distribution == 'arch' else \
-      install_debian_container()
+      install_debian_container(distribution)
   )
 
-install_debian_container = lambda: \
-  tuxapp.unpack_tarball(tuxapp.download_missing_app_temp_file('debian', get_debian_container_url()), tuxapp.get_app_root_path('debian'), ('--exclude=./dev',)) and \
-  all(install_debian_container_package(package) for package in ('fakeroot', 'libfakeroot')) and \
-  configure_debian_container()
+install_debian_container = lambda distribution: \
+  tuxapp.unpack_tarball(tuxapp.download_missing_app_temp_file(distribution, get_debian_container_url(distribution)), tuxapp.get_app_root_path(distribution), ('--exclude={}'.format('./dev' if is_debian_distribution(distribution) else 'dev'),)) and \
+  all(install_debian_container_package(distribution, package) for package in ('fakeroot', 'libfakeroot')) and \
+  configure_debian_container(distribution)
 
-install_debian_container_package = lambda package: \
-  tuxapp.silence(tuxapp.unpack_package)(tuxapp.download_missing_app_temp_file('debian', request_debian_package_url(package)), tuxapp.get_app_root_path('debian')) and \
+install_debian_container_package = lambda distribution, package: \
+  tuxapp.silence(tuxapp.unpack_package)(tuxapp.download_missing_app_temp_file(distribution, request_debian_package_url(distribution, package)), tuxapp.get_app_root_path(distribution)) and \
   package
 
 install_missing_container = lambda distribution: \
   update_old_container(distribution) and \
   distribution \
-    if os.path.isfile(get_install_mark_path(distribution)) else \
+    if os.path.isfile(get_install_flag_path(distribution)) else \
   install_container(distribution) and \
-  tuxapp.write_file(get_install_mark_path(distribution)) and \
-  utilities.update_data((container, distribution, 'update-timestamp'), int(time.time())) and \
+  tuxapp.write_file(get_install_flag_path(distribution)) and \
+  utilities.update_data((distribution, 'timestamp'), int(time.time())) and \
   distribution
 
 is_app_process_output_ignored = lambda app, output: \
@@ -203,11 +220,19 @@ is_app_process_output_ignored = lambda app, output: \
     'viber': 'Could not initialize GLX',
   }.get(app, r'\0') in output
 
+is_debian_distribution = lambda distribution: \
+  distribution in (
+    'jessie',
+    'stretch',
+  )
+
 request_arch_container_url = lambda: get_arch_mirror_url('iso/latest/') + tuxapp.request_grep_url(get_arch_mirror_url('iso/latest/'), ('-Po', '-m', '1', r'(?<=")archlinux-bootstrap-[^"]+'))
 
 request_arch_package_url = lambda package: get_arch_package_url(package) + tuxapp.request_grep_url(get_arch_package_url(package), ('-Po', '-m', '1', r'(?<="){}-[^"]+'.format(package)))
 
-request_debian_package_url = lambda package: tuxapp.get_debian_mirror_url() + tuxapp.request_grep_url(get_debian_package_url(package), ('-o', '-m', '1', r'[^/]*/pool/[^"]*'))
+request_debian_package_url = lambda distribution, package: \
+  (tuxapp.get_debian_mirror_url() if is_debian_distribution(distribution) else tuxapp.get_ubuntu_mirror_url()) + \
+  tuxapp.request_grep_url(get_debian_package_url(distribution, package), ('-o', '-m', '1', r'[^/]*/pool/[^"]*'))
 
 test_app = lambda app, distribution=None: \
   test_installed_app(app, distribution) \
@@ -234,17 +259,17 @@ test_app_process = \
 
 test_apps = lambda apps: utilities.call_parallel(test_app_worker, apps, 4)
 
-test_installed_app = lambda app, distribution=None: all(not detect_missing_app_libraries(app, distribution) for distribution in ((distribution,) if distribution else get_test_distributions()))
+test_installed_app = lambda app, distribution=None: all(not detect_missing_app_libraries(app, distribution) for distribution in ((distribution,) if distribution else get_test_distributions())) # pylint: disable=superfluous-parens
 
 update_arch_container = lambda: call_root_script('arch', r'pacman -Syu --noconfirm')
 
 update_container = lambda distribution: \
   update_arch_container() \
     if distribution == 'arch' else \
-  update_debian_container()
+  update_debian_container(distribution)
 
-update_debian_container = lambda: \
-  call_root_script('debian', r'''
+update_debian_container = lambda distribution: \
+  call_root_script(distribution, r'''
   apt update
   DEBIAN_FRONTEND=noninteractive apt dist-upgrade -y
   ''')
