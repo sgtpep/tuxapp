@@ -564,6 +564,6 @@ update_app_version_data = lambda app: \
   True \
     if utilities.query_data((app, 'version')) == tuxapp.request_app_version(app) else \
   utilities.update_data_items((
-    ((app, 'update-timestamp'), int(time.time())),
+    ((app, 'timestamp'), int(time.time())),
     ((app, 'version'), tuxapp.request_app_version(app)),
   ))

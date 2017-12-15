@@ -1131,7 +1131,7 @@ query_data_uri = lambda path, width=None: \
   utilities.update_data(('data-uri', tuxapp.hash_md5(os.path.basename(path)), width), build_data_uri(path, width)) and \
   utilities.query_data(('data-uri', tuxapp.hash_md5(os.path.basename(path)), width))
 
-query_updated_apps = lambda size: tuple((row[0].split(':', 1)[0], int(row[1])) for rows in iter(utilities.connect_data().execute('SELECT key, value FROM items WHERE key LIKE "%:update-timestamp" ORDER BY value DESC LIMIT ?', (size,)).fetchmany, []) for row in rows)
+query_updated_apps = lambda size: tuple((row[0].split(':', 1)[0], int(row[1])) for rows in iter(utilities.connect_data().execute('SELECT key, value FROM items WHERE key LIKE "%:timestamp" ORDER BY value DESC LIMIT ?', (size,)).fetchmany, []) for row in rows)
 
 remove_whitespace = lambda string: re.sub(r'^\s+', '', string, 0, re.M).replace('\n', '')
 
