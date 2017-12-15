@@ -412,6 +412,8 @@ build_command = lambda command: \
     build_tag('code.command', command),
   )
 
+build_data_uri_key = lambda path, width=None: ('data-uri', tuxapp.hash_md5(os.path.basename(path)), str(width))
+
 build_feed = lambda url, name, timestamp, entries: \
   join_elements(
     '<?xml version="1.0" encoding="utf-8"?>',
@@ -1127,9 +1129,9 @@ process_lightbox_previous = lambda html: re.sub(r' class="lightbox-action is-pre
 process_styles = lambda html: get_style_regex().sub('', html).replace(build_combined_styles(), build_tag('style', None, *functools.reduce(lambda styles, style: styles if style in styles else styles + (style,), get_style_regex().findall(html), ())))
 
 query_data_uri = lambda path, width=None: \
-  utilities.query_data(('data-uri', tuxapp.hash_md5(os.path.basename(path)), str(width))) or \
-  utilities.update_data(('data-uri', tuxapp.hash_md5(os.path.basename(path)), str(width)), build_data_uri(path, width)) and \
-  utilities.query_data(('data-uri', tuxapp.hash_md5(os.path.basename(path)), str(width)))
+  utilities.query_data(build_data_uri_key(path, width)) or \
+  utilities.update_data(build_data_uri_key(path, width), build_data_uri(path, width)) and \
+  utilities.query_data(build_data_uri_key(path, width))
 
 query_updated_apps = lambda size: tuple((row[0].split(':', 1)[0], int(row[1])) for rows in iter(utilities.connect_data().execute('SELECT key, value FROM items WHERE key LIKE "%:timestamp" ORDER BY value DESC LIMIT ?', (size,)).fetchmany, []) for row in rows)
 
