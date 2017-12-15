@@ -15,15 +15,15 @@ from lib import (
 
 def check_app_process_output(function):
   @functools.wraps(function)
-  def wrapper(app, *args, **kwargs):
+  def wrapper(app, distribution):
     timestamp = time.time()
-    output = function(app, *args, **kwargs)
+    output = function(app, distribution)
     if any(extract_app_library(app, line) for line in output.splitlines()):
       if not tuxapp.is_silent():
         print(output, file=sys.stderr)
     elif time.time() - timestamp < get_process_timeout() - 0.5 and not is_app_process_output_ignored(app, output):
       print('\n{}'.format(output), file=sys.stderr)
-      raise AssertionError('{} exited unexpectedly'.format(app))
+      raise AssertionError('{} terminated unexpectedly on {}'.format(app, distribution))
     return output
   return wrapper
 
