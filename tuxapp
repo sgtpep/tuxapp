@@ -286,7 +286,7 @@ def parse_package_data_header(path):
     start = map_file.find(b'data.tar.')
     end = map_file.find(b'`\n', start)
     if start != -1 and end != -1:
-      filename, _, _, _, _, size = map_file[start:end].decode('utf-8').split()
+      filename, _, _, _, _, size = map_file[start:end].decode('utf-8', 'replace').split()
       return {
         'extension': re.sub(r'\W.*$', '', filename.replace('data.tar.', '', 1)),
         'offset': end + 2,

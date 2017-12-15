@@ -78,7 +78,7 @@ def execute_app(app):
 def input_text(message, prefill='', choices=(), is_whitespacy=False):
   try:
     import readline
-    readline.set_startup_hook(lambda: readline.insert_text(filter_text(prefill, is_whitespacy).encode('utf-8')))
+    readline.set_startup_hook(lambda: readline.insert_text(filter_text(prefill, is_whitespacy).encode('utf-8', 'replace')))
     path = os.path.expanduser('~/.python_history')
     if is_repl() and os.path.isfile(path):
       readline.write_history_file(path)
@@ -90,7 +90,7 @@ def input_text(message, prefill='', choices=(), is_whitespacy=False):
       import builtins
     except ImportError:
       import __builtin__ as builtins
-    return filter_text(getattr(builtins, 'raw_input', input)('{}: '.format(message)).decode('utf-8'), is_whitespacy)
+    return filter_text(getattr(builtins, 'raw_input', input)('{}: '.format(message)).decode('utf-8', 'replace'), is_whitespacy)
   finally:
     readline.set_startup_hook()
     if is_repl() and os.path.isfile(path):
