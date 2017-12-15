@@ -344,7 +344,7 @@ check_url_name = lambda url, name: \
 
 download_missing_app_file = lambda url, pattern: \
   next(glob.iglob(pattern), None) or \
-  tuxapp.rename_file(tuxapp.download_missing_app_file(tuxapp.get_name(), url, '{}~'.format(os.path.splitext(pattern)[0])), '{}.{}'.format(os.path.splitext(pattern)[0], utilities.detect_image_extension('{}~'.format(os.path.splitext(pattern)[0]))))
+  tuxapp.rename_file(tuxapp.download_missing_app_file(tuxapp.get_name(), url, os.path.splitext(pattern)[0]), '{}.{}'.format(os.path.splitext(pattern)[0], utilities.detect_image_extension(os.path.splitext(pattern)[0])))
 
 extract_url_name = lambda url: re.sub(r'-+', ' ', re.sub(r'^www\.', '', tuxapp.parse_url(url).netloc).split('.', 1)[0])
 
