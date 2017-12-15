@@ -487,8 +487,8 @@ build_wget_request_arguments = lambda options, is_gzip=False: \
 
 check_app_installed = \
   check('{} is not installed')(
-    lambda app: \
-      is_app_installed(app) and \
+    lambda app, is_soft=False: \
+      (os.path.isdir(get_app_path(app)) if is_soft else is_app_installed(app)) and \
       app
   )
 
@@ -1190,7 +1190,7 @@ main = \
         if parse_arguments().list else \
       purge_cache() \
         if parse_arguments().purge else \
-      all(remove_app(check_app_installed(extract_app(argument))) for argument in parse_arguments().arguments) \
+      all(remove_app(check_app_installed(extract_app(argument), True)) for argument in parse_arguments().arguments) \
         if parse_arguments().remove else \
       all(install_app(check_app_installed(extract_app(argument))) for argument in parse_arguments().arguments or get_installed_apps()) \
         if parse_arguments().update else \
