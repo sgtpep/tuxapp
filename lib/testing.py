@@ -193,7 +193,7 @@ install_missing_container = lambda distribution: \
     if os.path.isfile(get_install_mark_path(distribution)) else \
   install_container(distribution) and \
   tuxapp.write_file(get_install_mark_path(distribution)) and \
-  utilities.update_data(('container', distribution, 'update-timestamp'), int(time.time())) and \
+  utilities.update_data((container, distribution, 'update-timestamp'), int(time.time())) and \
   distribution
 
 is_app_process_output_ignored = lambda app, output: \
@@ -252,6 +252,6 @@ update_debian_container = lambda: \
 update_old_container = lambda distribution: \
   update_container(distribution) and \
   tuxapp.remove_old_files(tuxapp.get_app_temp_file_path(distribution, '*'), 30) and \
-  utilities.update_data(('container', distribution, 'update-timestamp'), int(time.time())) \
-    if int(utilities.query_data(('container', distribution, 'update-timestamp'), '0')) < time.time() - 60 * 60 * 24 else \
+  utilities.update_data((container, distribution, 'update-timestamp'), int(time.time())) \
+    if int(utilities.query_data((container, distribution, 'update-timestamp'), '0')) < time.time() - 60 * 60 * 24 else \
   True
