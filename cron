@@ -61,7 +61,7 @@ copy_root = lambda: tuxapp.copy_directory(generating.get_build_path(), get_root_
 
 diff_data = lambda: \
   write_data(get_dump_path('after')) and \
-  tuxapp.uncheck(True)(tuxapp.call_process)(r'git diff -U0 --word-diff {} {} | tail -n +5 | grep -v "^@@ "'.format(tuxapp.quote_argument(get_dump_path('before')), tuxapp.quote_argument(get_dump_path('after')))) and \
+  (tuxapp.uncheck(tuxapp.call_process)(r'git diff -U0 --word-diff {} {} | tail -n +5 | grep -v "^@@ "'.format(tuxapp.quote_argument(get_dump_path('before')), tuxapp.quote_argument(get_dump_path('after')))) or True) and \
   all(tuxapp.remove_file(get_dump_path(name)) for name in ('after', 'before'))
 
 get_dump_path = lambda name: '/tmp/{}-{}'.format(tuxapp.get_name(), name)

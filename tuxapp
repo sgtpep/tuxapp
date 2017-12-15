@@ -180,16 +180,14 @@ def silence(function):
       return result
   return wrapper
 
-def uncheck(default=None):
-  def decorator(function):
-    @functools.wraps(function)
-    def wrapper(*args, **kwargs):
-      try:
-        return function(*args, **kwargs)
-      except AssertionError:
-        return default
-    return wrapper
-  return decorator
+def uncheck(function):
+  @functools.wraps(function)
+  def wrapper(*args, **kwargs):
+    try:
+      return function(*args, **kwargs)
+    except AssertionError:
+      return
+  return wrapper
 
 @check_process_exceptions
 def call_process(arguments):
@@ -1261,7 +1259,7 @@ query_appfile = lambda app, key: \
 
 query_appfile_download_urls = \
   check('No download URL of {} for your architecture')(
-    lambda app: tuple(filter_app_download_url(app, url) for url in uncheck('')(query_appfile_value)(app, 'download-{}-url'.format(detect_architecture())).split())
+    lambda app: tuple(filter_app_download_url(app, url) for url in (uncheck(query_appfile_value)(app, 'download-{}-url'.format(detect_architecture())) or '').split())
   )
 
 query_appfile_value = \
@@ -1325,14 +1323,14 @@ request_app_version_memoized = \
 request_appfile = \
   memoize_temporarily(
   check('{} was not found')(
-    lambda app: uncheck()(request_url)(build_github_raw_url('apps/{}'.format(app)))
+    lambda app: uncheck(request_url)(build_github_raw_url('apps/{}'.format(app)))
   ))
 
 request_grep_url = \
   log('Requesting {}')(
   check('Failed to request and grep {}')(
     lambda url, arguments: \
-      uncheck()(read_process)(r'{} | {} | {} | grep {} 2> /dev/null || :'.format(join_arguments(build_request_arguments(
+      uncheck(read_process)(r'{} | {} | {} | grep {} 2> /dev/null || :'.format(join_arguments(build_request_arguments(
         ('-Ss', url),
         ('-q', '-O', '-', url),
       True)), get_request_gzip_command(), get_request_head_command(), join_arguments(arguments))).rstrip('\n')
@@ -1342,7 +1340,7 @@ request_grep_url_all = \
   log('Requesting {}')(
   check('Failed to request and grep {}')(
     lambda url, arguments: \
-      uncheck()(read_process)(r'( {} | {} ) 2>&1 | {} | grep {} 2> /dev/null || :'.format(join_arguments(build_request_arguments(
+      uncheck(read_process)(r'( {} | {} ) 2>&1 | {} | grep {} 2> /dev/null || :'.format(join_arguments(build_request_arguments(
         ('-Ss', '-D', '/dev/stderr', url),
         ('-Sq', '-O', '-', url),
       True)), get_request_gzip_command(), get_request_head_command(), join_arguments(arguments))).rstrip('\n')
@@ -1352,7 +1350,7 @@ request_url = \
   log('Requesting {}')(
   check('Failed to request {}')(
     lambda url: \
-      uncheck()(read_process)(r'{} | {} | {}'.format(join_arguments(build_request_arguments(
+      uncheck(read_process)(r'{} | {} | {}'.format(join_arguments(build_request_arguments(
         ('-Ss', url),
         ('-q', '-O', '-', url),
       True)), get_request_gzip_command(), get_request_head_command()))
@@ -1362,7 +1360,7 @@ request_url_headers = \
   log('Requesting {}')(
   check('Failed to request {}')(
     lambda url: \
-      uncheck()(read_process)(build_request_arguments(
+      uncheck(read_process)(build_request_arguments(
         ('-ISs', '-X', 'GET', url),
         ('-Sq', '-O', '-', '--spider', url),
       ), get_request_command() == 'wget')
@@ -1448,7 +1446,7 @@ unpack_package = \
   check(lambda path, *args, **kwargs: 'Failed to unpack {}'.format(os.path.basename(path)))(
   output(' ')(
     lambda path, output_path, options=(): \
-      uncheck()(pipe_process_stdin)(open(path, 'rb'),
+      uncheck(pipe_process_stdin)(open(path, 'rb'),
         ('tar', '-x', get_tar_filter_option(query_package_data_header(path, 'extension')), '-C', make_directories(output_path)) + \
         get_tar_progress_options() + \
         options,
@@ -1492,7 +1490,7 @@ update_app_package_list = \
           if len(items) < 100 else \
         update_app_package_list_items(app, items) and \
         ({},),
-      uncheck()(read_process_lines)(r'''
+      uncheck(read_process_lines)(r'''
       xzgrep '^\($\|\(Depends\|Filename\|Package\|Pre-Depends\|Provides\): \)' {} | \
       sed 's/ ([^)]\+)//g; s/ | [^,]\+//g; s/:any//g; s/, / /g; s|^Filename: |\0{}/|' 2> /dev/null
       echo EOF
