@@ -84,7 +84,7 @@ call_root_script = lambda distribution, script: \
   )))
 
 configure_arch_container = lambda: \
-  tuxapp.write_file(os.path.join(tuxapp.get_app_root_path('arch'), 'etc/pacman.d/mirrorlist'), 'Server = {}\n'.format(get_arch_mirror_url('$repo/os/$arch'))) and \
+  tuxapp.write_file(tuxapp.get_app_root_file_path('arch', 'etc/pacman.d/mirrorlist'), 'Server = {}\n'.format(get_arch_mirror_url('$repo/os/$arch'))) and \
   call_root_script('arch', r'''
   pacman-key --init
   pacman-key --populate archlinux
@@ -98,8 +98,8 @@ configure_arch_container = lambda: \
   ''')
 
 configure_debian_container = lambda distribution: \
-  tuxapp.write_file(os.path.join(tuxapp.get_app_root_path(distribution), 'etc/apt/apt.conf.d/50keep-downloaded-packages'), 'Binary::apt::APT::Keep-Downloaded-Packages "true";\n') and \
-  (not is_debian_distribution(distribution) or tuxapp.write_file(os.path.join(tuxapp.get_app_root_path(distribution), 'etc/apt/sources.list'), textwrap.dedent('''\
+  tuxapp.write_file(tuxapp.get_app_root_file_path(distribution, 'etc/apt/apt.conf.d/50keep-downloaded-packages'), 'Binary::apt::APT::Keep-Downloaded-Packages "true";\n') and \
+  (not is_debian_distribution(distribution) or tuxapp.write_file(tuxapp.get_app_root_file_path(distribution, 'etc/apt/sources.list'), textwrap.dedent('''\
   deb http://deb.debian.org/debian {0} main
   deb http://deb.debian.org/debian-security {0}/updates main
   ''').format(distribution))) and \
@@ -113,7 +113,7 @@ configure_debian_container = lambda distribution: \
   )
   DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
   ''') and \
-  (is_debian_distribution(distribution) or tuxapp.write_file(os.path.join(tuxapp.get_app_root_path(distribution), 'etc/bash.bashrc'), tuxapp.read_file(os.path.join(tuxapp.get_app_root_path(distribution), 'etc/bash.bashrc')).replace('(groups)', '(true)', 1))) and \
+  (is_debian_distribution(distribution) or tuxapp.write_file(tuxapp.get_app_root_file_path(distribution, 'etc/bash.bashrc'), tuxapp.read_file(tuxapp.get_app_root_file_path(distribution, 'etc/bash.bashrc')).replace('(groups)', '(true)', 1))) and \
   True
 
 detect_missing_app_libraries = \
@@ -177,7 +177,7 @@ get_distributions = lambda: \
     'xenial',
   )
 
-get_install_flag_path = lambda distribution: os.path.join(tuxapp.get_app_root_path(distribution), 'var/lib', tuxapp.get_name())
+get_install_flag_path = lambda distribution: tuxapp.get_app_root_file_path(distribution, os.path.join('var/lib', tuxapp.get_name()))
 
 get_process_timeout = lambda: 3
 
@@ -191,7 +191,7 @@ get_xauthority_path = lambda: os.path.expanduser('~/.Xauthority')
 
 install_arch_container = lambda: \
   tuxapp.unpack_tarball(tuxapp.download_missing_app_temp_file('arch', request_arch_container_url()), tuxapp.get_app_root_path('arch'), ('--strip-components=1',)) and \
-  tuxapp.change_file_mode(os.path.join(tuxapp.get_app_root_path('arch'), 'etc/ca-certificates/extracted/cadir'), lambda mode: mode | stat.S_IWUSR) and \
+  tuxapp.change_file_mode(tuxapp.get_app_root_file_path('arch', 'etc/ca-certificates/extracted/cadir'), lambda mode: mode | stat.S_IWUSR) and \
   all(install_arch_container_package(package) for package in ('fakechroot', 'fakeroot', 'sed')) and \
   configure_arch_container()
 

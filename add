@@ -146,7 +146,7 @@ detect_app_distribution_executable = lambda app, prefix='': \
     if len(detect_app_distribution_executables(app, prefix, True)) == 1 else \
   ''
 
-detect_app_distribution_executables = lambda app, prefix='', is_all=False: tuple(path.replace(tuxapp.get_app_distribution_path(app), '.') for path in glob.iglob(os.path.join(tuxapp.get_app_distribution_path(app), prefix, '*')) if tuxapp.is_file_executable(path) and (is_all or os.path.basename(path).lower() == app.lower()))
+detect_app_distribution_executables = lambda app, prefix='', is_all=False: tuple(path.replace(tuxapp.get_app_distribution_path(app), '.') for path in glob.iglob(tuxapp.get_app_distribution_file_path(app, os.path.join(prefix, '*'))) if tuxapp.is_file_executable(path) and (is_all or os.path.basename(path).lower() == app.lower()))
 
 detect_app_executable = lambda app: \
   tuxapp.install_app_distribution(app) and \
@@ -167,11 +167,11 @@ detect_app_packages = lambda app, packages='', installed_packages='': \
 
 detect_installed_app_executable = lambda app: \
   './AppRun' \
-    if tuxapp.is_file_executable(os.path.join(tuxapp.get_app_distribution_path(app), 'AppRun')) else \
+    if tuxapp.is_file_executable(tuxapp.get_app_distribution_file_path(app, 'AppRun')) else \
   detect_app_distribution_executable(app, 'usr/bin') \
-    if os.path.isdir(os.path.join(tuxapp.get_app_distribution_path(app), 'usr/bin')) else \
+    if os.path.isdir(tuxapp.get_app_distribution_file_path(app, 'usr/bin')) else \
   detect_app_distribution_executable(app, 'opt/*') \
-    if os.path.isdir(os.path.join(tuxapp.get_app_distribution_path(app), 'opt')) else \
+    if os.path.isdir(tuxapp.get_app_distribution_file_path(app, 'opt')) else \
   detect_app_distribution_executable(app)
 
 detect_version_regex = lambda html: \

@@ -426,7 +426,7 @@ append_file = lambda path, content='': write_file(path, content, True)
 
 build_app_download_path = lambda app, url: build_download_path(get_app_downloads_path(app), url)
 
-build_app_library_path = lambda app: ':'.join(os.path.join(get_app_root_path(app), path, detect_library_directory_name()) for path in ('lib', 'usr/lib'))
+build_app_library_path = lambda app: ':'.join(get_app_root_file_path(app, os.path.join(path, detect_library_directory_name())) for path in ('lib', 'usr/lib'))
 
 build_app_package_list_urls = \
   check(lambda app, *args, **kwargs: 'Unknown package repository: {}'.format(query_appfile(app, 'package-repository')))(
@@ -631,13 +631,15 @@ get_app_cached_file_path = lambda app, path: os.path.join(get_cache_path(), quer
 
 get_app_desktop_entry_path = lambda app: os.path.join(get_xdg_data_path(), 'applications/{}-{}.desktop'.format(get_name(), app))
 
-get_app_distribution_binary_path = lambda app, filename: os.path.join(get_app_distribution_path(app), 'usr/bin', filename)
+get_app_distribution_binary_path = lambda app, filename: get_app_distribution_file_path(app, os.path.join('usr/bin', filename))
+
+get_app_distribution_file_path = lambda app, path: os.path.join(get_app_distribution_path(app), path)
 
 get_app_distribution_path = lambda app: os.path.join(get_app_path(app), 'dist')
 
 get_app_downloads_path = lambda app: os.path.join(get_app_path(app), 'downloads')
 
-get_app_dynamic_linker_path = lambda app: next(glob.iglob(os.path.join(get_app_root_path(app), 'lib', detect_library_directory_name(), 'ld-linux*.so.2')))
+get_app_dynamic_linker_path = lambda app: next(glob.iglob(get_app_root_file_path(app, os.path.join('lib', detect_library_directory_name(), 'ld-linux*.so.2'))))
 
 get_app_firejail_options_path = lambda app: os.path.join(get_app_path(app), 'firejail')
 
@@ -647,15 +649,17 @@ get_app_lock_path = lambda app: os.path.join(get_app_path(app), 'lock')
 
 get_app_package_data_path = lambda app: os.path.join(get_cache_path(), query_appfile(app, 'package-repository'), 'packages')
 
-get_app_package_version_path = lambda app, package: os.path.join(get_app_root_path(app), 'var/lib/packages', package)
+get_app_package_version_path = lambda app, package: get_app_root_file_path(app, os.path.join('var/lib/packages', package))
 
 get_app_patchelf_file_path = lambda app, path: os.path.join(get_app_patchelf_path(app), os.path.basename(path))
 
-get_app_patchelf_path = lambda app: os.path.join(get_app_root_path(app), 'usr/lib/patchelf')
+get_app_patchelf_path = lambda app: get_app_root_file_path(app, 'usr/lib/patchelf')
 
 get_app_path = lambda app: os.path.join(os.path.expanduser('~/.{}'.format(get_name())), app)
 
-get_app_root_binary_path = lambda app, filename: os.path.join(get_app_root_path(app), 'usr/bin', filename)
+get_app_root_binary_path = lambda app, filename: get_app_root_file_path(app, os.path.join('usr/bin', filename))
+
+get_app_root_file_path = lambda app, path: os.path.join(get_app_root_path(app), path)
 
 get_app_root_path = lambda app: os.path.join(get_app_path(app), 'root')
 
@@ -873,7 +877,7 @@ install_app_desktop_entry = \
 install_app_distribution = lambda app: \
   get_app_distribution_path(app) \
     if is_app_updated(app) else \
-  all(remove_file(path) for pattern in (os.path.join(get_app_distribution_path(app), '*'), get_app_distribution_binary_path(app, '*')) for path in glob.iglob(pattern) if is_file_executable(path)) and \
+  all(remove_file(path) for pattern in (get_app_distribution_file_path(app, '*'), get_app_distribution_binary_path(app, '*')) for path in glob.iglob(pattern) if is_file_executable(path)) and \
   all(unpack_app_distribution(app, path) for path in tuple(download_missing_app_file(app, url, get_app_temp_file_path(app, '{}-{}'.format(app, request_app_version(app)))) for url in query_appfile(app, 'download-urls'))) and \
   patch_app_elf_files(app, get_app_distribution_path(app)) and \
   write_app_version(app) and \
@@ -906,7 +910,7 @@ install_app_packages = lambda app, packages=None: \
 
 install_app_patchelf = lambda app: \
   install_app_packages(app, ('patchelf',)) and \
-  all(copy_updated_file(os.path.realpath(os.path.join(get_app_root_path(app), path.format(detect_library_directory_name()))), get_app_patchelf_file_path(app, path)) for path in (
+  all(copy_updated_file(os.path.realpath(get_app_root_file_path(app, path.format(detect_library_directory_name()))), get_app_patchelf_file_path(app, path)) for path in (
     'lib/{}/libc.so.6',
     'lib/{}/libgcc_s.so.1',
     'lib/{}/libm.so.6',
@@ -1209,7 +1213,7 @@ move_directory = lambda path, destination_path: \
   remove_directory_ascending(path) and \
   destination_path
 
-normalize_app_command = lambda app, command: join_arguments(os.path.realpath(os.path.join(get_app_distribution_path(app), argument)).replace(get_app_distribution_path(app), '.', 1) if argument.startswith('./') else argument for argument in split_command(command))
+normalize_app_command = lambda app, command: join_arguments(os.path.realpath(get_app_distribution_file_path(app, argument)).replace(get_app_distribution_path(app), '.', 1) if argument.startswith('./') else argument for argument in split_command(command))
 
 parse_appfile = lambda app: dict(line.split('=', 1) for line in read_appfile(app).splitlines())
 
@@ -1263,8 +1267,8 @@ patch_app_package = lambda app, package: \
   Plugins = qt5/plugins
   Prefix = {}
   Translations = ../../share/qt5/translations
-  ''').format(os.path.join(get_app_root_path(app), 'usr/lib', detect_library_directory_name()))) and \
-  symlink_file(get_app_root_binary_path(app, 'qt.conf'), os.path.join(os.path.join(get_app_root_path(app), 'usr/lib', detect_library_directory_name()), 'qt5/libexec/qt.conf')) \
+  ''').format(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name())))) and \
+  symlink_file(get_app_root_binary_path(app, 'qt.conf'), get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5/libexec/qt.conf'))) \
     if package in ('python-pyqt5', 'python3-pyqt5') else \
   True
 
@@ -1464,7 +1468,7 @@ unpack_app_distribution = \
 
 unpack_app_package_distribution = lambda app, path: \
   unpack_package(path, get_app_distribution_path(app)) and \
-  all(symlink_file(os.path.relpath(os.path.join(get_app_distribution_path(app), os.readlink(path).lstrip('/')), os.path.dirname(path)), path) for path in glob.iglob(get_app_distribution_binary_path(app, '*')) if os.path.islink(path) and os.readlink(path).startswith('/')) and \
+  all(symlink_file(os.path.relpath(get_app_distribution_file_path(app, os.readlink(path).lstrip('/')), os.path.dirname(path)), path) for path in glob.iglob(get_app_distribution_binary_path(app, '*')) if os.path.islink(path) and os.readlink(path).startswith('/')) and \
   get_app_distribution_path(app)
 
 unpack_app_zip_distribution = lambda app, path: \
