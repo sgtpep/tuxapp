@@ -426,7 +426,7 @@ append_file = lambda path, content='': write_file(path, content, True)
 
 build_app_download_path = lambda app, url: build_download_path(get_app_downloads_path(app), url)
 
-build_app_library_path = lambda app: ':'.join(get_app_root_file_path(app, os.path.join(path, detect_library_directory_name())) for path in ('lib', 'usr/lib'))
+build_app_library_path = lambda app: ':'.join(get_app_root_file_path(app, os.path.join(path, detect_library_directory_name())) for path in ('usr/lib', 'lib'))
 
 build_app_package_list_urls = \
   check(lambda app, *args, **kwargs: 'Unknown package repository: {}'.format(query_appfile(app, 'package-repository')))(
