@@ -660,7 +660,7 @@ build_lightbox_script = lambda: \
   main();
   ''')
 
-build_logo_url = lambda: get_file_url(copy_updated_file(get_logo_path(), os.path.join(get_build_path(), os.path.basename(get_logo_path()))))
+build_logo_url = lambda: get_file_url(tuxapp.copy_updated_file(get_logo_path(), os.path.join(get_build_path(), os.path.basename(get_logo_path()))))
 
 build_main_page = lambda: \
   join_elements(
@@ -895,11 +895,6 @@ build_thumbnail = lambda text, url, path, video_url=None: \
 build_title = lambda *components: build_tag('title', ' - '.join(components + (get_name(),)))
 
 build_updated_feed = lambda: build_feed(get_updated_feed_url(), get_updated_feed_name(), query_updated_apps(1)[0][1], (build_app_feed_entry(app, timestamp) for app, timestamp in query_updated_apps(25)))
-
-copy_updated_file = lambda path, destination_path: \
-  destination_path \
-    if tuxapp.is_file_newer(path, destination_path) else \
-  tuxapp.copy_file(path, destination_path)
 
 extract_tag_name = lambda selector: selector.split('#', 1)[0].split('.', 1)[0] or 'div'
 

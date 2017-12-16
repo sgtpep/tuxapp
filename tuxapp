@@ -521,6 +521,11 @@ connect_data = lambda path: \
   (os.path.isfile(path) or connect_data_memoized.remove(path)) and \
   connect_data_memoized(path)
 
+copy_updated_file = lambda path, destination_path: \
+  copy_file(path, destination_path) \
+    if is_file_newer(path, destination_path) else \
+  destination_path
+
 detect_architecture = \
   check(lambda *args, **kwargs: 'Unknown architecture: {}'.format(platform.machine()))(
     lambda: \
