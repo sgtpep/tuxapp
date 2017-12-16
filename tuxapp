@@ -916,15 +916,15 @@ install_app_patchelf = lambda app: \
 
 install_app_runner = lambda app: \
   write_bash_script(get_app_runner_path(app), r'''
-  declare -r app_path=''' + tildify_path(get_app_path(app)) + r'''
-  declare -r browser_path=''' + tildify_path(install_app_browser(app)) + r'''
+  declare -r app_path=''' + get_app_path(app) + r'''
+  declare -r browser_path=''' + install_app_browser(app) + r'''
   declare -r cache_path=${XDG_CACHE_HOME-~/.cache}/''' + quote_argument(os.path.relpath(get_cache_path(), get_xdg_cache_path())) + r'''
-  declare -r distribution_path=''' + tildify_path(get_app_distribution_path(app)) + r'''
-  declare -r executable_arguments=(''' + sanitize_app_command(app, sanitize_command(query_appfile(app, 'executable'))) + r''')
+  declare -r distribution_path=''' + get_app_distribution_path(app) + r'''
+  declare -r executable_arguments=(''' + normalize_app_command(app, sanitize_command(query_appfile(app, 'executable'))) + r''')
   declare -r firejail_options=(''' + sanitize_command(query_appfile(app, 'firejail')) + r''')
-  declare -r firejail_options_path=''' + tildify_path(get_app_firejail_options_path(app)) + r'''
-  declare -r root_path=''' + tildify_path(get_app_root_path(app)) + r'''
-  declare -r urls_path=''' + tildify_path(os.path.join(get_app_path(app), 'urls')) + r'''
+  declare -r firejail_options_path=''' + get_app_firejail_options_path(app) + r'''
+  declare -r root_path=''' + get_app_root_path(app) + r'''
+  declare -r urls_path=''' + os.path.join(get_app_path(app), 'urls') + r'''
 
   # shellcheck disable=SC2088
   declare -r firejail_blacklisted_paths=(
@@ -961,17 +961,14 @@ install_app_runner = lambda app: \
     result_environment[PATH]=$root_path/usr/bin:$root_path/bin:$PATH
     result_environment[PYTHONHOME]=$root_path/usr
 
-    build_directory_list python_path "$distribution_path"/usr/lib/python*/dist-packages "$root_path"/usr/lib/python*{,/dist-packages,/plat-*}
-    [[ ! ${python_path-} ]] || result_environment[PYTHONPATH]=$python_path
+    [[ ${executable_path-} ]] || get_executable_path executable_path
+    [[ ${executable_path-} != ./AppRun ]] || result_environment[APPDIR]=$distribution_path
 
-    build_library_path library_path
-    [[ ! ${library_path-} ]] || result_environment[LD_LIBRARY_PATH]=$library_path
-
-    LD_LIBRARY_PATH=${result_environment[LD_LIBRARY_PATH]-} build_gdk_pixbuf_path gdk_pixbuf_path
+    build_gdk_pixbuf_path gdk_pixbuf_path
     [[ ! ${gdk_pixbuf_path-} ]] || result_environment[GDK_PIXBUF_MODULE_FILE]=$gdk_pixbuf_path
 
-    [[ ${executable_path-} ]] || get_executable_path executable_path
-    [[ $executable_path != ./AppRun ]] || result_environment[APPDIR]=$distribution_path
+    build_directory_list python_path "$distribution_path"/usr/lib/python*/dist-packages "$root_path"/usr/lib/python*{,/dist-packages,/plat-*}
+    [[ ! ${python_path-} ]] || result_environment[PYTHONPATH]=${PYTHONPATH+$PYTHONPATH:}$python_path
 
     if type firejail &> /dev/null; then
       result_environment[BROWSER]=$browser_path
@@ -995,30 +992,32 @@ install_app_runner = lambda app: \
       result_firejail_arguments+=(--env="$name=${argument_environment[$name]}")
     done
 
-    result_firejail_arguments+=(--read-only="$root_path")
-
-    declare path
-    for path in "$cache_path" "${app_path%/*}"/*; do
-      [[ ! -d $path || $path == "$app_path" ]] || result_firejail_arguments+=(--blacklist="$path")
-    done
-
     declare path
     for path in "${firejail_blacklisted_paths[@]}"; do
       [[ ! -e ${path/#~/$HOME} ]] || result_firejail_arguments+=(--blacklist="$path")
     done
 
-    [[ ${executable_path-} ]] || get_executable_path executable_path
-    declare -r profile_path=/etc/firejail/${executable_path##*/}.profile
-    if [[ -f $profile_path ]]; then
-      declare profile
-      profile=$(< "$profile_path")
-      if [[ $profile =~ include\ ([^$'\n']) ]]; then
-        declare -r included_path=/etc/firejail/${BASH_REMATCH[1]}.profile
-        [[ ! -f $included_path ]] || profile=$(< "$included_path")
-      fi
-      readonly profile
+    result_firejail_arguments+=(--read-only="$root_path")
 
-      [[ $profile != *whitelist\ * ]] || result_firejail_arguments+=(--whitelist={"$distribution_path","$root_path"})
+    declare path
+    for path in "$cache_path" "${app_path%/*}"/*; do
+      [[ ! -d $path || $path == "$app_path" ]] || result_firejail_arguments+=(--read-only="$path")
+    done
+
+    [[ ${executable_path-} ]] || get_executable_path executable_path
+    if [[ ${executable_path-} ]]; then
+      declare -r profile_path=/etc/firejail/${executable_path##*/}.profile
+      if [[ -f $profile_path ]]; then
+        declare profile
+        profile=$(< "$profile_path")
+        if [[ $profile =~ include\ ([^$'\n']) ]]; then
+          declare -r included_path=/etc/firejail/${BASH_REMATCH[1]}.profile
+          [[ ! -f $included_path ]] || profile=$(< "$included_path")
+        fi
+        readonly profile
+
+        [[ $profile != *whitelist\ * ]] || result_firejail_arguments+=(--whitelist={"$distribution_path","$root_path"})
+      fi
     fi
 
     declare app_firejail_options
@@ -1043,25 +1042,6 @@ install_app_runner = lambda app: \
     done
 
     readonly result_gdk_pixbuf_path
-  }
-
-  function build_library_path {
-    # shellcheck disable=SC2034
-    declare -n result_library_path=$1
-    shift
-
-    declare library_paths=()
-    declare base_path
-    for base_path in "$distribution_path" "$root_path"; do
-      declare path
-      for path in "$base_path"{,/usr}/lib/*-linux-gnu{,/{alsa-lib,mesa,pulseaudio}}; do
-        [[ ! -d $path ]] || library_paths+=("$path")
-      done
-    done
-    readonly library_paths
-
-    # shellcheck disable=SC2086
-    build_directory_list result_library_path ${library_paths+"${library_paths[@]}"}
   }
 
   function build_strace_arguments {
@@ -1123,8 +1103,6 @@ install_app_runner = lambda app: \
       for name in "${!environment[@]}"; do
         export "$name=${environment[$name]}"
       done
-
-      declare -r firejail_arguments=()
     fi
 
     declare strace_arguments
@@ -1230,6 +1208,8 @@ move_directory = lambda path, destination_path: \
   copy_directory(path, destination_path) and \
   remove_directory_ascending(path) and \
   destination_path
+
+normalize_app_command = lambda app, command: join_arguments(os.path.realpath(os.path.join(get_app_distribution_path(app), argument)).replace(get_app_distribution_path(app), '.', 1) if argument.startswith('./') else argument for argument in split_command(command))
 
 parse_appfile = lambda app: dict(line.split('=', 1) for line in read_appfile(app).splitlines())
 
@@ -1439,16 +1419,9 @@ resolve_app_packages_recursive = lambda app, packages, resolved_packages=set(): 
 
 resolve_outdated_app_packages = lambda app, packages: tuple(package for package in resolve_app_packages(app, packages) if not extract_package_version(parse_url(query_app_package_url(app, package)).path) == read_app_package_version(app, package))
 
-sanitize_app_command = lambda app, command: join_arguments(os.path.realpath(os.path.join(get_app_distribution_path(app), argument)).replace(get_app_distribution_path(app), '.', 1) if argument.startswith('./') else argument for argument in split_command(command))
-
 sanitize_command = lambda command: join_arguments(split_command(command))
 
 search = lambda pattern, string, flags=0, group=0: getattr(re.search(pattern, string, flags), 'group', lambda *args, **kwargs: '')(group)
-
-tildify_path = lambda path: \
-  path.replace(os.path.expanduser('~'), '~', 1) \
-    if path.startswith(os.path.expanduser('~/')) or path == os.path.expanduser('~') else \
-  path
 
 unpack_app_appimage1_distribution = \
   log(lambda app, path, *args, **kwargs: 'Unpacking {}'.format(os.path.basename(path)))(
