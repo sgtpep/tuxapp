@@ -112,7 +112,9 @@ configure_debian_container = lambda distribution: \
     xkb-data
   )
   DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
-  ''')
+  ''') and \
+  (is_debian_distribution(distribution) or tuxapp.write_file(os.path.join(tuxapp.get_app_root_path(distribution), 'etc/bash.bashrc'), tuxapp.read_file(os.path.join(tuxapp.get_app_root_path(distribution), 'etc/bash.bashrc')).replace('(groups)', '(true)', 1))) and \
+  True
 
 detect_missing_app_libraries = \
   tuxapp.do(lambda app, distribution, *args, **kwargs: kwargs['result'] and print('Missing libraries for {} on {}: {}'.format(app, distribution, ', '.join(kwargs['result'])), file=sys.stderr))(
