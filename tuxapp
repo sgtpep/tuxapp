@@ -221,7 +221,7 @@ def commit_data(path):
 @memoize
 def connect_data_memoized(path):
   import sqlite3
-  connection = sqlite3.connect(make_file_directories(path))
+  connection = sqlite3.connect(make_file_directories(path), 60 * 5)
   connection.execute('CREATE TABLE IF NOT EXISTS items (key TEXT PRIMARY KEY, value TEXT)')
   return connection
 
