@@ -170,14 +170,7 @@ get_distribution_fakeroot_arguments = lambda distribution: \
     if distribution == 'arch' else \
   ('fakeroot-sysv',)
 
-get_distributions = lambda: \
-  (
-    'arch',
-    'artful',
-    'jessie',
-    'stretch',
-    'xenial',
-  )
+get_distributions = lambda: tuple(sorted(get_test_distributions()))
 
 get_install_flag_path = lambda distribution: tuxapp.get_app_root_file_path(distribution, os.path.join('var/lib', tuxapp.get_name()))
 
