@@ -44,6 +44,7 @@ build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_trace=Fa
   ) + \
   (('--bind', tuxapp.get_app_path(app), tuxapp.get_app_path(app)) if app else ()) + \
   tuple(option for path in build_bwrap_readonly_bind_paths() for option in ('--ro-bind', path, path)) + \
+  (('--ro-bind', get_app_xauthority_path(app), get_app_xauthority_path(app)) if app and os.path.isfile(get_app_xauthority_path(app)) else ()) + \
   (('--setenv', 'TUXAPP_TRACE', '1') if is_trace else ()) + \
   ('bash', '-l') + \
   ((tuxapp.get_app_runner_path(app),) + arguments if app else ())
@@ -54,7 +55,6 @@ build_bwrap_readonly_bind_paths = lambda: \
     '/usr/lib/*-linux-gnu/pulseaudio',
     '/usr/lib/locale',
     '/usr/share/alsa',
-    get_xauthority_path(),
   ) for path in glob.iglob(pattern))
 
 build_root_bwrap_arguments = lambda distribution: \
@@ -139,6 +139,8 @@ extract_library = lambda string: \
     if '/nacl_helper: error while loading shared libraries: ' not in string else \
   ''
 
+get_app_xauthority_path = lambda app: os.path.join(tuxapp.get_app_path(app), '.Xauthority')
+
 get_arch_mirror_url = lambda path='': os.path.join('https://mirrors.kernel.org/archlinux/', path)
 
 get_arch_package_url = lambda package: get_arch_mirror_url(os.path.join('extra' if package == 'fakechroot' else 'core', 'os/x86_64/'))
@@ -186,8 +188,6 @@ get_test_distributions = lambda: \
     'stretch',
     'arch',
   )
-
-get_xauthority_path = lambda: os.path.expanduser('~/.Xauthority')
 
 install_arch_container = lambda: \
   tuxapp.unpack_tarball(tuxapp.download_missing_app_temp_file('arch', request_arch_container_url()), tuxapp.get_app_root_path('arch'), ('--strip-components=1',)) and \
@@ -263,7 +263,7 @@ test_app_process = \
       kill -9 $(echo "$output" | grep -Po '(?<= Process )\d+') 2> /dev/null
       echo "$output"
       '''.format(
-        'xvfb-run -a -f {} '.format(tuxapp.quote_argument(get_xauthority_path())) if tuxapp.is_existing_command('xvfb-run') else '',
+        'xvfb-run -a -f {} '.format(tuxapp.quote_argument(get_app_xauthority_path(app))) if tuxapp.is_existing_command('xvfb-run') else '',
         tuxapp.quote_argument(str(get_process_timeout())),
         tuxapp.join_arguments(build_bwrap_arguments(install_missing_container(distribution), app)).replace(' bash ', ' strace -f -e none bash ', 1),
       ), True)
