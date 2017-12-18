@@ -436,13 +436,13 @@ build_app_package_list_urls = \
           'debian/dists/{}/main/{}',
           'debian-security/dists/{}/updates/main/{}',
         )) \
-          if query_appfile(app, 'package-repository') == 'stretch' else \
+          if query_appfile(app, 'package-repository') in ('jessie', 'stretch') else \
         (get_ubuntu_mirror_url() + path for path in (
           'ubuntu/dists/{}/main/{}',
           'ubuntu/dists/{}/universe/{}',
           'ubuntu/dists/{}-security/main/{}',
         )) \
-          if query_appfile(app, 'package-repository') == 'xenial' else \
+          if query_appfile(app, 'package-repository') in ('xenial', 'artful') else \
         ()
       ))
   )
