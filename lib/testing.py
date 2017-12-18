@@ -187,6 +187,9 @@ get_test_distributions = lambda: \
   (
     'stretch',
     'arch',
+    'artful',
+    'xenial',
+    'jessie',
   )
 
 install_arch_container = lambda: \
