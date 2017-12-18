@@ -424,6 +424,11 @@ def write_file(path, content='', is_append=False):
 
 append_file = lambda path, content='': write_file(path, content, True)
 
+build_app_distribution_filename = lambda app, url: \
+  os.path.basename(parse_url(url).path) \
+    if '.' in os.path.basename(parse_url(url).path) else \
+  '-'.join((app, request_app_version(app), hash_md5(url)))
+
 build_app_download_path = lambda app, url: build_download_path(get_app_downloads_path(app), url)
 
 build_app_library_path = lambda app: ':'.join(get_app_root_file_path(app, os.path.join(path, detect_library_directory_name())) for path in ('usr/lib', 'lib'))
@@ -877,11 +882,10 @@ install_app_desktop_entry = \
 install_app_distribution = lambda app: \
   get_app_distribution_path(app) \
     if is_app_updated(app) else \
-  all(remove_file(path) for pattern in (get_app_distribution_file_path(app, '*'), get_app_distribution_binary_path(app, '*')) for path in glob.iglob(pattern) if is_file_executable(path)) and \
-  all(unpack_app_distribution(app, path) for path in tuple(download_missing_app_file(app, url, get_app_temp_file_path(app, '{}-{}'.format(app, request_app_version(app)))) for url in query_appfile(app, 'download-urls'))) and \
+  all(unpack_app_distribution(app, path) for path in tuple(download_missing_app_file(app, url, get_app_temp_file_path(app, build_app_distribution_filename(app, url))) for url in query_appfile(app, 'download-urls'))) and \
   patch_app_elf_files(app, get_app_distribution_path(app)) and \
   write_app_version(app) and \
-  all(remove_file(path) for path in glob.iglob(get_app_temp_file_path(app, '{}-*'.format(app)))) and \
+  all(remove_file(path) for path in glob.iglob(get_app_temp_file_path(app, '*'))) and \
   get_app_distribution_path(app)
 
 install_app_icon = lambda app: \
