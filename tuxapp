@@ -281,7 +281,7 @@ def parse_arguments(arguments=None):
   parsed_arguments = parser.parse_args(arguments)
   return parsed_arguments
 
-@memoize
+@memoize_temporarily
 @check(lambda path, *args, **kwargs: 'Failed to parse {}'.format(os.path.basename(path)))
 def parse_package_data_header(path):
   import contextlib
