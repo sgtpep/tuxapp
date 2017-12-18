@@ -431,7 +431,12 @@ build_app_distribution_filename = lambda app, url: \
 
 build_app_download_path = lambda app, url: build_download_path(get_app_downloads_path(app), url)
 
-build_app_library_path = lambda app: ':'.join(get_app_root_file_path(app, os.path.join(path, detect_library_directory_name())) for path in ('usr/lib', 'lib'))
+build_app_library_path = lambda app: \
+  ':'.join(path for path in (get_app_root_path(app), get_app_distribution_path(app)) for path in (
+    os.path.join(path, 'usr/lib', detect_library_directory_name()),
+    os.path.join(path, 'lib', detect_library_directory_name()),
+    os.path.join(path, 'usr/lib'),
+  ))
 
 build_app_package_list_urls = \
   check(lambda app, *args, **kwargs: 'Unknown package repository: {}'.format(query_appfile(app, 'package-repository')))(
@@ -1149,8 +1154,8 @@ is_file_executable = lambda path: \
   not is_file_library(path)
 
 is_file_library = lambda path: \
-  os.path.splitext(path)[1] in ('.node', '.so') or \
-  '.so.' in path
+  os.path.isfile(path) and \
+  (os.path.splitext(path)[1] in ('.node', '.so') or '.so.' in path)
 
 is_file_list_nested = lambda paths: all(path.lstrip('./').split('/', 1)[0] == paths[0].lstrip('./').split('/', 1)[0] for path in paths)
 
@@ -1175,11 +1180,11 @@ list_all_apps = \
     lambda: tuple(request_grep_url(build_github_api_url('repos/{}/contents/apps'.format(get_github_repository())), ('-Po', r'(?<="name": ")(?!\.)[^"]+')).splitlines())
   )
 
-list_app_distribution = lambda app: (os.path.join(path, filename) for path, directories, filenames in os.walk(get_app_distribution_path(app)) if '/node_modules/' not in path for filename in filenames)
+list_app_distribution = lambda app: (path for path in list_directory(get_app_distribution_path(app)) if '/node_modules/' not in path)
 
-list_app_executables = lambda app, path: tuple(path for path in (os.path.join(path, filename) for path, directories, filenames in os.walk(path) if path != get_app_patchelf_path(app) for filename in filenames) if is_file_executable(path) and is_file_magic_number(path, b'\x7fELF'))
+list_directory = lambda path: (os.path.join(path, filename) for path, directories, filenames in os.walk(path) for filename in filenames)
 
-list_app_libraries = lambda app, path: tuple(path for path in (os.path.join(path, filename) for path, directories, filenames in os.walk(path) if path != get_app_patchelf_path(app) and os.path.basename(path) != 'gconv' for filename in filenames if not filename.startswith('ld-')) if is_file_library(path) and not os.path.islink(path) and is_file_magic_number(path, b'\x7fELF'))
+list_directory_elf_files = lambda path: tuple(path for path in list_directory(path) if (is_file_executable(path) or is_file_library(path) and '/gconv/' not in path and not os.path.basename(path).startswith('ld-')) and not os.path.islink(path) and is_file_magic_number(path, b'\x7fELF'))
 
 list_installed_apps = \
   output(lambda *args, **kwargs: '\n'.join('{} {}'.format(app, version) for app, version in kwargs['result']))(
@@ -1224,40 +1229,44 @@ parse_appfile = lambda app: dict(line.split('=', 1) for line in read_appfile(app
 
 patch_app_elf_files = lambda app, path: \
   install_app_patchelf(app) and \
-  patch_app_elf_files_verbose(app, path)
+  patch_app_elf_files_patchelf(app, list_directory_elf_files(path))
 
 patch_app_elf_files_patchelf = \
-  lambda app, paths, is_executable=False: \
-    call_process(join_arguments(
-      build_firejail_arguments() + \
-      ('python', '-') + \
-      (join_arguments((get_app_dynamic_linker_path(app), '--library-path', get_app_patchelf_path(app), get_app_patchelf_file_path(app, 'patchelf'))), get_app_path(app), get_app_root_path(app), build_app_library_path(app), str(is_executable), get_app_dynamic_linker_path(app)) + \
-      paths,
-    ) + ' << EOF' + textwrap.dedent(r'''
-    import os
-    import subprocess
-    import sys
-    try:
-      from shlex import quote
-    except ImportError:
-      from pipes import quote
-    patchelf_command, app_path, root_path, library_path, is_executable, interpreter_path = sys.argv[1:7]
-    for path in sys.argv[7:]:
-      paths = tuple(subprocess.check_output('{} --print-rpath {} 2> /dev/null || :'.format(patchelf_command, quote(path)), shell=True).rstrip().split(':'))
-      patched_paths = \
-        tuple(os.path.join(root_path, path.lstrip('/')) if path.startswith('/') and not path.startswith(app_path) else path for path in paths if path) + \
-        tuple(path for path in library_path.split(':') if path and path not in paths)
-      if patched_paths != paths:
-        subprocess.check_output('{} --no-default-lib {}--set-rpath {} {} 2> /dev/null || :'.format(patchelf_command, '--set-interpreter {} '.format(quote(interpreter_path)) if is_executable == 'True' else '', quote(':'.join(patched_paths)), quote(path)), shell=True)
-    EOF
-    '''))
-
-patch_app_elf_files_verbose = \
   log('Patching ELF files')(
-    lambda app, path: \
-      patch_app_elf_files_patchelf(app, list_app_executables(app, path), True) and \
-      patch_app_elf_files_patchelf(app, list_app_libraries(app, path))
-  )
+  check('Failed to patch ELF files')(
+    lambda app, paths: \
+      uncheck(call_process)(join_arguments(
+        build_firejail_arguments() + \
+        ('python', '-') + \
+        (get_app_patchelf_path(app), join_arguments((get_app_dynamic_linker_path(app), '--library-path', get_app_patchelf_path(app), get_app_patchelf_file_path(app, 'patchelf'))), get_app_path(app), get_app_root_path(app), build_app_library_path(app), '1' if re.match(r'0\.8\b', read_app_package_version(app, 'patchelf')) else '', get_app_dynamic_linker_path(app)) + \
+        paths,
+      ) + ' << EOF' + textwrap.dedent(r'''
+      from __future__ import print_function
+      import os
+      import stat
+      import subprocess
+      import sys
+      try:
+        from shlex import quote
+      except ImportError:
+        from pipes import quote
+      patchelf_path, patchelf_command, app_path, root_path, library_path, is_old_patchelf, interpreter_path = sys.argv[1:8]
+      for path in sys.argv[8:]:
+        if os.path.dirname(path) != patchelf_path:
+          paths = tuple(path for path in subprocess.check_output('{} --print-rpath {} 2> /dev/null || :'.format(patchelf_command, quote(path)), shell=True).rstrip().split(':') if path)
+          patched_paths = \
+            tuple(os.path.join(root_path, path.lstrip('/')) if path.startswith('/') and not path.startswith(app_path) else path for path in paths) + \
+            tuple(path for path in library_path.split(':') if path not in paths)
+          if patched_paths != paths:
+            if not os.access(path, os.W_OK):
+              os.chmod(path, os.stat(path).st_mode | stat.S_IWUSR)
+            output = subprocess.check_output('{} {}--force-rpath {}--set-rpath {} {} 2>&1 || :'.format(patchelf_command, '' if is_old_patchelf else '--no-default-lib ', '--set-interpreter {} '.format(quote(interpreter_path)) if os.access(path, os.X_OK) and os.path.splitext(path)[1] != '.so' and '.so.' not in path else '', quote(':'.join(patched_paths)), quote(path)), shell=True)
+            if not all(line.startswith('warning: working around ') or line == 'cannot find section .interp' or is_old_patchelf and line == 'maximum file size exceeded' for line in output.splitlines()):
+              print(output, end='', file=sys.stderr)
+              sys.exit(1)
+      EOF
+      '''))
+  ))
 
 patch_app_package = lambda app, package: \
   write_bash_script(get_app_root_binary_path(app, 'lsb_release'), r'''
