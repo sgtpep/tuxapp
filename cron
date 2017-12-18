@@ -24,9 +24,7 @@ def handle_failed_app_requests(function):
   @functools.wraps(function)
   def wrapper(app, *args, **kwargs):
     try:
-      result = function(app, *args, **kwargs)
-      utilities.update_data((app, 'request-failures'), '0')
-      return result
+      return function(app, *args, **kwargs)
     except AssertionError as exception:
       if exception.args and ' failed to request ' in exception.args[0]:
         count = int(utilities.query_data((app, 'request-failures')) or '0') + 1
@@ -36,6 +34,8 @@ def handle_failed_app_requests(function):
         return False
       else:
         raise
+    else:
+      utilities.update_data((app, 'request-failures'), '0')
   return wrapper
 
 def skip_processed_app(prefix):
