@@ -18,7 +18,7 @@ def register(linter):
 
     def visit_assignname(self, node):
       import astroid
-      if not node.col_offset and isinstance(node.assign_type().value, astroid.Lambda):
+      if not node.col_offset and isinstance(node.assign_type().value, (astroid.Call, astroid.Lambda)):
         if self.previous_names.get('lambda', '') > node.name:
           self.add_message('unordered-item', args=('Lambda', node.name), node=node)
         self.previous_names['lambda'] = node.name
