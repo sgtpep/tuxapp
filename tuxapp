@@ -1269,20 +1269,19 @@ patch_app_elf_files_patchelf = \
   ))
 
 patch_app_package = lambda app, package: \
-  write_bash_script(get_app_root_binary_path(app, 'lsb_release'), r'''
-  [[ ! -x /usr/bin/lsb_release ]] || exec /usr/bin/lsb_release "$@"
-  echo 'No LSB modules are available.' 2> /dev/null
-  ''') \
-    if package == 'lsb-release' else \
-  write_file(get_app_root_binary_path(app, 'qt.conf'), textwrap.dedent('''\
+  symlink_file(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'libGL.so.1')), 'mesa/libGL.so.1') \
+    if package == 'libgl1-mesa-glx' and not os.path.isfile(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'libGL.so.1'))) else \
+  all(write_file(os.path.join(path, 'qt.conf'), textwrap.dedent('''\
   [Paths]
   Data = ../../share/qt5
   LibraryExecutables = qt5/libexec
   Plugins = qt5/plugins
   Prefix = {}
   Translations = ../../share/qt5/translations
-  ''').format(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name())))) and \
-  symlink_file(get_app_root_binary_path(app, 'qt.conf'), get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5/libexec/qt.conf'))) \
+  ''').format(os.path.relpath(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name())), path))) for path in (
+    get_app_root_file_path(app, 'usr/bin'),
+    get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5/libexec')),
+  )) \
     if package in ('python-pyqt5', 'python3-pyqt5') else \
   True
 
