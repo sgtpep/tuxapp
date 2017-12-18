@@ -293,5 +293,5 @@ update_old_container = lambda distribution: \
   update_container(distribution) and \
   tuxapp.remove_old_files(tuxapp.get_app_temp_file_path(distribution, '*'), 30) and \
   utilities.update_data((distribution, 'timestamp'), int(time.time())) \
-    if int(utilities.query_data((distribution, 'timestamp')) or '0') < time.time() - 60 * 60 * 24 else \
+    if int(utilities.query_data((distribution, 'timestamp')) or '0') < time.time() - 60 * 60 * 24 * 7 else \
   True
