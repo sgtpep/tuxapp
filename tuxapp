@@ -744,6 +744,8 @@ get_package_groups = lambda: \
     'group-chromium': (
       'libasound2',
       'libgconf-2-4',
+      'libgl1-mesa-dri',
+      'libgl1-mesa-glx',
       'libgtk-3-0',
       'libnss3',
       'libxss1',
