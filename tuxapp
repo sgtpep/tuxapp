@@ -896,6 +896,7 @@ install_app_icon = lambda app: \
 
 install_app_package_file = lambda app, path: \
   silence(unpack_package)(path, get_app_root_path(app), tuple('--exclude=.{}'.format(exclusion) for exclusion in get_package_exclusions(extract_package_name(path)))) and \
+  patch_app_package(app, extract_package_name(path)) and \
   extract_package_name(path)
 
 install_app_package_files = \
