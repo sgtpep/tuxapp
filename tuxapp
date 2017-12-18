@@ -1058,7 +1058,7 @@ install_app_runner = lambda app: \
     shift
 
     result_strace_arguments=()
-    [[ ! ${TUXAPP_TRACE-} ]] || result_strace_arguments+=(strace -f -e open,openat)
+    [[ ! ${TUXAPP_TRACE-} ]] || result_strace_arguments+=(strace -f -e open,openat,stat)
     readonly result_strace_arguments
   }
 
