@@ -556,14 +556,33 @@ copy_updated_file = lambda path, destination_path: \
     if is_file_newer(path, destination_path) else \
   destination_path
 
-detect_app_library_package = lambda app, library: \
-  query_app_package_data(app, library) or \
-  update_app_package_data(app, library, request_app_library_package(app, library)) and \
-  query_app_package_data(app, library)
-
 detect_app_library_packages = \
   log('Detecting library packages')(
-    lambda app, libraries: tuple(sorted(set(detect_app_library_package(app, library) for library in libraries)))
+    lambda app, libraries: \
+      tuple(sorted(set(
+        tuple(package for package in (query_app_package_data(app, library) for library in libraries) if package) + \
+        tuple(detect_app_library_packages_check(dict(functools.reduce(lambda items, line: \
+          items + ((line.lstrip(' '), None),) \
+            if line.startswith(' ') else \
+          items \
+            if is_library_package_ignored(line) or items[-1][1] else \
+          update_app_package_data(app, items[-1][0], line) and \
+          items[:-1] + ((items[-1][0], line),),
+        request_grep_urls(tuple('https://{}/search?{}'.format('packages.debian.org' if is_debian_repository(query_appfile(app, 'package-repository')) else 'packages.ubuntu.com', encode_url_parameters({
+          'arch': detect_debian_architecture(),
+          'keywords': library,
+          'mode': 'exactfilename',
+          'searchon': 'contents',
+          'suite': query_appfile(app, 'package-repository'),
+        })) for library in libraries if not query_app_package_data(app, library)), ('-Po', r' [^\s]+(?=</title>)|(?<="/{}/)[^"]+'.format(re.escape(query_appfile(app, 'package-repository'))))), ()))).values())
+      )))
+  )
+
+detect_app_library_packages_check = \
+  check(lambda packages, *args, **kwargs: kwargs['result'] is False and 'Failed to detect packages for libraries: {}'.format(', '.join(library for library, package in packages.items() if not package)))(
+    lambda packages: \
+      all(package for library, package in packages.items()) and \
+      packages
   )
 
 detect_architecture = \
@@ -594,16 +613,19 @@ detect_library_directory_name = lambda: \
 
 detect_missing_app_libraries = lambda app: \
   install_app_packages(app, ('libc-bin',)) and \
-  detect_missing_app_libraries_ldd(app, uncheck(read_process)('{} || :'.format(join_arguments(
-    build_firejail_arguments() + \
-    ('env', 'LC_ALL=C', get_app_root_binary_path(app, 'ldd')) + \
-    list_directory_elf_files(get_app_distribution_path(app))
-  ))) or '')
+  detect_missing_app_libraries_call(app)
 
-detect_missing_app_libraries_ldd = \
+detect_missing_app_libraries_call = \
   log('Detecting missing libraries')(
-    lambda app, text: tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in text.splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and '\t{} => {}/'.format(library, get_app_path(app)) not in text)))
+    lambda app: \
+      detect_missing_app_libraries_parse(app, uncheck(read_process)('{} || :'.format(join_arguments(
+        build_firejail_arguments() + \
+        ('env', 'LC_ALL=C', get_app_root_binary_path(app, 'ldd')) + \
+        list_directory_elf_files(get_app_distribution_path(app))
+      ))) or '')
   )
+
+detect_missing_app_libraries_parse = lambda app, text: tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in text.splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and '\t{} => {}/'.format(library, get_app_path(app)) not in text)))
 
 download_app_file = \
   log('Downloading {1}')(
@@ -1418,11 +1440,6 @@ rename_file_ascending = lambda path, destination_path: \
   rename_file(path, destination_path) and \
   remove_empty_directories(os.path.dirname(path)) and \
   destination_path
-
-request_app_library_package = \
-  check('Failed to detect a package for {1}')(
-    lambda app, library: next((unquote_url(package) for package in (silence(uncheck(request_grep_url))('https://{}/search?{}'.format('packages.debian.org' if is_debian_repository(query_appfile(app, 'package-repository')) else 'packages.ubuntu.com', encode_url_parameters({'arch': detect_debian_architecture(), 'keywords': '/{}'.format(library), 'searchon': 'contents', 'suite': query_appfile(app, 'package-repository')})), ('-Po', r'(?<="/{}/)[^"]+'.format(re.escape(query_appfile(app, 'package-repository'))))) or '').splitlines() if not is_library_package_ignored(package)), None)
-  )
 
 request_app_version = lambda app, pattern=None: request_app_version_memoized(app, query_appfile(app, 'version-url'), pattern or query_appfile(app, 'version-regex'))
 
