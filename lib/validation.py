@@ -118,7 +118,8 @@ validate_app_packages = lambda app, packages: \
   validate_text(packages) and \
   validate_multiple_value(packages) and \
   tuxapp.check('Unknown group')(lambda: all(tuxapp.expand_package_group(package) != package for package in packages.split() if package.startswith('group-')))() and \
-  tuxapp.check('Group already contains a package')(lambda: not set(packages.split()) & set(tuxapp.expand_package_groups(package for package in packages.split() if package.startswith('group-'))))()
+  tuxapp.check('Group already contains a package')(lambda: not set(packages.split()) & set(tuxapp.expand_package_groups(package for package in packages.split() if package.startswith('group-'))))() and \
+  tuxapp.update_app_package_lists(app) and all(tuxapp.query_app_package_url(app, package) for package in tuxapp.expand_package_groups(packages.split()) if not package.startswith('group-'))
 
 validate_app_title = lambda app, title: \
   not title or \
