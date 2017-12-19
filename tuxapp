@@ -256,6 +256,13 @@ def copy_file_content(file, destination_file, offset=0, size=None, chunk_size=65
     except IOError:
       return False
 
+def encode_url_parameters(parameters):
+  try:
+    from urllib.parse import urlencode
+  except ImportError:
+    from urllib import urlencode
+  return urlencode(parameters)
+
 def is_existing_command(command):
   import distutils.spawn
   return bool(distutils.spawn.find_executable(command))
@@ -403,6 +410,13 @@ def unpack_zip_file(path, output_path):
   except Exception as exception: # pylint: disable=broad-except
     print_exception(exception)
 
+def unquote_url(string):
+  try:
+    from urllib.parse import unquote
+  except ImportError:
+    from urllib import unquote
+  return unquote(string)
+
 def wait_pid(get_pid):
   previous_pid = None
   while True:
@@ -454,6 +468,12 @@ build_app_package_list_urls = \
         ))
       ))
   )
+
+build_app_packages = \
+  lambda app: tuple(sorted(set(
+    detect_app_library_packages(app, detect_missing_app_libraries(app)) + \
+    query_appfile(app, 'packages')
+  )))
 
 build_app_runner_relative_path = lambda app, path: re.sub(r'/\.$', '', os.path.join('${0%/*}', quote_argument(os.path.relpath(path, os.path.dirname(get_app_runner_path(app))))))
 
@@ -536,6 +556,11 @@ copy_updated_file = lambda path, destination_path: \
     if is_file_newer(path, destination_path) else \
   destination_path
 
+detect_app_library_packages = \
+  log('Detecting library packages')(
+    lambda app, libraries: tuple(sorted(unquote_url(package) for package in set(request_grep_urls(tuple('https://{}/search?{}'.format('packages.debian.org' if is_debian_repository(query_appfile(app, 'package-repository')) else 'packages.ubuntu.com', encode_url_parameters({'arch': detect_debian_architecture(), 'keywords': '/{}'.format(library), 'searchon': 'contents', 'suite': query_appfile(app, 'package-repository')})) for library in libraries), ('-Po', r'(?<="/{}/)[^"]+'.format(re.escape(query_appfile(app, 'package-repository')))))) if not re.search(r'-(cross|dbg|dev|i386|x32)$', package) and not re.match(r'libx?32', package)))
+  )
+
 detect_architecture = \
   check(lambda *args, **kwargs: 'Unknown architecture: {}'.format(platform.machine()))(
     lambda: \
@@ -561,6 +586,13 @@ detect_library_directory_name = lambda: \
     'amd64': 'x86_64',
     'i386': 'i386',
   }.get(detect_debian_architecture()))
+
+detect_missing_app_libraries = \
+  log('Detecting missing libraries')(
+    lambda app: detect_missing_app_libraries_ldd(app, uncheck(read_process)('LC_ALL=C ldd {} || :'.format(join_arguments(list_directory_elf_files(get_app_distribution_path(app))))) or '')
+  )
+
+detect_missing_app_libraries_ldd = lambda app, output: tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in output.splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and '\t{} => {}/'.format(library, get_app_path(app)) not in output)))
 
 download_app_file = \
   log('Downloading {1}')(
@@ -913,7 +945,7 @@ install_app_package_files = \
 
 install_app_packages = lambda app, packages=None: \
   update_app_package_lists(app) and \
-  install_app_package_files(app, download_app_packages(app, resolve_outdated_app_packages(app, packages or query_appfile(app, 'packages')))) and \
+  install_app_package_files(app, download_app_packages(app, resolve_outdated_app_packages(app, packages or build_app_packages(app)))) and \
   all(remove_file(path) if os.path.isfile(get_app_cached_file_path(app, path)) else rename_file(path, get_app_cached_file_path(app, path)) for path in glob.iglob(get_app_temp_file_path(app, '*.deb'))) and \
   remove_old_files(get_app_cached_file_path(app, '*.deb'))
 
@@ -1402,6 +1434,18 @@ request_grep_url = \
         ('-q', '-O', '-', url),
       True)), get_request_gzip_command(), get_request_head_command(), join_arguments(arguments))).rstrip('\n')
   ))
+
+request_grep_urls = \
+  check(lambda urls, *args, **kwargs: kwargs['result'] is None and 'Failed to request and grep URLs')(
+    lambda urls, arguments: \
+      tuple((uncheck(read_process)(r'{} | {} | {} | grep {} 2> /dev/null || :'.format(join_arguments(build_request_arguments(
+        ('-Ss',) + urls,
+        ('-q', '-O', '-',) + urls,
+      True)), get_request_gzip_command(), get_request_head_command(), join_arguments(arguments))) or '').splitlines()) or \
+      None \
+        if urls else \
+      ()
+  )
 
 request_grep_url_all = \
   log('Requesting {}')(
