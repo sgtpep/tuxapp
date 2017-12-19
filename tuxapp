@@ -1255,7 +1255,7 @@ patch_app_elf_files_patchelf = \
           paths = tuple(path for path in subprocess.check_output('{} --print-rpath {} 2> /dev/null || :'.format(patchelf_command, quote(path)), shell=True).rstrip().split(':') if path)
           patched_paths = \
             tuple(os.path.join(root_path, path.lstrip('/')) if path.startswith('/') and not path.startswith(app_path) else path for path in paths) + \
-            tuple(path for path in library_path.split(':') if path not in paths)
+            tuple(path for path in ('{}/'.format(os.path.join('\$ORIGIN', os.path.relpath(library_path, os.path.dirname(path))).rstrip('/.')) for library_path in library_path.split(':')) if path not in paths)
           if patched_paths != paths:
             if not os.access(path, os.W_OK):
               os.chmod(path, os.stat(path).st_mode | stat.S_IWUSR)
