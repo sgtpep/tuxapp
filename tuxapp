@@ -1251,7 +1251,7 @@ patch_app_elf_files_patchelf = \
         from pipes import quote
       patchelf_path, patchelf_command, app_path, root_path, library_path, is_old_patchelf, interpreter_path = sys.argv[1:8]
       for path in sys.argv[8:]:
-        if os.path.dirname(path) != patchelf_path and os.path.getatime(path) - os.path.getmtime(path) > 60 * 5:
+        if os.path.dirname(path) != patchelf_path and (not path.startswith('{}/'.format(root_path)) or os.path.getatime(path) - os.path.getmtime(path) > 60 * 5):
           paths = tuple(path for path in subprocess.check_output('{} --print-rpath {} 2> /dev/null || :'.format(patchelf_command, quote(path)), shell=True).rstrip().split(':') if path)
           patched_paths = \
             tuple(os.path.join(root_path, path.lstrip('/')) if path.startswith('/') and not path.startswith(app_path) else path for path in paths) + \
