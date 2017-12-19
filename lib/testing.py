@@ -28,6 +28,16 @@ def check_app_process_output(function):
     return output
   return wrapper
 
+def handle_exceptions(function):
+  @functools.wraps(function)
+  def wrapper(*args, **kwargs):
+    try:
+      return function(*args, **kwargs)
+    except Exception as exception: # pylint: disable=broad-except
+      tuxapp.print_exception(exception)
+      return False
+  return wrapper
+
 def test_app_worker(app):
   return test_app(app)
 
@@ -246,7 +256,7 @@ request_debian_package_url = lambda distribution, package: \
 test_app = lambda app, distribution=None: \
   test_installed_app(app, distribution) \
     if tuxapp.is_app_installed(app) else \
-  (tuxapp.install_app(app) or tuxapp.remove_app(app) and False) and \
+  (handle_exceptions(tuxapp.install_app)(app) or tuxapp.remove_app(app) and False) and \
   (tuxapp.remove_app(app) if test_installed_app(app, distribution) else tuxapp.remove_app(app) and False)
 
 test_app_process = \
