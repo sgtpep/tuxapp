@@ -597,7 +597,7 @@ detect_missing_app_libraries = lambda app: \
 
 detect_missing_app_libraries_ldd = \
   log('Detecting missing libraries')(
-    lambda app, output: tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in output.splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and '\t{} => {}/'.format(library, get_app_path(app)) not in output)))
+    lambda app, text: tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in text.splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and '\t{} => {}/'.format(library, get_app_path(app)) not in text)))
   )
 
 download_app_file = \
