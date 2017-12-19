@@ -1236,7 +1236,7 @@ patch_app_elf_files = lambda app, path: \
 
 patch_app_elf_files_patchelf = \
   log('Patching ELF files')(
-  check('Failed to patch ELF files')(
+  check('Failed to patch ELF files for {}')(
     lambda app, paths: \
       uncheck(call_process)(join_arguments(
         build_firejail_arguments() + \
