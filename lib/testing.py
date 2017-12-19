@@ -231,18 +231,22 @@ install_missing_container = lambda distribution: \
   utilities.update_data((distribution, 'timestamp'), int(time.time())) and \
   distribution
 
+is_app_firefox_based = lambda app: \
+  app in (
+    'firefox',
+    'firefox-developer-edition',
+    'firefox-esr',
+    'seamonkey',
+    'thunderbird',
+  )
+
 is_app_process_output_ignored = lambda app, distribution, output: \
   {
     'subsurface': 'Could not initialize GLX',
     'supertuxkart': 'Fatal error, could not get visual.',
     'viber': 'Could not initialize GLX',
   }.get(app, r'\0') in output or \
-  distribution == 'jessie' and app in (
-    'firefox',
-    'firefox-developer-edition',
-    'firefox-esr',
-    'thunderbird',
-  )
+  distribution == 'jessie' and is_app_firefox_based(app)
 
 request_arch_container_url = lambda: get_arch_mirror_url('iso/latest/') + tuxapp.request_grep_url(get_arch_mirror_url('iso/latest/'), ('-Po', '-m', '1', r'(?<=")archlinux-bootstrap-[^"]+'))
 
