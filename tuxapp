@@ -1121,9 +1121,8 @@ install_app_runner = lambda app: \
     declare strace_arguments
     build_strace_arguments strace_arguments
 
-    cd "$distribution_path"
     # shellcheck disable=SC2086
-    exec ${firejail_arguments+"${firejail_arguments[@]}"} ${strace_arguments+"${strace_arguments[@]}"} ${executable_arguments+"${executable_arguments[@]}"} "$@"
+    exec ${firejail_arguments+"${firejail_arguments[@]}"} ${strace_arguments+"${strace_arguments[@]}"} ${executable_arguments+"${executable_arguments[@]/.\//"$distribution_path"/}"} "$@"
   }
 
   function read_firejail_options {
@@ -1300,8 +1299,6 @@ query_app_package_url = \
 query_appfile = lambda app, key: \
   query_appfile_download_urls(app) \
     if key == 'download-urls' else \
-  query_appfile_value(app, 'executable').replace('{dist}', quote_argument(get_app_distribution_path(app))).replace('{root}', quote_argument(get_app_root_path(app))) \
-    if key == 'executable' else \
   expand_package_groups(query_appfile_value(app, 'packages').split()) \
     if key == 'packages' else \
   query_appfile_value(app, key).lstrip('~') \

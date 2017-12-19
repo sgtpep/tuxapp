@@ -3,7 +3,7 @@ description=Whether you are a graphic designer, photographer, illustrator, or sc
 desktop-entry=
 download-x86-64-url=https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+files/gimp_{version}-0x0~ppa_amd64.deb https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+files/gimp-data_{version}-0x0~ppa_all.deb https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+files/libgimp2.0_{version}-0x0~ppa_amd64.deb
 download-x86-url=https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+files/gimp_{version}-0x0~ppa_i386.deb https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+files/gimp-data_{version}-0x0~ppa_all.deb https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+files/libgimp2.0_{version}-0x0~ppa_i386.deb
-executable=env GIMP2_DATADIR={dist}/usr/share/gimp/2.0 GIMP2_SYSCONFDIR={dist}/etc/gimp/2.0 ./usr/bin/gimp
+executable=env GIMP2_DATADIR=./usr/share/gimp/2.0 GIMP2_SYSCONFDIR=./etc/gimp/2.0 ./usr/bin/gimp
 firejail=
 free-license=yes
 group=image-editors
