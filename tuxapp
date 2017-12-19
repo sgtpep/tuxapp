@@ -457,6 +457,8 @@ build_app_package_list_urls = \
       ))
   )
 
+build_app_runner_relative_path = lambda app, path: re.sub(r'/\.$', '', os.path.join('${0%/*}', quote_argument(os.path.relpath(path, os.path.dirname(get_app_runner_path(app))))))
+
 build_curl_request_arguments = lambda options, is_gzip=False: \
   ('curl', '-#Lf', '-H', 'Accept-Language: en', '-m', '10', '--retry', '2') + \
   (() if parse_url(options[-1]).netloc == 'downloads.sourceforge.net' else ('-A', get_user_agent())) + \
@@ -929,15 +931,15 @@ install_app_patchelf = lambda app: \
 
 install_app_runner = lambda app: \
   write_bash_script(get_app_runner_path(app), r'''
-  declare -r app_path=''' + get_app_path(app) + r'''
-  declare -r browser_path=''' + install_app_browser(app) + r'''
+  declare -r app_path=''' + build_app_runner_relative_path(app, get_app_path(app)) + r'''
+  declare -r browser_path=''' + build_app_runner_relative_path(app, install_app_browser(app)) + r'''
   declare -r cache_path=${XDG_CACHE_HOME-~/.cache}/''' + quote_argument(os.path.relpath(get_cache_path(), get_xdg_cache_path())) + r'''
-  declare -r distribution_path=''' + get_app_distribution_path(app) + r'''
+  declare -r distribution_path=''' + build_app_runner_relative_path(app, get_app_distribution_path(app)) + r'''
   declare -r executable_arguments=(''' + normalize_app_command(app, sanitize_command(query_appfile(app, 'executable'))) + r''')
   declare -r firejail_options=(''' + sanitize_command(query_appfile(app, 'firejail')) + r''')
-  declare -r firejail_options_path=''' + get_app_firejail_options_path(app) + r'''
-  declare -r root_path=''' + get_app_root_path(app) + r'''
-  declare -r urls_path=''' + os.path.join(get_app_path(app), 'urls') + r'''
+  declare -r firejail_options_path=''' + build_app_runner_relative_path(app, get_app_firejail_options_path(app)) + r'''
+  declare -r root_path=''' + build_app_runner_relative_path(app, get_app_root_path(app)) + r'''
+  declare -r urls_path=''' + build_app_runner_relative_path(app, os.path.join(get_app_path(app), 'urls')) + r'''
 
   # shellcheck disable=SC2088
   declare -r firejail_blacklisted_paths=(
