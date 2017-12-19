@@ -613,19 +613,19 @@ detect_library_directory_name = lambda: \
 
 detect_missing_app_libraries = lambda app: \
   install_app_packages(app, ('libc-bin',)) and \
-  detect_missing_app_libraries_call(app)
+  detect_missing_app_libraries_verbose(app)
 
-detect_missing_app_libraries_call = \
+detect_missing_app_libraries_ldd = lambda app, paths: \
+  tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in (uncheck(read_process)('{} || :'.format(join_arguments(
+    build_firejail_arguments() + \
+    ('env', 'LC_ALL=C', get_app_root_binary_path(app, 'ldd')) + \
+    paths
+  ))) or '').splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and not any(os.path.basename(path) == library for path in paths))))
+
+detect_missing_app_libraries_verbose = \
   log('Detecting missing libraries')(
-    lambda app: \
-      detect_missing_app_libraries_parse(app, uncheck(read_process)('{} || :'.format(join_arguments(
-        build_firejail_arguments() + \
-        ('env', 'LC_ALL=C', get_app_root_binary_path(app, 'ldd')) + \
-        list_directory_elf_files(get_app_distribution_path(app))
-      ))) or '')
+    lambda app: detect_missing_app_libraries_ldd(app, list_directory_elf_files(get_app_distribution_path(app)))
   )
-
-detect_missing_app_libraries_parse = lambda app, text: tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in text.splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and '\t{} => {}/'.format(library, get_app_path(app)) not in text)))
 
 download_app_file = \
   log('Downloading {1}')(
