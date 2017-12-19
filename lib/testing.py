@@ -226,7 +226,8 @@ is_app_process_output_ignored = lambda app, output: \
     'subsurface': 'Could not initialize GLX',
     'supertuxkart': 'Fatal error, could not get visual.',
     'viber': 'Could not initialize GLX',
-  }.get(app, r'\0') in output
+  }.get(app, r'\0') in output or \
+  '\nsyscall_317(' in output and 'group-firefox' in tuxapp.query_appfile_value(app, 'packages')
 
 is_debian_distribution = lambda distribution: \
   distribution in (
