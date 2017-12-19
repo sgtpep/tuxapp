@@ -893,13 +893,10 @@ install_app_distribution = lambda app: \
   patch_app_elf_files(app, get_app_distribution_path(app)) and \
   write_app_version(app) and \
   all(remove_file(path) for path in glob.iglob(get_app_temp_file_path(app, '*'))) and \
+  remove_file(get_app_icon_path(app)) and \
   get_app_distribution_path(app)
 
-install_app_icon = lambda app: \
-  uncheck(download_app_file)(app, query_appfile(app, 'icon-url'), get_app_icon_path(app)) and \
-  touch_file(get_app_icon_path(app)) \
-    if is_file_newer(get_app_version_path(app), get_app_icon_path(app)) else \
-  get_app_icon_path(app)
+install_app_icon = lambda app: uncheck(download_missing_app_file)(app, query_appfile(app, 'icon-url'), get_app_icon_path(app))
 
 install_app_package_file = lambda app, path: \
   silence(unpack_package)(path, get_app_root_path(app), tuple('--exclude=.{}'.format(exclusion) for exclusion in get_package_exclusions(extract_package_name(path)))) and \
@@ -1147,8 +1144,7 @@ is_app_installed = lambda app: \
 
 is_app_updated = lambda app: \
   is_app_installed(app) and \
-  read_app_version(app) == request_app_version(app) and \
-  read_app_download_urls_hash(app) == hash_app_download_urls(app)
+  read_app_version(app) == request_app_version_cached(app)
 
 is_file_executable = lambda path: \
   os.path.isfile(path) and \
@@ -1371,6 +1367,14 @@ rename_file_ascending = lambda path, destination_path: \
   destination_path
 
 request_app_version = lambda app, pattern=None: request_app_version_memoized(app, query_appfile(app, 'version-url'), pattern or query_appfile(app, 'version-regex'))
+
+request_app_version_cached = lambda app, pattern=None: \
+  read_app_version(app) \
+    if get_file_mtime(get_app_version_path(app)) > time.time() - 60 * 5 else \
+  touch_file(get_app_version_path(app)) and \
+  read_app_version(app) \
+    if request_app_version(app) == read_app_version(app) else \
+  request_app_version(app)
 
 request_app_version_memoized = \
   memoize_temporarily(
