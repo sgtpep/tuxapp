@@ -266,7 +266,9 @@ test_app_process = \
       ), True)
   ))
 
-test_apps = lambda apps: utilities.call_parallel(test_app_worker, apps, 4)
+test_apps = lambda apps: \
+  tuxapp.silence(all)(install_missing_container(distribution) for distribution in get_test_distributions()) and \
+  utilities.call_parallel(test_app_worker, apps, 4)
 
 test_installed_app = lambda app, distribution=None: all(not detect_missing_app_libraries(app, distribution) for distribution in ((distribution,) if distribution else get_test_distributions())) # pylint: disable=superfluous-parens
 
