@@ -22,7 +22,7 @@ def check_app_process_output(function):
     if any(extract_app_library(app, line) for line in output.splitlines()):
       if not tuxapp.is_silent():
         print(output, file=sys.stderr)
-    elif time.time() - timestamp < get_process_timeout() - 0.5 and not is_app_process_output_ignored(app, output):
+    elif time.time() - timestamp < get_process_timeout() - 0.5 and not is_app_process_output_ignored(app, distribution, output):
       print('\n{}'.format(output), file=sys.stderr)
       raise AssertionError('{} terminated unexpectedly on {}'.format(app, distribution))
     return output
@@ -231,13 +231,18 @@ install_missing_container = lambda distribution: \
   utilities.update_data((distribution, 'timestamp'), int(time.time())) and \
   distribution
 
-is_app_process_output_ignored = lambda app, output: \
+is_app_process_output_ignored = lambda app, distribution, output: \
   {
     'subsurface': 'Could not initialize GLX',
     'supertuxkart': 'Fatal error, could not get visual.',
     'viber': 'Could not initialize GLX',
   }.get(app, r'\0') in output or \
-  '\nsyscall_317(' in output and 'group-firefox' in tuxapp.query_appfile_value(app, 'packages')
+  distribution == 'jessie' and app in (
+    'firefox',
+    'firefox-developer-edition',
+    'firefox-esr',
+    'thunderbird',
+  )
 
 request_arch_container_url = lambda: get_arch_mirror_url('iso/latest/') + tuxapp.request_grep_url(get_arch_mirror_url('iso/latest/'), ('-Po', '-m', '1', r'(?<=")archlinux-bootstrap-[^"]+'))
 
