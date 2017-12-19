@@ -547,6 +547,13 @@ check_apps_updated = \
     lambda apps: tuple((app, check_app_updated(app)) for app in apps)
   )
 
+check_detected_app_library_packages = \
+  check(lambda packages, *args, **kwargs: kwargs['result'] is False and 'Failed to detect packages for libraries: {}'.format(', '.join(library for library, package in packages.items() if not package)))(
+    lambda packages: \
+      all(package for library, package in packages.items()) and \
+      packages
+  )
+
 connect_data = lambda path: \
   (os.path.isfile(path) or connect_data_memoized.remove(path)) and \
   connect_data_memoized(path)
@@ -560,29 +567,16 @@ detect_app_library_packages = \
   log('Detecting library packages')(
     lambda app, libraries: \
       tuple(sorted(set(
-        tuple(package for package in (query_app_package_data(app, library) for library in libraries) if package) + \
-        tuple(detect_app_library_packages_check(dict(functools.reduce(lambda items, line: \
+        tuple(package for package in (query_app_package_data(app, (library, 'package')) for library in libraries) if package) + \
+        tuple(check_detected_app_library_packages(dict(functools.reduce(lambda items, line: \
           items + ((line.lstrip(' '), None),) \
             if line.startswith(' ') else \
           items \
             if is_library_package_ignored(line) or items[-1][1] else \
-          update_app_package_data(app, items[-1][0], line) and \
+          update_app_package_data(app, (items[-1][0], 'package'), line) and \
           items[:-1] + ((items[-1][0], line),),
-        request_grep_urls(tuple('https://{}/search?{}'.format('packages.debian.org' if is_debian_repository(query_appfile(app, 'package-repository')) else 'packages.ubuntu.com', encode_url_parameters({
-          'arch': detect_debian_architecture(),
-          'keywords': library,
-          'mode': 'exactfilename',
-          'searchon': 'contents',
-          'suite': query_appfile(app, 'package-repository'),
-        })) for library in libraries if not query_app_package_data(app, library)), ('-Po', r' [^\s]+(?=</title>)|(?<="/{}/)[^"]+'.format(re.escape(query_appfile(app, 'package-repository'))))), ()))).values())
+        request_app_library_packages(app, libraries), ()))).values())
       )))
-  )
-
-detect_app_library_packages_check = \
-  check(lambda packages, *args, **kwargs: kwargs['result'] is False and 'Failed to detect packages for libraries: {}'.format(', '.join(library for library, package in packages.items() if not package)))(
-    lambda packages: \
-      all(package for library, package in packages.items()) and \
-      packages
   )
 
 detect_architecture = \
@@ -719,6 +713,8 @@ get_app_dynamic_linker_path = lambda app: next(glob.iglob(get_app_root_file_path
 get_app_firejail_options_path = lambda app: os.path.join(get_app_path(app), 'firejail')
 
 get_app_icon_path = lambda app: os.path.join(get_app_path(app), 'icon')
+
+get_app_library_packages_request_size = lambda: 10
 
 get_app_lock_path = lambda app: os.path.join(get_app_path(app), 'lock')
 
@@ -1440,6 +1436,15 @@ rename_file_ascending = lambda path, destination_path: \
   rename_file(path, destination_path) and \
   remove_empty_directories(os.path.dirname(path)) and \
   destination_path
+
+request_app_library_packages = lambda app, libraries: \
+  tuple(unquote_url(line) for lines in (request_grep_urls(tuple('https://{}/search?{}'.format('packages.debian.org' if is_debian_repository(query_appfile(app, 'package-repository')) else 'packages.ubuntu.com', encode_url_parameters({
+    'arch': detect_debian_architecture(),
+    'keywords': library,
+    'mode': 'exactfilename',
+    'searchon': 'contents',
+    'suite': query_appfile(app, 'package-repository'),
+  })) for library in libraries if not query_app_package_data(app, (library, 'package'))), ('-Po', r' [^\s]+(?=</title>)|(?<="/{}/)[^"]+'.format(re.escape(query_appfile(app, 'package-repository'))))) for libraries in (libraries[index:index + get_app_library_packages_request_size()] for index in range(0, len(libraries), get_app_library_packages_request_size()))) for line in lines)
 
 request_app_version = lambda app, pattern=None: request_app_version_memoized(app, query_appfile(app, 'version-url'), pattern or query_appfile(app, 'version-regex'))
 
