@@ -556,9 +556,14 @@ copy_updated_file = lambda path, destination_path: \
     if is_file_newer(path, destination_path) else \
   destination_path
 
+detect_app_library_package = lambda app, library: \
+  query_app_package_data(app, library) or \
+  update_app_package_data(app, library, request_app_library_package(app, library)) and \
+  query_app_package_data(app, library)
+
 detect_app_library_packages = \
   log('Detecting library packages')(
-    lambda app, libraries: tuple(sorted(unquote_url(package) for package in set(request_grep_urls(tuple('https://{}/search?{}'.format('packages.debian.org' if is_debian_repository(query_appfile(app, 'package-repository')) else 'packages.ubuntu.com', encode_url_parameters({'arch': detect_debian_architecture(), 'keywords': '/{}'.format(library), 'searchon': 'contents', 'suite': query_appfile(app, 'package-repository')})) for library in libraries), ('-Po', r'(?<="/{}/)[^"]+'.format(re.escape(query_appfile(app, 'package-repository')))))) if not re.search(r'-(cross|dbg|dev|i386|x32)$', package) and not re.match(r'libx?32', package)))
+    lambda app, libraries: tuple(sorted(set(detect_app_library_package(app, library) for library in libraries)))
   )
 
 detect_architecture = \
@@ -1204,6 +1209,10 @@ is_file_magic_number = lambda path, magic_number: read_file_binary(path, len(mag
 
 is_file_newer = lambda path, reference_path: get_file_mtime(path) > get_file_mtime(reference_path)
 
+is_library_package_ignored = lambda package: \
+  re.match(r'libx?32', package) or \
+  re.search(r'-(cross|dbg|dev|i386|x32)$', package)
+
 is_package_library = lambda package: \
   package.startswith('lib') or \
   package == 'zlib1g'
@@ -1407,6 +1416,11 @@ rename_file_ascending = lambda path, destination_path: \
   rename_file(path, destination_path) and \
   remove_empty_directories(os.path.dirname(path)) and \
   destination_path
+
+request_app_library_package = \
+  check('Failed to detect a package for {1}')(
+    lambda app, library: next((unquote_url(package) for package in (silence(uncheck(request_grep_url))('https://{}/search?{}'.format('packages.debian.org' if is_debian_repository(query_appfile(app, 'package-repository')) else 'packages.ubuntu.com', encode_url_parameters({'arch': detect_debian_architecture(), 'keywords': '/{}'.format(library), 'searchon': 'contents', 'suite': query_appfile(app, 'package-repository')})), ('-Po', r'(?<="/{}/)[^"]+'.format(re.escape(query_appfile(app, 'package-repository'))))) or '').splitlines() if not is_library_package_ignored(package)), None)
+  )
 
 request_app_version = lambda app, pattern=None: request_app_version_memoized(app, query_appfile(app, 'version-url'), pattern or query_appfile(app, 'version-regex'))
 
