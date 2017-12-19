@@ -52,12 +52,6 @@ deb http://deb.debian.org/debian stretch main
 deb http://security.debian.org/ stretch/updates main
 EOF
 
-if [[ ! $(zgrep ' dist-upgrade\b' /var/log/apt/history.log* || :) ]]; then
-  sudo apt update
-  sudo APT_LISTCHANGES_FRONTEND=none DEBIAN_FRONTEND=noninteractive apt -o Dpkg::Options::=--force-confnew dist-upgrade -y
-  sudo apt autoremove -y --purge
-fi
-
 packages=(
   bubblewrap
   certbot
