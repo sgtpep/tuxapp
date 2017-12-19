@@ -587,12 +587,18 @@ detect_library_directory_name = lambda: \
     'i386': 'i386',
   }.get(detect_debian_architecture()))
 
-detect_missing_app_libraries = \
-  log('Detecting missing libraries')(
-    lambda app: detect_missing_app_libraries_ldd(app, uncheck(read_process)('LC_ALL=C ldd {} || :'.format(join_arguments(list_directory_elf_files(get_app_distribution_path(app))))) or '')
-  )
+detect_missing_app_libraries = lambda app: \
+  install_app_packages(app, ('libc-bin',)) and \
+  detect_missing_app_libraries_ldd(app, uncheck(read_process)('{} || :'.format(join_arguments(
+    build_firejail_arguments() + \
+    ('env', 'LC_ALL=C', get_app_root_binary_path(app, 'ldd')) + \
+    list_directory_elf_files(get_app_distribution_path(app))
+  ))) or '')
 
-detect_missing_app_libraries_ldd = lambda app, output: tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in output.splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and '\t{} => {}/'.format(library, get_app_path(app)) not in output)))
+detect_missing_app_libraries_ldd = \
+  log('Detecting missing libraries')(
+    lambda app, output: tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in output.splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and '\t{} => {}/'.format(library, get_app_path(app)) not in output)))
+  )
 
 download_app_file = \
   log('Downloading {1}')(
@@ -768,7 +774,7 @@ get_package_exclusions = lambda package: \
     '/usr/sbin',
     '/var',
   ) + \
-  (('/bin', '/usr/bin') if package.startswith('lib') and package != 'libarchive-tools' else ()) + \
+  (('/bin', '/usr/bin') if package.startswith('lib') and package not in ('libarchive-tools', 'libc-bin') else ()) + \
   (() if package == 'libqt5webengine-data' else ('/usr/share',))
 
 get_package_groups = lambda: \
