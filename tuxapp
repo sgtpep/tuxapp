@@ -446,14 +446,12 @@ build_app_package_list_urls = \
           'debian/dists/{}/main/{}',
           'debian-security/dists/{}/updates/main/{}',
         )) \
-          if query_appfile(app, 'package-repository') in ('jessie', 'stretch') else \
+          if is_debian_repository(query_appfile(app, 'package-repository')) else \
         (get_ubuntu_mirror_url() + path for path in (
           'ubuntu/dists/{}/main/{}',
           'ubuntu/dists/{}/universe/{}',
           'ubuntu/dists/{}-security/main/{}',
-        )) \
-          if query_appfile(app, 'package-repository') in ('xenial', 'artful') else \
-        ()
+        ))
       ))
   )
 
@@ -1146,6 +1144,12 @@ is_app_installed = lambda app: \
 is_app_updated = lambda app: \
   is_app_installed(app) and \
   read_app_version(app) == request_app_version_cached(app)
+
+is_debian_repository = lambda repository: \
+  repository in (
+    'jessie',
+    'stretch',
+  )
 
 is_file_executable = lambda path: \
   os.path.isfile(path) and \

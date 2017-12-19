@@ -78,7 +78,7 @@ build_root_bwrap_arguments = lambda distribution: \
   ) + \
   (('--ro-bind', '/etc/machine-id', '/etc/machine-id') if distribution == 'xenial' else ()) + \
   ('env', '-u', 'LANG') + \
-  (() if is_debian_distribution(distribution) else ('PATH=/usr/sbin:/usr/bin:/sbin:/bin',)) + \
+  (() if tuxapp.is_debian_repository(distribution) else ('PATH=/usr/sbin:/usr/bin:/sbin:/bin',)) + \
   get_distribution_fakeroot_arguments(distribution) + \
   ('bash', '-l')
 
@@ -109,7 +109,7 @@ configure_arch_container = lambda: \
 
 configure_debian_container = lambda distribution: \
   tuxapp.write_file(tuxapp.get_app_root_file_path(distribution, 'etc/apt/apt.conf.d/50keep-downloaded-packages'), 'Binary::apt::APT::Keep-Downloaded-Packages "true";\n') and \
-  (not is_debian_distribution(distribution) or tuxapp.write_file(tuxapp.get_app_root_file_path(distribution, 'etc/apt/sources.list'), textwrap.dedent('''\
+  (not tuxapp.is_debian_repository(distribution) or tuxapp.write_file(tuxapp.get_app_root_file_path(distribution, 'etc/apt/sources.list'), textwrap.dedent('''\
   deb http://deb.debian.org/debian {0} main
   deb http://deb.debian.org/debian-security {0}/updates main
   ''').format(distribution))) and \
@@ -123,7 +123,7 @@ configure_debian_container = lambda distribution: \
   )
   DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
   ''') and \
-  (is_debian_distribution(distribution) or tuxapp.write_file(tuxapp.get_app_root_file_path(distribution, 'etc/bash.bashrc'), tuxapp.read_file(tuxapp.get_app_root_file_path(distribution, 'etc/bash.bashrc')).replace('(groups)', '(true)', 1))) and \
+  (tuxapp.is_debian_repository(distribution) or tuxapp.write_file(tuxapp.get_app_root_file_path(distribution, 'etc/bash.bashrc'), tuxapp.read_file(tuxapp.get_app_root_file_path(distribution, 'etc/bash.bashrc')).replace('(groups)', '(true)', 1))) and \
   True
 
 detect_missing_app_libraries = \
@@ -166,7 +166,7 @@ get_debian_container_url = lambda distribution: \
     if distribution == 'xenial' else \
   None
 
-get_debian_package_url = lambda distribution, package: 'https://{}/{}/{}/{}/download'.format('packages.debian.org' if is_debian_distribution(distribution) else 'packages.ubuntu.com', distribution, tuxapp.detect_debian_architecture(), package)
+get_debian_package_url = lambda distribution, package: 'https://{}/{}/{}/{}/download'.format('packages.debian.org' if tuxapp.is_debian_repository(distribution) else 'packages.ubuntu.com', distribution, tuxapp.detect_debian_architecture(), package)
 
 get_default_distribution = lambda: 'stretch'
 
@@ -214,7 +214,7 @@ install_container = \
   )
 
 install_debian_container = lambda distribution: \
-  tuxapp.unpack_tarball(tuxapp.download_missing_app_temp_file(distribution, get_debian_container_url(distribution)), tuxapp.get_app_root_path(distribution), ('--exclude={}'.format('./dev' if is_debian_distribution(distribution) else 'dev'),)) and \
+  tuxapp.unpack_tarball(tuxapp.download_missing_app_temp_file(distribution, get_debian_container_url(distribution)), tuxapp.get_app_root_path(distribution), ('--exclude={}'.format('./dev' if tuxapp.is_debian_repository(distribution) else 'dev'),)) and \
   all(install_debian_container_package(distribution, package) for package in ('fakeroot', 'libfakeroot')) and \
   configure_debian_container(distribution)
 
@@ -239,18 +239,12 @@ is_app_process_output_ignored = lambda app, output: \
   }.get(app, r'\0') in output or \
   '\nsyscall_317(' in output and 'group-firefox' in tuxapp.query_appfile_value(app, 'packages')
 
-is_debian_distribution = lambda distribution: \
-  distribution in (
-    'jessie',
-    'stretch',
-  )
-
 request_arch_container_url = lambda: get_arch_mirror_url('iso/latest/') + tuxapp.request_grep_url(get_arch_mirror_url('iso/latest/'), ('-Po', '-m', '1', r'(?<=")archlinux-bootstrap-[^"]+'))
 
 request_arch_package_url = lambda package: get_arch_package_url(package) + tuxapp.request_grep_url(get_arch_package_url(package), ('-Po', '-m', '1', r'(?<="){}-[^"]+'.format(package)))
 
 request_debian_package_url = lambda distribution, package: \
-  (tuxapp.get_debian_mirror_url() if is_debian_distribution(distribution) else tuxapp.get_ubuntu_mirror_url()) + \
+  (tuxapp.get_debian_mirror_url() if tuxapp.is_debian_repository(distribution) else tuxapp.get_ubuntu_mirror_url()) + \
   tuxapp.request_grep_url(get_debian_package_url(distribution, package), ('-o', '-m', '1', r'[^/]*/pool/[^"]*'))
 
 test_app = lambda app, distribution=None: \

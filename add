@@ -54,7 +54,7 @@ def detect_app_library_packages(app, packages=()):
     else:
       for library in libraries:
         try:
-          package = tuxapp.request_grep_url('https://{}/search?arch={}&keywords=/{}&searchon=contents&suite={}'.format('packages.ubuntu.com' if tuxapp.query_appfile(app, 'package-repository') == 'xenial' else 'packages.debian.org', tuxapp.detect_debian_architecture(), filename, tuxapp.query_appfile(app, 'package-repository')), ('-Po', '-m', '1', r'(?<="/{}/)[^"]+'.format(re.escape(tuxapp.query_appfile(app, 'package-repository')))))
+          package = tuxapp.request_grep_url('https://{}/search?arch={}&keywords=/{}&searchon=contents&suite={}'.format('packages.debian.org' if tuxapp.is_debian_repository(tuxapp.query_appfile(app, 'package-repository')) else 'packages.ubuntu.com', tuxapp.detect_debian_architecture(), library, tuxapp.query_appfile(app, 'package-repository')), ('-Po', '-m', '1', r'(?<="/{}/)[^"]+'.format(re.escape(tuxapp.query_appfile(app, 'package-repository')))))
         except AssertionError as exception:
           tuxapp.print_exception(exception)
           return packages
