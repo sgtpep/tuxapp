@@ -1441,6 +1441,16 @@ request_grep_url = \
       True)), get_request_gzip_command(), get_request_head_command(), join_arguments(arguments))).rstrip('\n')
   ))
 
+request_grep_url_all = \
+  log('Requesting {}')(
+  check('Failed to request and grep {}')(
+    lambda url, arguments: \
+      uncheck(read_process)(r'( {} | {} ) 2>&1 | {} | grep {} 2> /dev/null || :'.format(join_arguments(build_request_arguments(
+        ('-Ss', '-D', '/dev/stderr', url),
+        ('-Sq', '-O', '-', url),
+      True)), get_request_gzip_command(), get_request_head_command(), join_arguments(arguments))).rstrip('\n')
+  ))
+
 request_grep_urls = \
   check(lambda urls, *args, **kwargs: kwargs['result'] is None and 'Failed to request and grep URLs')(
     lambda urls, arguments: \
@@ -1452,16 +1462,6 @@ request_grep_urls = \
         if urls else \
       ()
   )
-
-request_grep_url_all = \
-  log('Requesting {}')(
-  check('Failed to request and grep {}')(
-    lambda url, arguments: \
-      uncheck(read_process)(r'( {} | {} ) 2>&1 | {} | grep {} 2> /dev/null || :'.format(join_arguments(build_request_arguments(
-        ('-Ss', '-D', '/dev/stderr', url),
-        ('-Sq', '-O', '-', url),
-      True)), get_request_gzip_command(), get_request_head_command(), join_arguments(arguments))).rstrip('\n')
-  ))
 
 request_url = \
   log('Requesting {}')(
