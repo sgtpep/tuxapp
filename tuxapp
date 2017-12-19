@@ -1353,6 +1353,8 @@ query_app_package_url = \
 query_appfile = lambda app, key: \
   query_appfile_download_urls(app) \
     if key == 'download-urls' else \
+  tuple(query_appfile_value(app, 'ignored-libraries').split()) \
+    if key == 'ignored-libraries' else \
   expand_package_groups(query_appfile_value(app, 'packages').split()) \
     if key == 'packages' else \
   query_appfile_value(app, key).lstrip('~') \

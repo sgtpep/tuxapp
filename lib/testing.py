@@ -139,7 +139,7 @@ execute_shell = lambda distribution: tuxapp.execute_process(build_bwrap_argument
 
 extract_app_library = lambda app, string: \
   '' \
-    if extract_library(string) in tuxapp.query_appfile(app, 'ignored-libraries').split() else \
+    if extract_library(string) in tuxapp.query_appfile(app, 'ignored-libraries') + ('libGL.so.1',) else \
   extract_library(string)
 
 extract_library = lambda string: \
