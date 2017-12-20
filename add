@@ -340,6 +340,7 @@ update_appfile_executable = lambda data: update_appfile(data, 'executable', inpu
 update_appfile_execute = lambda data: \
   update_appfile_test(data) \
     if os.path.isfile(get_app_execution_flag_path(data['app'])) else \
+  tuxapp.install_app_distribution(data['app']) and \
   tuxapp.install_app_appfile_packages(data['app']) and \
   tuxapp.install_app_runner(data['app']) and \
   execute_app(data['app']) and \
