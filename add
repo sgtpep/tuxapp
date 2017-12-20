@@ -86,6 +86,11 @@ def main():
       step += 1
       if step == len(get_update_appfile_functions()):
         break
+    except AssertionError as exception:
+      tuxapp.print_exception(exception)
+      step -= 1
+      if step < 0:
+        raise KeyboardInterrupt
     except EOFError:
       raise KeyboardInterrupt
     except KeyboardInterrupt:
