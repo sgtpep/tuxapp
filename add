@@ -165,6 +165,10 @@ filter_description = lambda description: \
   ('' if description[-1] in validation.get_punctuation() else '.')
 
 filter_download_url = lambda url: \
+  re.sub(r'^.+/debian/pool', '{debian}', url) \
+    if '/debian/pool/' in url else \
+  re.sub(r'^.+/ubuntu/pool', '{ubuntu}', url) \
+    if '/ubuntu/pool/' in url else \
   'http://downloads.sourceforge.net/project/{}'.format(tuxapp.parse_url(url).path.replace('/projects/', '').replace('/files/', '/').replace('/download', '')) \
     if tuxapp.parse_url(url).netloc == 'sourceforge.net' else \
   url
