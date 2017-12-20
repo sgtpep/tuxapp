@@ -24,7 +24,8 @@ def check_app_process_output(function):
         print(output, file=sys.stderr)
     elif time.time() - timestamp < get_process_timeout() - 0.5 and not is_app_process_output_ignored(app, distribution, output):
       print('\n{}'.format(output), file=sys.stderr)
-      raise AssertionError('{} terminated unexpectedly on {}'.format(app, distribution))
+      print('{} terminated unexpectedly on {}'.format(app, distribution), file=sys.stderr)
+      return ''
     return output
   return wrapper
 
