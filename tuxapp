@@ -1228,7 +1228,7 @@ is_file_magic_number = lambda path, magic_number: read_file_binary(path, len(mag
 is_file_newer = lambda path, reference_path: get_file_mtime(path) > get_file_mtime(reference_path)
 
 is_library_package_ignored = lambda package: \
-  not package.startswith('lib') or \
+  not is_package_library(package) or \
   re.match(r'libx?32', package) or \
   re.search(r'-(cross|dbg|dev|i386|x32)$', package)
 
