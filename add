@@ -44,15 +44,12 @@ def execute_app(app):
   utilities.install_missing_package('firejail')
   tuxapp.call_process((tuxapp.get_app_runner_path(app),))
   if not confirm_message('Continue?'):
-    tuxapp.remove_file(tuxapp.get_app_runner_path(app))
     raise AssertionError
   print('Executing {} on {}'.format(app, testing.get_default_distribution()), file=sys.stderr)
   tuxapp.call_process(testing.build_bwrap_arguments(testing.get_default_distribution(), app))
   if not confirm_message('Continue?'):
-    tuxapp.remove_file(tuxapp.get_app_runner_path(app))
     raise AssertionError
   if not testing.test_app(app):
-    tuxapp.remove_file(tuxapp.get_app_runner_path(app))
     raise AssertionError
 
 def input_text(message, prefill='', choices=(), is_whitespacy=False):
@@ -202,6 +199,8 @@ filter_version_url = lambda url: re.sub(r'^.+({}/releases\b).*$'.format(utilitie
 
 generate_appfile = lambda data: ''.join('{}={}\n'.format(key, data[key]) for key in sorted(data) if key != 'app')
 
+get_app_test_flag_path = lambda app: os.path.join(tuxapp.get_app_path(app), '.tested')
+
 get_default_app = lambda: 'temp'
 
 get_update_appfile_functions = lambda: \
@@ -216,7 +215,7 @@ get_update_appfile_functions = lambda: \
     update_appfile_package_repository,
     update_appfile_executable,
     update_appfile_packages,
-    update_appfile_execute,
+    update_appfile_test,
     update_appfile_category,
     update_appfile_group,
     update_appfile_free_license,
@@ -337,14 +336,6 @@ update_appfile_download_x86_url = lambda data: update_appfile(data, 'download-x8
 
 update_appfile_executable = lambda data: update_appfile(data, 'executable', input_app_executable(data['app'], data['executable'] if 'executable' in data else detect_app_executable(data['app'])))
 
-update_appfile_execute = lambda data: \
-  data \
-    if os.path.isfile(tuxapp.get_app_runner_path(data['app'])) else \
-  tuxapp.install_app_appfile_packages(data['app']) and \
-  tuxapp.install_app_runner(data['app']) and \
-  execute_app(data['app']) and \
-  data
-
 update_appfile_free_license = lambda data: update_appfile(data, 'free-license', input_free_license(data.get('free-license', 'yes')))
 
 update_appfile_generate = lambda data: \
@@ -365,6 +356,15 @@ update_appfile_package_repository = lambda data: update_appfile(data, 'package-r
 update_appfile_packages = lambda data: \
   tuxapp.update_app_package_lists(data['app']) and \
   update_appfile(data, 'packages', input_app_packages(data['app'], data['packages'] if 'packages' in data else filter_packages(data['app'])))
+
+update_appfile_test = lambda data: \
+  data \
+    if os.path.isfile(get_app_test_flag_path(data['app'])) else \
+  tuxapp.install_app_appfile_packages(data['app']) and \
+  tuxapp.install_app_runner(data['app']) and \
+  execute_app(data['app']) and \
+  tuxapp.touch_file(get_app_test_flag_path(data['app'])) and \
+  data
 
 update_appfile_title = lambda data: update_appfile(data, 'title', input_app_title(data['app'], data['title'] if data.get('title') else filter_title(parsing.parse_title(data['homepage-url']))))
 
