@@ -609,6 +609,7 @@ detect_missing_app_libraries = lambda app: \
   detect_missing_app_libraries_verbose(app)
 
 detect_missing_app_libraries_ldd = lambda app, paths: \
+  paths and \
   tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in (uncheck(read_process)('{} || :'.format(join_arguments(
     build_firejail_arguments() + \
     ('env', 'LC_ALL=C', get_app_root_binary_path(app, 'ldd')) + \
