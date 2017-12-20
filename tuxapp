@@ -1304,12 +1304,10 @@ patch_app_package = lambda app, package: \
     if package == 'libgl1-mesa-glx' and not os.path.isfile(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'libGL.so.1'))) else \
   all(write_file(os.path.join(path, 'qt.conf'), textwrap.dedent('''\
   [Paths]
-  Data = ../../share/qt5
-  LibraryExecutables = qt5/libexec
-  Plugins = qt5/plugins
+  Data = ../../../share/qt5
   Prefix = {}
-  Translations = ../../share/qt5/translations
-  ''').format(os.path.relpath(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name())), path))) for path in (
+  Translations = ../../../share/qt5/translations
+  ''').format(os.path.relpath(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5')), path))) for path in (
     get_app_root_file_path(app, 'usr/bin'),
     get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5/libexec')),
   )) \
