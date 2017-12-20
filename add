@@ -49,8 +49,7 @@ def execute_app(app):
   tuxapp.call_process(testing.build_bwrap_arguments(testing.get_default_distribution(), app))
   if not confirm_message('Continue?'):
     raise AssertionError
-  if not testing.test_app(app):
-    raise AssertionError
+  return True
 
 def input_text(message, prefill='', choices=(), is_whitespacy=False):
   try:
@@ -199,7 +198,9 @@ filter_version_url = lambda url: re.sub(r'^.+({}/releases\b).*$'.format(utilitie
 
 generate_appfile = lambda data: ''.join('{}={}\n'.format(key, data[key]) for key in sorted(data) if key != 'app')
 
-get_app_test_flag_path = lambda app: os.path.join(tuxapp.get_app_path(app), '.tested')
+get_app_execution_flag_path = lambda app: os.path.join(tuxapp.get_app_path(app), '.add-executed')
+
+get_app_test_flag_path = lambda app: os.path.join(tuxapp.get_app_path(app), '.add-tested')
 
 get_default_app = lambda: 'temp'
 
@@ -215,7 +216,7 @@ get_update_appfile_functions = lambda: \
     update_appfile_package_repository,
     update_appfile_executable,
     update_appfile_packages,
-    update_appfile_test,
+    update_appfile_execute,
     update_appfile_category,
     update_appfile_group,
     update_appfile_free_license,
@@ -336,6 +337,15 @@ update_appfile_download_x86_url = lambda data: update_appfile(data, 'download-x8
 
 update_appfile_executable = lambda data: update_appfile(data, 'executable', input_app_executable(data['app'], data['executable'] if 'executable' in data else detect_app_executable(data['app'])))
 
+update_appfile_execute = lambda data: \
+  update_appfile_test(data) \
+    if os.path.isfile(get_app_execution_flag_path(data['app'])) else \
+  tuxapp.install_app_appfile_packages(data['app']) and \
+  tuxapp.install_app_runner(data['app']) and \
+  execute_app(data['app']) and \
+  tuxapp.touch_file(get_app_execution_flag_path(data['app'])) and \
+  update_appfile_test(data)
+
 update_appfile_free_license = lambda data: update_appfile(data, 'free-license', input_free_license(data.get('free-license', 'yes')))
 
 update_appfile_generate = lambda data: \
@@ -360,9 +370,7 @@ update_appfile_packages = lambda data: \
 update_appfile_test = lambda data: \
   data \
     if os.path.isfile(get_app_test_flag_path(data['app'])) else \
-  tuxapp.install_app_appfile_packages(data['app']) and \
-  tuxapp.install_app_runner(data['app']) and \
-  execute_app(data['app']) and \
+  testing.test_app(data['app']) and \
   tuxapp.touch_file(get_app_test_flag_path(data['app'])) and \
   data
 
