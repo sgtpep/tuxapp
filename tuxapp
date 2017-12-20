@@ -549,8 +549,8 @@ check_apps_updated = \
   )
 
 check_detected_app_library_packages = \
-  log_after(lambda packages, *args, **kwargs: any(not package for library, package in packages.items()) and 'Unable to detect packages for libraries: {}'.format(', '.join(library for library, package in packages.items() if not package)))(
-    lambda packages: dict((library, package) for library, package in packages.items() if package)
+  log_after(lambda items, *args, **kwargs: any(not package for library, package in items) and 'Unable to detect items for libraries: {}'.format(', '.join(library for library, package in items if not package)))(
+    lambda items: tuple(package for library, package in items if package)
   )
 
 connect_data = lambda path: \
@@ -567,14 +567,14 @@ detect_app_library_packages = \
     lambda app, libraries: \
       tuple(sorted(set(
         tuple(package for package in (query_app_package_data(app, (library, 'package')) for library in libraries) if package) + \
-        tuple(check_detected_app_library_packages(dict(functools.reduce(lambda items, line: \
+        check_detected_app_library_packages(functools.reduce(lambda items, line: \
           items + ((line.lstrip(' '), None),) \
             if line.startswith(' ') else \
           items \
             if is_library_package_ignored(line) or items[-1][1] else \
           update_app_package_data(app, (items[-1][0], 'package'), line) and \
           items[:-1] + ((items[-1][0], line),),
-        request_app_library_packages(app, libraries), ()))).values())
+        request_app_library_packages(app, libraries), ()))
       )))
   )
 
