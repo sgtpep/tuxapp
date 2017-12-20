@@ -549,7 +549,7 @@ check_apps_updated = \
   )
 
 check_detected_app_library_packages = \
-  log_after(lambda items, *args, **kwargs: any(not package for library, package in items) and 'Unable to detect items for libraries: {}'.format(', '.join(library for library, package in items if not package)))(
+  log_after(lambda items, *args, **kwargs: any(not package for library, package in items) and 'Unable to detect packages for libraries: {}'.format(', '.join(library for library, package in items if not package)))(
     lambda items: tuple(package for library, package in items if package)
   )
 
