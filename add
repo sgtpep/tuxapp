@@ -251,7 +251,7 @@ input_app_name = \
 
 input_app_packages = \
   validate(lambda app, *args, **kwargs: validation.validate_app_packages(app, kwargs['result']))(
-    lambda app, prefill='': filter_packages(input_text('Packages', prefill, lambda text, state: complete_app_packages(app, text, state)))
+    lambda app, prefill='': filter_packages(input_text('Packages', prefill, lambda text, state: complete_app_packages(app, text, state))) # pylint: disable=undefined-variable
   )
 
 input_app_title = \
