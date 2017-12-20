@@ -470,11 +470,11 @@ build_app_package_list_urls = \
   )
 
 build_app_packages = \
-  lambda app: tuple(sorted(set(
+  lambda app: tuple(sorted(set(filter_packages(
     detect_app_library_packages(app, detect_missing_app_libraries(app)) + \
     ('libudev1',) + \
     query_appfile(app, 'packages')
-  )))
+  ))))
 
 build_app_runner_relative_path = lambda app, path: re.sub(r'/\.$', '', os.path.join('${0%/*}', quote_argument(os.path.relpath(path, os.path.dirname(get_app_runner_path(app))))))
 
@@ -695,6 +695,10 @@ extract_package_name = lambda path: os.path.basename(path).split('_', 1)[0]
 extract_package_version = lambda path: path.split('_', 2)[1]
 
 filter_app_download_url = lambda app, url: url.replace('{debian}', '{}debian/pool'.format(get_debian_mirror_url())).replace('{ubuntu}', '{}ubuntu/pool'.format(get_ubuntu_mirror_url())).replace('{version}', request_app_version(app))
+
+filter_packages = lambda packages: \
+  packages + \
+  (('libgl1-mesa-dri',) if 'libgl1-mesa-glx' in packages else ())
 
 get_app_cached_file_path = lambda app, path: os.path.join(get_cache_path(), query_appfile(app, 'package-repository'), os.path.basename(path))
 
