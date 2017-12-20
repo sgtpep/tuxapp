@@ -331,6 +331,7 @@ update_appfile_executable = lambda data: update_appfile(data, 'executable', inpu
 
 update_appfile_execute = lambda data: \
   tuxapp.install_app_packages(data['app']) and \
+  tuxapp.install_app_runner(data['app']) and \
   execute_app(data['app'])
 
 update_appfile_free_license = lambda data: update_appfile(data, 'free-license', input_free_license(data.get('free-license', 'yes')))
