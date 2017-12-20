@@ -41,6 +41,15 @@ def handle_exceptions(function):
 def test_app_worker(app):
   return test_app(app)
 
+build_app_readonly_bind_paths = lambda app=None: \
+  tuple(path for pattern in (
+    '/usr/lib/*-linux-gnu/alsa-lib',
+    '/usr/lib/*-linux-gnu/pulseaudio',
+    '/usr/lib/locale',
+    '/usr/share/alsa',
+    get_app_xauthority_path(app or tuxapp.get_name()),
+  ) for path in glob.iglob(pattern))
+
 build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_trace=False: \
   utilities.install_missing_package('bubblewrap', 'bwrap') and \
   ('bwrap', '--bind', tuxapp.get_app_root_path(distribution), '/',
@@ -53,19 +62,10 @@ build_bwrap_arguments = lambda distribution, app=None, arguments=(), is_trace=Fa
     '--tmpfs', '/tmp',
   ) + \
   (('--bind', tuxapp.get_app_path(app), tuxapp.get_app_path(app)) if app else ()) + \
-  tuple(option for path in build_bwrap_readonly_bind_paths() for option in ('--ro-bind', path, path)) + \
-  (('--ro-bind', get_app_xauthority_path(app), get_app_xauthority_path(app)) if app and os.path.isfile(get_app_xauthority_path(app)) else ()) + \
+  tuple(option for path in build_app_readonly_bind_paths(app) for option in ('--ro-bind', path, path)) + \
   (('--setenv', 'TUXAPP_TRACE', '1') if is_trace else ()) + \
   ('bash', '-l') + \
   ((tuxapp.get_app_runner_path(app),) + arguments if app else ())
-
-build_bwrap_readonly_bind_paths = lambda: \
-  tuple(path for pattern in (
-    '/usr/lib/*-linux-gnu/alsa-lib',
-    '/usr/lib/*-linux-gnu/pulseaudio',
-    '/usr/lib/locale',
-    '/usr/share/alsa',
-  ) for path in glob.iglob(pattern))
 
 build_root_bwrap_arguments = lambda distribution: \
   utilities.install_missing_package('bubblewrap', 'bwrap') and \
