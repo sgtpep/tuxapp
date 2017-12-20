@@ -40,17 +40,20 @@ def validate(validate_function):
   return decorator
 
 def execute_app(app):
-  for distribution in testing.get_test_distributions()[:2]:
-    print('Executing {} on {}'.format(app, distribution), file=sys.stderr)
-    tuxapp.call_process(testing.build_bwrap_arguments(distribution, app))
-    if not confirm_message('Continue?'):
-      raise AssertionError
   print('Executing {} with firejail'.format(app), file=sys.stderr)
   utilities.install_missing_package('firejail')
   tuxapp.call_process((tuxapp.get_app_runner_path(app),))
   if not confirm_message('Continue?'):
+    tuxapp.remove_file(tuxapp.get_app_runner_path(app))
     raise AssertionError
-  return True
+  print('Executing {} on {}'.format(app, testing.get_default_distribution()), file=sys.stderr)
+  tuxapp.call_process(testing.build_bwrap_arguments(testing.get_default_distribution(), app))
+  if not confirm_message('Continue?'):
+    tuxapp.remove_file(tuxapp.get_app_runner_path(app))
+    raise AssertionError
+  if not testing.test_app(app):
+    tuxapp.remove_file(tuxapp.get_app_runner_path(app))
+    raise AssertionError
 
 def input_text(message, prefill='', choices=(), is_whitespacy=False):
   try:
@@ -339,7 +342,7 @@ update_appfile_execute = lambda data: \
     if os.path.isfile(tuxapp.get_app_runner_path(data['app'])) else \
   tuxapp.install_app_appfile_packages(data['app']) and \
   tuxapp.install_app_runner(data['app']) and \
-  (execute_app(data['app']) or tuxapp.remove_file(tuxapp.get_app_runner_path(data['app']))) and \
+  execute_app(data['app']) and \
   data
 
 update_appfile_free_license = lambda data: update_appfile(data, 'free-license', input_free_license(data.get('free-license', 'yes')))
