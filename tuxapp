@@ -563,7 +563,7 @@ copy_updated_file = lambda path, destination_path: \
   destination_path
 
 detect_app_library_packages = \
-  log('Detecting library packages')(
+  log(lambda app, libraries, *args, **kwargs: libraries and 'Detecting library packages')(
     lambda app, libraries: \
       tuple(sorted(set(
         tuple(package for package in (query_app_package_data(app, (library, 'package')) for library in libraries) if package) + \
