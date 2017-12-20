@@ -364,7 +364,7 @@ filter_app_downloads_url = lambda app, url: \
 filter_app_screenshot_url = lambda app, url: \
   '' \
     if re.search({
-      'avidemux': '/menu-screenshots-inactive\.png$',
+      'avidemux': r'/menu-screenshots-inactive\.png$',
       'jumpfm': r'/dev\.png$',
       'skype': r'\bscreenshots\.debian\.net/',
       'visual-studio-code': r'\.svg$',
