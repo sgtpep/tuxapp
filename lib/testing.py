@@ -272,7 +272,7 @@ test_app_process = \
       kill -9 $(echo "$output" | grep -Po '(?<= Process )\d+') 2> /dev/null
       echo "$output"
       '''.format(
-        'xvfb-run -a -f {} '.format(tuxapp.quote_argument(get_app_xauthority_path(app))) if tuxapp.is_existing_command('xvfb-run') else '',
+        'xvfb-run -a -f {} -s "-screen 0 800x600x24" '.format(tuxapp.quote_argument(get_app_xauthority_path(app))) if tuxapp.is_existing_command('xvfb-run') else '',
         tuxapp.quote_argument(str(get_process_timeout())),
         tuxapp.join_arguments(build_bwrap_arguments(install_missing_container(distribution), app)).replace(' bash ', ' strace -f -e none bash ', 1),
       ), True)
