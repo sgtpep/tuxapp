@@ -44,12 +44,12 @@ def execute_app(app):
     print('Executing {} on {}'.format(app, distribution), file=sys.stderr)
     tuxapp.call_process(testing.build_bwrap_arguments(distribution, app))
     if not confirm_message('Continue?'):
-      raise KeyboardInterrupt
+      raise AssertionError
   print('Executing {} with firejail'.format(app), file=sys.stderr)
   utilities.install_missing_package('firejail')
   tuxapp.call_process((tuxapp.get_app_runner_path(app),))
   if not confirm_message('Continue?'):
-    raise KeyboardInterrupt
+    raise AssertionError
   return True
 
 def input_text(message, prefill='', choices=(), is_whitespacy=False):
