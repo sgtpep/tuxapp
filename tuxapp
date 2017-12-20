@@ -617,7 +617,7 @@ detect_missing_app_libraries_ldd = lambda app, paths: \
   ))) or '').splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and not any(os.path.basename(path) == library or os.path.basename(path).startswith('{}.'.format(library)) for path in paths))))
 
 detect_missing_app_libraries_verbose = \
-  log('Detecting missing libraries')(
+  log('Checking libraries')(
     lambda app: detect_missing_app_libraries_ldd(app, list_directory_elf_files(get_app_distribution_path(app)))
   )
 
