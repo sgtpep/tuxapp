@@ -116,6 +116,7 @@ configure_debian_container = lambda distribution: \
   update_debian_container(distribution) and \
   call_root_script(distribution, r'''
   packages=(
+    ca-certificates
     fontconfig-config
     fonts-dejavu-core
     strace

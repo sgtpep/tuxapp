@@ -1,0 +1,19 @@
+category=office
+description=Electron Cash gives you what you love about the popular Electrum Bitcoin wallet, but for Bitcoin Cash. Control your own private keys. Back up your wallet easily with a mnemonic seed phrase. SPV technology provides high security without having to download the blockchain or run a full node.
+desktop-entry=
+download-x86-64-url=https://electroncash.org/downloads/{version}/win-linux/ElectronCash-{version}.tar.gz {debian}/main/p/pyaes/python3-pyaes_1.6.0-1_all.deb {debian}/main/j/jsonrpclib-pelix/jsonrpclib-pelix_0.3.1.orig.tar.gz
+download-x86-url=https://electroncash.org/downloads/{version}/win-linux/ElectronCash-{version}.tar.gz {debian}/main/p/pyaes/python3-pyaes_1.6.0-1_all.deb {debian}/main/j/jsonrpclib-pelix/jsonrpclib-pelix_0.3.1.orig.tar.gz
+executable=./electron-cash
+firejail=--noblacklist=~/.electron-cash
+free-license=yes
+group=cryptocurrency-wallets
+homepage-url=https://www.electroncash.org/
+icon-url=https://raw.githubusercontent.com/fyookball/electrum/master/icons/electron-cash.png
+ignored-libraries=
+name=Electron Cash
+note=
+package-repository=stretch
+packages=python3-dnspython python3-ecdsa python3-pbkdf2 python3-protobuf python3-pyqt5 python3-qrcode python3-requests python3-socks
+title=SPV Wallet for Bitcoin Cash
+version-regex=/ElectronCash-(.+?).tar.gz
+version-url=https://www.electroncash.org/
