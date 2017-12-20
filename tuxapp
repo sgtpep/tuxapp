@@ -614,7 +614,7 @@ detect_missing_app_libraries_ldd = lambda app, paths: \
     build_firejail_arguments() + \
     ('env', 'LC_ALL=C', get_app_root_binary_path(app, 'ldd')) + \
     paths
-  ))) or '').splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and not any(os.path.basename(path) == library for path in paths) and library not in query_appfile(app, 'ignored-libraries'))))
+  ))) or '').splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and not any(os.path.basename(path) == library or os.path.basename(path).startswith('{}.'.format(library)) for path in paths))))
 
 detect_missing_app_libraries_verbose = \
   log('Detecting missing libraries')(
