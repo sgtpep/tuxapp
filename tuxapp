@@ -1301,7 +1301,6 @@ patch_app_elf_files = lambda app, path: \
   patch_app_elf_files_patchelf(app, list_directory_elf_files(path))
 
 patch_app_elf_files_patchelf = \
-  log('Patching ELF files')(
   check('Failed to patch ELF files for {}')(
     lambda app, paths: \
       uncheck(call_process)(join_arguments(
@@ -1336,7 +1335,7 @@ patch_app_elf_files_patchelf = \
               sys.exit(1)
       EOF
       '''))
-  ))
+  )
 
 patch_app_package = lambda app, package: \
   symlink_file(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'libGL.so.1')), 'mesa/libGL.so.1') \
