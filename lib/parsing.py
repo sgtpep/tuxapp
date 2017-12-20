@@ -291,7 +291,10 @@ class ScreenshotsURLParser(BaseParser):
 
   def on_tag(self, tag, attributes):
     if tag == 'a':
-      self.read_content(tag, attributes)
+      if attributes.get('href') and re.search(r'\bscreenshots\b', attributes['href'], re.I):
+        raise ResultException(attributes['href'])
+      else:
+        self.read_content(tag, attributes)
 
 class TitleParser(BaseParser):
   is_head = True
