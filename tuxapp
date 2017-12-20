@@ -600,7 +600,7 @@ detect_library_directory_name = lambda: \
 
 detect_missing_app_file_libraries = lambda app, paths: \
   paths and \
-  tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in read_app_ldd_output(app, paths).splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and not any(os.path.basename(path) == library or os.path.basename(path).startswith('{}.'.format(library)) for path in paths))))
+  tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in read_app_ldd_output(app, paths).splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and not any(os.path.basename(path) == library or os.path.basename(path).startswith('{}.'.format(library)) for path in paths) and library not in query_appfile(app, 'ignored-libraries'))))
 
 detect_missing_app_libraries = lambda app: \
   install_app_packages(app, ('libc-bin',)) and \
