@@ -1024,9 +1024,12 @@ install_app_runner = lambda app: \
       result_firejail_arguments+=(--env="$name=${argument_environment[$name]}")
     done
 
+    declare app_firejail_options
+    read_firejail_options app_firejail_options
+
     declare path
     for path in "${firejail_blacklisted_paths[@]}"; do
-      [[ ! -e ${path/#~/$HOME} ]] || result_firejail_arguments+=(--blacklist="$path")
+      [[ ! -e ${path/#~/$HOME} || " ${firejail_options+"${firejail_options[@]}"} ${app_firejail_options+"${app_firejail_options[@]}"} " == *" --noblacklist"[\ =]"$path "* ]] || result_firejail_arguments+=(--blacklist="$path")
     done
 
     result_firejail_arguments+=(--read-only="$root_path")
@@ -1051,9 +1054,6 @@ install_app_runner = lambda app: \
         [[ $profile != *whitelist\ * ]] || result_firejail_arguments+=(--whitelist={"$distribution_path","$root_path"})
       fi
     fi
-
-    declare app_firejail_options
-    read_firejail_options app_firejail_options
 
     result_firejail_arguments+=(${firejail_options+"${firejail_options[@]}"} ${app_firejail_options+"${app_firejail_options[@]}"})
 
