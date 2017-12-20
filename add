@@ -42,7 +42,7 @@ def validate(validate_function):
 def detect_app_library_packages(app, packages=()):
   tuxapp.install_app_runner(app)
   try:
-    tuxapp.install_app_packages(app, tuxapp.expand_package_groups(packages))
+    tuxapp.install_app_packages(app, packages)
   except AssertionError as exception:
     tuxapp.print_exception(exception)
     return packages
@@ -128,11 +128,7 @@ check_url_protocol = lambda url: \
     if validation.is_url_valid(url) and not validation.check_url_https(url) else \
   url
 
-complete_app_packages = lambda app, text, state: \
-  (
-    tuple(group for group in tuxapp.get_package_groups().keys() if text and group.startswith(text)) + \
-    tuple(row[0].split(':', 1)[0] for row in tuxapp.connect_data(tuxapp.get_app_package_data_path(app)).execute('SELECT key FROM items WHERE key LIKE ? LIMIT 100', ('{}%:url'.format(text),)).fetchall())
-  )[state]
+complete_app_packages = lambda app, text, state: tuple(row[0].split(':', 1)[0] for row in tuxapp.connect_data(tuxapp.get_app_package_data_path(app)).execute('SELECT key FROM items WHERE key LIKE ? LIMIT 100', ('{}%:url'.format(text),)).fetchall())[state]
 
 confirm_message = lambda message, is_no=False: \
   not re.match(r'($|n)', input_text('{} [y/N]'.format(message)), re.I) \
@@ -152,18 +148,11 @@ detect_app_executable = lambda app: \
   tuxapp.install_app_distribution(app) and \
   detect_installed_app_executable(app)
 
-detect_app_package_groups = lambda filenames: \
-  ('group-chromium',) \
-    if 'nw_100_percent.pak' in filenames else \
-  ('group-electron',) \
-    if any(filename in filenames for filename in get_electron_filenames()) else \
-  ()
-
 detect_app_packages = lambda app, packages='', installed_packages='': \
   packages \
     if packages and packages == installed_packages else \
   (packages and set(packages.split()) >= set(installed_packages.split()) or tuxapp.remove_directory(tuxapp.get_app_root_path(app))) and \
-  ' '.join(detect_app_library_packages(app, tuple(packages.split()) or detect_app_package_groups(set(os.path.basename(path) for path in tuxapp.list_app_distribution(app)))))
+  ' '.join(detect_app_library_packages(app, tuple(packages.split())))
 
 detect_installed_app_executable = lambda app: \
   './AppRun' \
@@ -230,14 +219,6 @@ filter_version_url = lambda url: re.sub(r'^.+({}/releases\b).*$'.format(utilitie
 generate_appfile = lambda data: ''.join('{}={}\n'.format(key, data[key]) for key in sorted(data) if key != 'app')
 
 get_default_app = lambda: 'temp'
-
-get_electron_filenames = lambda: \
-  (
-    'atom.asar',
-    'cef.pak',
-    'electron.asar',
-    'nw.pak',
-  )
 
 get_library_package = lambda filename: \
   {

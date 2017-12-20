@@ -684,10 +684,6 @@ execute_app = lambda app, arguments=(): execute_process((get_app_runner_path(app
 
 execute_process = lambda arguments: os.execvp(arguments[0], arguments)
 
-expand_package_group = lambda group: get_package_groups().get(group, (group,))
-
-expand_package_groups = lambda packages: tuple(package for package in packages for package in expand_package_group(package))
-
 extract_app = lambda string: os.path.basename(string)
 
 extract_package_name = lambda path: os.path.basename(path).split('_', 1)[0]
@@ -799,40 +795,6 @@ get_package_exclusions = lambda package: \
   ) + \
   (('/bin', '/usr/bin') if package.startswith('lib') and package not in ('libarchive-tools', 'libc-bin') else ()) + \
   (() if package == 'libqt5webengine-data' else ('/usr/share',))
-
-get_package_groups = lambda: \
-  {
-    'group-chromium': (
-      'libasound2',
-      'libgconf-2-4',
-      'libgl1-mesa-dri',
-      'libgl1-mesa-glx',
-      'libgtk-3-0',
-      'libnss3',
-      'libxss1',
-      'libxtst6',
-    ),
-    'group-electron': (
-      'libasound2',
-      'libgconf-2-4',
-      'libgtk2.0-0',
-      'libnss3',
-      'libpulse0',
-      'libudev1',
-      'libxkbfile1',
-      'libxss1',
-      'libxtst6',
-    ),
-    'group-firefox': (
-      'libdbus-glib-1-2',
-      'libgtk-3-0',
-      'libxt6',
-    ),
-    'group-opengl': (
-      'libgl1-mesa-dri',
-      'libgl1-mesa-glx',
-    ),
-  }
 
 get_package_install_command = lambda package, message='{}': \
   message.format('sudo apt install {}'.format(package)) \
@@ -1377,7 +1339,7 @@ query_appfile = lambda app, key: \
     if key == 'download-urls' else \
   tuple(query_appfile_value(app, 'ignored-libraries').split()) \
     if key == 'ignored-libraries' else \
-  expand_package_groups(query_appfile_value(app, 'packages').split()) \
+  tuple(query_appfile_value(app, 'packages').split()) \
     if key == 'packages' else \
   query_appfile_value(app, key).lstrip('~') \
     if key in ('description', 'name', 'title') else \
