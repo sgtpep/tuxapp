@@ -1502,11 +1502,14 @@ sanitize_command = lambda command: join_arguments(split_command(command))
 
 search = lambda pattern, string, flags=0, group=0: getattr(re.search(pattern, string, flags), 'group', lambda *args, **kwargs: '')(group)
 
-unpack_app_appimage1_distribution = \
+unpack_app_appimage1_distribution = lambda app, path: \
+  install_app_packages(app, ('libarchive-tools', 'liblzo2-2')) and \
+  unpack_app_appimage1_distribution_verbose(app, path)
+
+unpack_app_appimage1_distribution_verbose = \
   log(lambda app, path, *args, **kwargs: 'Unpacking {}'.format(os.path.basename(path)))(
   check(lambda app, path, *args, **kwargs: 'Failed to unpack {}'.format(os.path.basename(path)))(
     lambda app, path: \
-      install_app_packages(app, ('libarchive-tools', 'liblzo2-2')) and \
       uncheck(call_process)(
         build_firejail_arguments() + \
         (get_app_root_binary_path(app, 'bsdtar'), '-x', '-C', make_directories(get_app_distribution_path(app)), '-f', path)
