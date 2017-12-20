@@ -1,0 +1,19 @@
+category=office
+description=Electrum is fast, because it uses servers that index the Bitcoin blockchain.
+desktop-entry=
+download-x86-64-url=https://download.electrum.org/{version}/Electrum-{version}.tar.gz
+download-x86-url=https://download.electrum.org/{version}/Electrum-{version}.tar.gz
+executable=./electrum
+firejail=--noblacklist=~/.electrum
+free-license=yes
+group=cryptocurrency-wallets
+homepage-url=https://electrum.org/
+icon-url=https://electrum.org/images/favicon.png
+ignored-libraries=
+name=Electrum
+note=
+package-repository=stretch
+packages=
+title=Bitcoin wallet
+version-regex=Electrum-([^<]+)
+version-url=https://electrum.org/panel-download.html
