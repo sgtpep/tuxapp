@@ -930,13 +930,13 @@ install_app_package_files = \
   log(lambda app, paths, *args, **kwargs: paths and 'Installing packages: {}'.format(', '.join(extract_package_name(path) for path in paths)))(
     lambda app, paths: \
       all(install_app_package_file(app, path) for path in paths) and \
-      (not paths or any(extract_package_name(path) == 'patchelf' for path in paths) or patch_app_elf_files(app, get_app_root_path(app))) and \
       all(write_app_package_file_version(app, path) for path in paths)
   )
 
-install_app_packages = lambda app, packages=None: \
+install_app_packages = lambda app, packages: \
   update_app_package_lists(app) and \
-  install_app_package_files(app, download_app_packages(app, resolve_outdated_app_packages(app, packages or query_appfile(app, 'packages')))) and \
+  install_app_package_files(app, download_app_packages(app, resolve_outdated_app_packages(app, packages))) and \
+  (not packages or 'patchelf' in packages or patch_app_elf_files(app, get_app_root_path(app))) and \
   all(remove_file(path) if os.path.isfile(get_app_cached_file_path(app, path)) else rename_file(path, get_app_cached_file_path(app, path)) for path in glob.iglob(get_app_temp_file_path(app, '*.deb'))) and \
   remove_old_files(get_app_cached_file_path(app, '*.deb'))
 
