@@ -107,7 +107,7 @@ check_appfile_existence = lambda app: \
 
 check_url_protocol = lambda url: \
   url.replace('http://', 'https://', 1) \
-    if validation.is_url_valid(url) and not validation.check_url_https(url) else \
+    if validation.is_url_valid(url) and not sys.argv[1:] and not validation.check_url_https(url) else \
   url
 
 complete_app_packages = lambda app, text, state: tuple(row[0].split(':', 1)[0] for row in tuxapp.connect_data(tuxapp.get_app_package_data_path(app)).execute('SELECT key FROM items WHERE key LIKE ? LIMIT 100', ('{}%:url'.format(text),)).fetchall())[state]
