@@ -917,7 +917,9 @@ install_app_distribution = lambda app: \
   write_app_version(app) and \
   get_app_distribution_path(app)
 
-install_app_icon = lambda app: uncheck(download_missing_app_file)(app, query_appfile(app, 'icon-url'), get_app_icon_path(app))
+install_app_icon = lambda app: \
+  not query_appfile(app, 'icon-url') or \
+  uncheck(download_missing_app_file)(app, query_appfile(app, 'icon-url'), get_app_icon_path(app))
 
 install_app_package_file = lambda app, path: \
   silence(unpack_package)(path, get_app_root_path(app), tuple('--exclude=.{}'.format(exclusion) for exclusion in get_package_exclusions(extract_package_name(path)))) and \
