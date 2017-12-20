@@ -469,13 +469,6 @@ build_app_package_list_urls = \
       ))
   )
 
-build_app_packages = \
-  lambda app: tuple(sorted(set(
-    detect_app_library_packages(app, detect_missing_app_libraries(app)) + \
-    ('libudev1',) + \
-    query_appfile(app, 'packages')
-  )))
-
 build_app_runner_relative_path = lambda app, path: re.sub(r'/\.$', '', os.path.join('${0%/*}', quote_argument(os.path.relpath(path, os.path.dirname(get_app_runner_path(app))))))
 
 build_curl_request_arguments = lambda options, is_gzip=False: \
@@ -574,7 +567,8 @@ detect_app_library_packages = \
             if is_library_package_ignored(line) or items[-1][1] else \
           update_app_package_data(app, (items[-1][0], 'package'), line) and \
           items[:-1] + ((items[-1][0], line),),
-        request_app_library_packages(app, libraries), ()))
+        request_app_library_packages(app, libraries), ())) + \
+        ('libudev1',)
       )))
   )
 
@@ -617,7 +611,7 @@ detect_missing_app_libraries_ldd = lambda app, paths: \
   ))) or '').splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and not any(os.path.basename(path) == library or os.path.basename(path).startswith('{}.'.format(library)) for path in paths))))
 
 detect_missing_app_libraries_verbose = \
-  log('Checking libraries')(
+  log('Detecting missing libraries')(
     lambda app: detect_missing_app_libraries_ldd(app, list_directory_elf_files(get_app_distribution_path(app)))
   )
 
@@ -914,9 +908,10 @@ install_app_distribution = lambda app: \
     if is_app_updated(app) else \
   all(unpack_app_distribution(app, path) for path in tuple(download_missing_app_file(app, url, get_app_temp_file_path(app, build_app_distribution_filename(app, url))) for url in query_appfile(app, 'download-urls'))) and \
   patch_app_elf_files(app, get_app_distribution_path(app)) and \
-  write_app_version(app) and \
   all(remove_file(path) for path in glob.iglob(get_app_temp_file_path(app, '*'))) and \
+  install_app_packages(app, detect_app_library_packages(app, detect_missing_app_libraries(app))) and \
   remove_file(get_app_icon_path(app)) and \
+  write_app_version(app) and \
   get_app_distribution_path(app)
 
 install_app_icon = lambda app: uncheck(download_missing_app_file)(app, query_appfile(app, 'icon-url'), get_app_icon_path(app))
@@ -936,7 +931,7 @@ install_app_package_files = \
 
 install_app_packages = lambda app, packages=None: \
   update_app_package_lists(app) and \
-  install_app_package_files(app, download_app_packages(app, resolve_outdated_app_packages(app, packages or build_app_packages(app)))) and \
+  install_app_package_files(app, download_app_packages(app, resolve_outdated_app_packages(app, packages or query_appfile(app, 'packages')))) and \
   all(remove_file(path) if os.path.isfile(get_app_cached_file_path(app, path)) else rename_file(path, get_app_cached_file_path(app, path)) for path in glob.iglob(get_app_temp_file_path(app, '*.deb'))) and \
   remove_old_files(get_app_cached_file_path(app, '*.deb'))
 
