@@ -843,7 +843,7 @@ get_xdg_cache_path = lambda: os.environ.get('XDG_CACHE_HOME', os.path.expanduser
 
 get_xdg_data_path = lambda: os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
 
-hash_app_download_urls = lambda app: hash_md5(' '.join(query_appfile(app, 'download-urls')))
+hash_app_download_urls = lambda app: hash_md5(' '.join(query_appfile_download_urls(app)))
 
 hash_md5 = lambda string: hashlib.md5(string.encode('utf-8', 'replace')).hexdigest()
 
@@ -1162,7 +1162,8 @@ is_app_installed = lambda app: \
 
 is_app_updated = lambda app: \
   is_app_installed(app) and \
-  read_app_version(app) == request_app_version_cached(app)
+  read_app_version(app) == request_app_version_cached(app) and \
+  read_app_download_urls_hash(app) == hash_app_download_urls(app)
 
 is_debian_repository = lambda repository: \
   repository in (
@@ -1329,7 +1330,7 @@ query_app_package_url = \
   )
 
 query_appfile = lambda app, key: \
-  query_appfile_download_urls(app) \
+  tuple(filter_app_download_url(app, url) for url in query_appfile_download_urls(app)) \
     if key == 'download-urls' else \
   tuple(query_appfile_value(app, 'ignored-libraries').split()) \
     if key == 'ignored-libraries' else \
@@ -1341,7 +1342,7 @@ query_appfile = lambda app, key: \
 
 query_appfile_download_urls = \
   check('No download URL of {} for your architecture')(
-    lambda app: tuple(filter_app_download_url(app, url) for url in (uncheck(query_appfile_value)(app, 'download-{}-url'.format(detect_architecture())) or '').split())
+    lambda app: (uncheck(query_appfile_value)(app, 'download-{}-url'.format(detect_architecture())) or '').split()
   )
 
 query_appfile_value = \
