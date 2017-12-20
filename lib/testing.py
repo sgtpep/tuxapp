@@ -142,12 +142,7 @@ extract_app_library = lambda app, string: \
     if is_app_library_ignored(app, extract_library(string)) else \
   extract_library(string)
 
-extract_library = lambda string: \
-  'libqxcb.so' \
-    if ' could not find or load the Qt platform plugin "xcb"' in string else \
-  tuxapp.search(r'[\w.-]+\.so\b[\w.]*', string) \
-    if '/nacl_helper: error while loading shared libraries: ' not in string else \
-  ''
+extract_library = lambda string: tuxapp.search(r'[\w.-]+\.so\b[\w.]*', string)
 
 get_app_xauthority_path = lambda app: os.path.join(tuxapp.get_app_path(app), '.Xauthority')
 
