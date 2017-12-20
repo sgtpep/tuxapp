@@ -598,21 +598,17 @@ detect_library_directory_name = lambda: \
     'i386': 'i386',
   }.get(detect_debian_architecture()))
 
+detect_missing_app_file_libraries = lambda app, paths: \
+  paths and \
+  tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in read_app_ldd_output(app, paths).splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and not any(os.path.basename(path) == library or os.path.basename(path).startswith('{}.'.format(library)) for path in paths))))
+
 detect_missing_app_libraries = lambda app: \
   install_app_packages(app, ('libc-bin',)) and \
   detect_missing_app_libraries_verbose(app)
 
-detect_missing_app_libraries_ldd = lambda app, paths: \
-  paths and \
-  tuple(sorted(set(library for library in (line.split(' => ', 1)[0].lstrip('\t') for line in (uncheck(read_process)('{} || :'.format(join_arguments(
-    build_firejail_arguments() + \
-    ('env', 'LC_ALL=C', get_app_root_binary_path(app, 'ldd')) + \
-    paths
-  ))) or '').splitlines() if line.endswith(' not found') or ' => ' in line and ' {}/'.format(get_app_path(app)) not in line) if not library.startswith('/') and not any(os.path.basename(path) == library or os.path.basename(path).startswith('{}.'.format(library)) for path in paths))))
-
 detect_missing_app_libraries_verbose = \
   log('Detecting missing libraries')(
-    lambda app: detect_missing_app_libraries_ldd(app, list_directory_elf_files(get_app_distribution_path(app)))
+    lambda app: detect_missing_app_file_libraries(app, list_directory_elf_files(get_app_distribution_path(app)))
   )
 
 download_app_file = \
@@ -1360,6 +1356,13 @@ query_package_data_header = lambda path, key: parse_package_data_header(path).ge
 read_app_download_urls_hash = lambda app: read_app_version_components(app)[-1]
 
 read_app_firejail_options = lambda app: read_file(get_app_firejail_options_path(app)).rstrip()
+
+read_app_ldd_output = lambda app, paths: \
+  uncheck(read_process)('{} || :'.format(join_arguments(
+    build_firejail_arguments() + \
+    ('env', 'LC_ALL=C', get_app_root_binary_path(app, 'ldd')) + \
+    paths
+  ))) or ''
 
 read_app_lock = lambda app: int(read_file(get_app_lock_path(app)) or '0')
 
