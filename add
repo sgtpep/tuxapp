@@ -239,9 +239,9 @@ input_app_download_url = \
   )
 
 input_app_executable = \
-  tuxapp.log(lambda app, *args, **kwargs: 'Executables: {}'.format(', '.join(list_app_executables(app))))(
+  tuxapp.log(lambda app, prefill='', *args, **kwargs: not prefill and 'Executables: {}'.format(', '.join(list_app_executables(app))))(
   validate(lambda app, *args, **kwargs: validation.validate_executable(kwargs['result']))(
-    lambda app, prefill='': filter_executable(input_text('Executable', prefill, list_app_executables(app) + tuple('./{}'.format(path) for path in list_app_executables(app))))
+    lambda app, prefill='': filter_executable(input_text('Executable', prefill, () if prefill else list_app_executables(app) + tuple('./{}'.format(path) for path in list_app_executables(app))))
   ))
 
 input_app_name = \
