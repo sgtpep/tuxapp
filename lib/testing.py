@@ -24,8 +24,7 @@ def check_app_process_output(function):
         print(output, file=sys.stderr)
     elif time.time() - timestamp < get_process_timeout() - 0.5 and not is_app_process_output_ignored(app, distribution, output):
       print('\n{}'.format(output), file=sys.stderr)
-      print('{} terminated unexpectedly on {}'.format(app, distribution), file=sys.stderr)
-      raise AssertionError
+      raise AssertionError('{} terminated unexpectedly on {}'.format(app, distribution))
     return output
   return wrapper
 
@@ -263,7 +262,7 @@ test_app = lambda app, distribution=None: \
   test_installed_app(app, distribution) \
     if tuxapp.is_app_installed(app) else \
   (handle_exceptions(tuxapp.install_app)(app) or tuxapp.remove_app(app) and False) and \
-  (tuxapp.remove_app(app) if tuxapp.uncheck(test_installed_app)(app, distribution) else tuxapp.remove_app(app) and False)
+  ((handle_exceptions(test_installed_app)(app, distribution) or True) and tuxapp.remove_app(app) and False)
 
 test_app_process = \
   tuxapp.log('Trying {} on {}')(
