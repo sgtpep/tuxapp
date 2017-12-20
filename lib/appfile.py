@@ -39,6 +39,7 @@ get_groups = lambda: \
     'role-playing',
     'sports-utilities',
     'version-control',
+    'video-editing',
     'video-streaming',
     'web-browsers',
     'web-development',
