@@ -335,9 +335,11 @@ update_appfile_download_x86_url = lambda data: update_appfile(data, 'download-x8
 update_appfile_executable = lambda data: update_appfile(data, 'executable', input_app_executable(data['app'], data['executable'] if 'executable' in data else detect_app_executable(data['app'])))
 
 update_appfile_execute = lambda data: \
+  data \
+    if os.path.isfile(tuxapp.get_app_runner_path(data['app'])) else \
   tuxapp.install_app_appfile_packages(data['app']) and \
   tuxapp.install_app_runner(data['app']) and \
-  execute_app(data['app']) and \
+  (execute_app(data['app']) or tuxapp.remove_file(tuxapp.get_app_runner_path(data['app']))) and \
   data
 
 update_appfile_free_license = lambda data: update_appfile(data, 'free-license', input_free_license(data.get('free-license', 'yes')))
