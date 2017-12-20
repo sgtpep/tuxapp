@@ -13,7 +13,7 @@ ignored-libraries=
 name=SeaMonkey
 note=
 package-repository=stretch
-packages=group-firefox libasound2
+packages=
 title=All-in-one internet application suite
 version-regex==seamonkey-([^&"]+)
 version-url=https://www.seamonkey-project.org/

@@ -13,7 +13,7 @@ ignored-libraries=
 name=Apache OpenOffice
 note=
 package-repository=stretch
-packages=libdbus-glib-1-2 libgtk2.0-0 libsm6
+packages=
 title=The free and open productivity suite
 version-regex=^DL.VERSION\s*=\s*"([^"]+)
 version-url=https://www.openoffice.org/download/globalvars.js
