@@ -869,12 +869,14 @@ install_app = \
   )(
     lambda app: \
       install_app_distribution(app) and \
-      install_app_packages(app) and \
+      install_app_appfile_packages(app) and \
       install_app_runner(app) and \
       check_app_firejail(app) and \
       install_app_desktop_entry(app) and \
       get_app_path(app)
   )))
+
+install_app_appfile_packages = lambda app: install_app_packages(app, query_appfile(app, 'packages'))
 
 install_app_browser = lambda app: \
   write_bash_script(get_app_root_binary_path(app, 'browser'), r'''
