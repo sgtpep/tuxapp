@@ -243,6 +243,7 @@ is_app_firefox_based = lambda app: \
 
 is_app_process_output_ignored = lambda app, distribution, output: \
   {
+    'drl': 'EInOutError : Invalid input',
     'qutebrowser': 'Could not initialize GLX',
     'subsurface': 'Could not initialize GLX',
     'supertuxkart': 'Fatal error, could not get visual.',
