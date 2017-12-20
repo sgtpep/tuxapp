@@ -1328,7 +1328,7 @@ patch_app_elf_files_patchelf = \
           if patched_paths != paths:
             if not os.access(path, os.W_OK):
               os.chmod(path, os.stat(path).st_mode | stat.S_IWUSR)
-            output = subprocess.check_output('{} {}--force-rpath {}--set-rpath {} {} 2>&1 || :'.format(patchelf_command, '' if is_old_patchelf else '--no-default-lib ', '--set-interpreter {} '.format(quote(interpreter_path)) if os.access(path, os.X_OK) and os.path.splitext(path)[1] != '.so' and '.so.' not in path else '', quote(':'.join(patched_paths)), quote(path)), shell=True)
+            output = subprocess.check_output('{} {}--force-rpath {}--set-rpath {} {} 2>&1 || :'.format(patchelf_command, '' if is_old_patchelf else '--no-default-lib ', '--set-interpreter {} '.format(quote(interpreter_path)) if os.access(path, os.X_OK) and os.path.splitext(path)[1] not in ('.node', '.so') and '.so.' not in path else '', quote(':'.join(patched_paths)), quote(path)), shell=True)
             if not all(line.startswith('warning: working around ') or line == 'cannot find section .interp' or is_old_patchelf and line == 'maximum file size exceeded' for line in output.splitlines()):
               print('Failed to patch {}'.format(path), file=sys.stderr)
               print(output, end='', file=sys.stderr)
