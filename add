@@ -326,7 +326,7 @@ update_appfile_app = lambda data: update_appfile(data, 'app', input_app(filter_a
 
 update_appfile_category = lambda data: update_appfile(data, 'category', input_category(data.get('category', '')))
 
-update_appfile_description = lambda data: update_appfile(data, 'description', input_app_description(data['app'], data['description'] if 'description' in data else filter_description(parsing.parse_description(data['homepage-url']))))
+update_appfile_description = lambda data: update_appfile(data, 'description', input_app_description(data['app'], data['description'] if data.get('description') else filter_description(parsing.parse_description(data['homepage-url']))))
 
 update_appfile_download_x86_64_url = lambda data: update_appfile(data, 'download-x86-64-url', input_app_download_url(data['app'], 'x86-64', data.get('download-x86-64-url', '')))
 
@@ -351,7 +351,7 @@ update_appfile_group = lambda data: update_appfile(data, 'group', input_group(da
 
 update_appfile_homepage_url = lambda data: update_appfile(data, 'homepage-url', input_homepage_url(data.get('homepage-url', '')))
 
-update_appfile_icon_url = lambda data: update_appfile(data, 'icon-url', input_icon_url(data['icon-url'] if 'icon-url' in data else utilities.open_url(filter_url(parsing.parse_icon_url(data['homepage-url'])))))
+update_appfile_icon_url = lambda data: update_appfile(data, 'icon-url', input_icon_url(data['icon-url'] if data.get('icon-url') else utilities.open_url(filter_url(parsing.parse_icon_url(data['homepage-url'])))))
 
 update_appfile_name = lambda data: update_appfile(data, 'name', input_app_name(data['app'], data['name'] if 'name' in data else filter_name(parsing.parse_name(data['homepage-url']))))
 
@@ -361,7 +361,7 @@ update_appfile_packages = lambda data: \
   tuxapp.update_app_package_lists(data['app']) and \
   update_appfile(data, 'packages', input_app_packages(data['app'], data['packages'] if 'packages' in data else filter_packages(data['app'])))
 
-update_appfile_title = lambda data: update_appfile(data, 'title', input_app_title(data['app'], data['title'] if 'title' in data else filter_title(parsing.parse_title(data['homepage-url']))))
+update_appfile_title = lambda data: update_appfile(data, 'title', input_app_title(data['app'], data['title'] if data.get('title') else filter_title(parsing.parse_title(data['homepage-url']))))
 
 update_appfile_version_regex = lambda data: update_appfile(data, 'version-regex', input_app_version_regex(data['app'], data['version-regex'] if 'version-regex' in data else detect_version_regex(parsing.request_url_cached(data.get('version-url') or data['homepage-url']))))
 
