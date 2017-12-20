@@ -55,6 +55,7 @@ EOF
 packages=(
   bubblewrap
   certbot
+  firejail
   git
   goaccess
   haveged
