@@ -1496,7 +1496,7 @@ resolve_app_packages_recursive = lambda app, packages, resolved_packages=set(): 
     resolve_app_packages_recursive(app, tuple(dependency for dependency in query_app_package_depenencies(app, package) if (is_package_library(dependency) or not package.startswith('lib')) and dependency not in resolved_packages), # pylint: disable=undefined-variable
   packages | {package}), packages, set())
 
-resolve_outdated_app_packages = lambda app, packages: tuple(package for package in resolve_app_packages(app, packages) if not extract_package_version(parse_url(query_app_package_url(app, package)).path) == read_app_package_version(app, package))
+resolve_outdated_app_packages = lambda app, packages: tuple(package for package in resolve_app_packages(app, packages) if extract_package_version(parse_url(query_app_package_url(app, package)).path) != read_app_package_version(app, package))
 
 sanitize_command = lambda command: join_arguments(split_command(command))
 
