@@ -472,6 +472,7 @@ build_app_package_list_urls = \
 build_app_packages = \
   lambda app: tuple(sorted(set(
     detect_app_library_packages(app, detect_missing_app_libraries(app)) + \
+    ('libudev1',) + \
     query_appfile(app, 'packages')
   )))
 
