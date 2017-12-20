@@ -157,13 +157,18 @@ filter_app = lambda app: re.sub(r'[^a-z0-9]+', '-', app.lower()).strip('-')
 filter_app_download_url = lambda app, urls, prefill: \
   urls \
     if urls == prefill else \
-  ' '.join(filter_url(url) for url in urls.split()).replace(tuxapp.request_app_version(app), '{version}')
+  ' '.join(filter_url(filter_download_url(url)) for url in urls.split()).replace(tuxapp.request_app_version(app), '{version}')
 
 filter_description = lambda description: \
   description and \
   description[0].upper() + \
   description[1:] + \
   ('' if description[-1] in validation.get_punctuation() else '.')
+
+filter_download_url = lambda url: \
+  'http://downloads.sourceforge.net/project/{}'.format(tuxapp.parse_url(url).path.replace('/projects/', '').replace('/files/', '/').replace('/download', '')) \
+    if tuxapp.parse_url(url).netloc == 'sourceforge.net' else \
+  url
 
 filter_executable = lambda executable: \
   executable \
