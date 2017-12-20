@@ -909,10 +909,14 @@ install_app_distribution = lambda app: \
   all(unpack_app_distribution(app, path) for path in tuple(download_missing_app_file(app, url, get_app_temp_file_path(app, build_app_distribution_filename(app, url))) for url in query_appfile(app, 'download-urls'))) and \
   patch_app_elf_files(app, get_app_distribution_path(app)) and \
   all(remove_file(path) for path in glob.iglob(get_app_temp_file_path(app, '*'))) and \
-  install_app_packages(app, detect_app_library_packages(app, detect_missing_app_libraries(app))) and \
+  install_app_distribution_packages(app) and \
   remove_file(get_app_icon_path(app)) and \
   write_app_version(app) and \
   get_app_distribution_path(app)
+
+install_app_distribution_packages = lambda app: \
+  (read_app_download_urls_hash(app) == hash_app_download_urls(app) or remove_directory(get_app_root_path(app))) and \
+  install_app_packages(app, detect_app_library_packages(app, detect_missing_app_libraries(app)))
 
 install_app_icon = lambda app: uncheck(download_missing_app_file)(app, query_appfile(app, 'icon-url'), get_app_icon_path(app))
 
