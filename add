@@ -40,7 +40,7 @@ def validate(validate_function):
   return decorator
 
 def execute_app(app):
-  for distribution in testing.get_test_distributions():
+  for distribution in testing.get_test_distributions()[:2]:
     print('Executing {} on {}'.format(app, distribution), file=sys.stderr)
     tuxapp.call_process(testing.build_bwrap_arguments(distribution, app))
     if not confirm_message('Continue?'):
