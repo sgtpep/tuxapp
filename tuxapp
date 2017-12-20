@@ -549,10 +549,8 @@ check_apps_updated = \
   )
 
 check_detected_app_library_packages = \
-  check(lambda packages, *args, **kwargs: kwargs['result'] is False and 'Failed to detect packages for libraries: {}'.format(', '.join(library for library, package in packages.items() if not package)))(
-    lambda packages: \
-      all(package for library, package in packages.items()) and \
-      packages
+  log_after(lambda packages, *args, **kwargs: any(not package for library, package in packages.items()) and 'Unable to detect packages for libraries: {}'.format(', '.join(library for library, package in packages.items() if not package)))(
+    lambda packages: dict((library, package) for library, package in packages.items() if package)
   )
 
 connect_data = lambda path: \
