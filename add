@@ -365,7 +365,7 @@ update_appfile_package_repository = lambda data: update_appfile(data, 'package-r
 
 update_appfile_packages = lambda data: \
   tuxapp.update_app_package_lists(data['app']) and \
-  update_appfile(data, 'packages', input_app_packages(data['app'], data['packages'] if 'packages' in data else filter_packages(data['app'])))
+  update_appfile(data, 'packages', input_app_packages(data['app'], data.get('packages', '')))
 
 update_appfile_test = lambda data: \
   data \
