@@ -515,7 +515,7 @@ parse_title = lambda url: \
 parse_version_url = lambda url: \
   '{}/releases/latest'.format(url) \
     if is_github_repository_url(url) else \
-  utilities.build_github_url(parse_github_repository(url), 'releases/latest') \
+  parse_github_latest_release_url(url) \
     if parse_github_repository(url) else \
   ''
 
