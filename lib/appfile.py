@@ -30,6 +30,7 @@ get_groups = lambda: \
     'ebook-utilities',
     'email-clients',
     'file-managers',
+    'game-stores',
     'image-editors',
     'instant-messengers',
     'integrated-development-environments',
