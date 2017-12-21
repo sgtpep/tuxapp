@@ -140,7 +140,7 @@ execute_shell = lambda distribution: tuxapp.execute_process(build_bwrap_argument
 
 extract_app_library = lambda app, string: \
   '' \
-    if is_app_library_ignored(app, extract_library(string)) else \
+    if is_app_library_ignored(app, extract_library(string)) or ' dbus-launch: error while loading shared libraries: libX11.so.6:' in string else \
   extract_library(string)
 
 extract_library = lambda string: tuxapp.search(r'[\w.-]+\.so\b[\w.]*', string)
@@ -242,7 +242,6 @@ is_app_process_output_ignored = lambda app, distribution, output: \
   {
     'drl': 'Can\'t open SDL_Mixer!',
   }.get(app, r'\0') in output or \
-  ' dbus-launch: error while loading shared libraries: libX11.so.6:' in output or \
   distribution == 'jessie' and is_app_firefox_based(app)
 
 request_arch_container_url = lambda: get_arch_mirror_url('iso/latest/') + tuxapp.request_grep_url(get_arch_mirror_url('iso/latest/'), ('-Po', '-m', '1', r'(?<=")archlinux-bootstrap-[^"]+'))
