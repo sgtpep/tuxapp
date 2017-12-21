@@ -260,7 +260,8 @@ test_app = lambda app, distribution=None: \
   test_installed_app(app, distribution) \
     if tuxapp.is_app_installed(app) else \
   (handle_exceptions(tuxapp.install_app)(app) or tuxapp.remove_app(app) and False) and \
-  ((handle_exceptions(test_installed_app)(app, distribution) or True) and tuxapp.remove_app(app) and False)
+  (handle_exceptions(test_installed_app)(app, distribution) or True) and \
+  tuxapp.remove_app(app)
 
 test_app_process = \
   tuxapp.log('Trying {} on {}')(
