@@ -473,7 +473,7 @@ build_app_runner_relative_path = lambda app, path: re.sub(r'/\.$', '', os.path.j
 
 build_curl_request_arguments = lambda options, is_gzip=False: \
   ('curl', '-#Lf', '-H', 'Accept-Language: en', '--connect-timeout', '10', '--retry', '2') + \
-  (() if parse_url(options[-1]).netloc == 'downloads.sourceforge.net' else ('-A', get_user_agent())) + \
+  (('--connect-timeout', '60') if parse_url(options[-1]).netloc == 'downloads.sourceforge.net' else ('-A', get_user_agent())) + \
   (('-H', 'Accept-Encoding: gzip') if is_gzip else ()) + \
   options
 
@@ -511,7 +511,7 @@ build_request_arguments = lambda curl_options=(), wget_options=(), is_gzip=False
 
 build_wget_request_arguments = lambda options, is_gzip=False: \
   ('wget', '-T', '10', '-t', '3', '-nv', '--header', 'Accept-Language: en') + \
-  (() if parse_url(options[-1]).netloc == 'downloads.sourceforge.net' else ('-U', get_user_agent())) + \
+  (('-T', '60') if parse_url(options[-1]).netloc == 'downloads.sourceforge.net' else ('-U', get_user_agent())) + \
   (('--header', 'Accept-Encoding: gzip') if is_gzip else ()) + \
   options
 
