@@ -88,6 +88,7 @@ validate_app = lambda app: \
   tuxapp.check('Reserved identifier')(lambda: app not in (tuxapp.get_name(),) + testing.get_distributions())
 
 validate_app_description = lambda app, description: \
+  not description or \
   validate_text(description) and \
   validate_capitalization(description) and \
   validate_terminal_punctuation(description) and \
