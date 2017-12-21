@@ -127,6 +127,7 @@ build_app_gallery = lambda app: \
     .app-gallery .thumbnail img,
     .app-gallery .thumbnail video {
       display: block;
+      margin: 0 auto;
       max-height: 10em;
       max-width: 100%;
     }
