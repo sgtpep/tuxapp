@@ -1601,7 +1601,12 @@ update_app_package_data_list_items = lambda app, items: \
   update_app_package_data_items(app, (((item['Package'], 'dependencies'), ' '.join(item[key] for key in ('Depends', 'Pre-Depends') if item.get(key))) for item in items), True) and \
   update_app_package_data_items(app, (((item['Package'], 'url'), item['Filename']) for item in items), True)
 
-update_app_package_list = \
+update_app_package_list = lambda app, url: \
+  int(query_app_package_data(app, ('timestamp', hash_md5(url))) or '0') > time.time() - 60 * 60 * 24 or \
+  (request_url_timestamp(url) <= int(query_app_package_data(app, ('timestamp', hash_md5(url))) or '0') or update_app_package_list_from_file(app, url, download_missing_app_temp_file(app, url))) and \
+  update_app_package_data(app, ('timestamp', hash_md5(url)), int(time.time()))
+
+update_app_package_list_from_file = \
   log('Updating the package data from {1}')(
   check('Failed to update the package data from {1}')(
     lambda app, url, path: \
@@ -1630,7 +1635,7 @@ update_app_package_list = \
 
 update_app_package_lists = \
   lock_app_package_data(
-    lambda app: all(update_updated_app_package_list(app, url) for url in build_app_package_list_urls(app))
+    lambda app: all(update_app_package_list(app, url) for url in build_app_package_list_urls(app))
   )
 
 update_data = lambda path, key, value='', is_deferred=False: \
@@ -1640,11 +1645,6 @@ update_data = lambda path, key, value='', is_deferred=False: \
 update_data_items = lambda path, items, is_deferred=False: \
   connect_data(path).executemany('REPLACE INTO items (key, value) VALUES (?, ?)', ((build_data_key(key), value) for key, value in items)) and \
   (is_deferred or commit_data(path))
-
-update_updated_app_package_list = lambda app, url: \
-  int(query_app_package_data(app, ('timestamp', hash_md5(url))) or '0') > time.time() - 60 * 60 * 24 or \
-  (request_url_timestamp(url) <= int(query_app_package_data(app, ('timestamp', hash_md5(url))) or '0') or update_app_package_list(app, url, download_missing_app_temp_file(app, url))) and \
-  update_app_package_data(app, ('timestamp', hash_md5(url)), int(time.time()))
 
 write_app_package_file_version = lambda app, path: write_file(get_app_package_version_path(app, extract_package_name(path)), '{}\n'.format(extract_package_version(path)))
 
