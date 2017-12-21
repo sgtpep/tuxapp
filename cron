@@ -32,6 +32,7 @@ def handle_failed_app_requests(function):
         if count < 3:
           return False
         else:
+          utilities.update_data((app, 'request-failures'), '0')
           raise
       else:
         raise
