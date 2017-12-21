@@ -260,7 +260,7 @@ test_app = lambda app, distribution=None: \
   tuxapp.remove_app(app)
 
 test_app_process = \
-  tuxapp.log('Trying {} on {}')(
+  tuxapp.log('Testing {} on {}')(
   check_app_process_output(
     lambda app, distribution: \
       utilities.install_missing_package('strace') and \
