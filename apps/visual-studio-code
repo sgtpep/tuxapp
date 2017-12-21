@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Code Editing. Redefined
-version-regex="softwareVersion">([^<]+)
+version-regex="softwareVersion">(.+?)<
 version-url=https://code.visualstudio.com/

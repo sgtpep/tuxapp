@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Privacy that fits in your pocket
-version-regex=/signal-desktop-beta_([^_]+)
+version-regex=/signal-desktop-beta_(.+?)_
 version-url=https://updates.signal.org/desktop/apt/dists/xenial/main/binary-amd64/Packages.gz

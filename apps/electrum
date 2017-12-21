@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=python3-pyqt5
 title=Bitcoin wallet
-version-regex=Electrum-([^<]+)
+version-regex=/Electrum-(.+?)\.tar
 version-url=https://electrum.org/panel-download.html

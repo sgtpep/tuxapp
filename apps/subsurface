@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=An open source divelog program for recreational, tech, and free-divers
-version-regex=/Subsurface-([^-]+)-x86_64
+version-regex=/Subsurface-(.+?)-x86_64
 version-url=https://subsurface-divelog.org/download/

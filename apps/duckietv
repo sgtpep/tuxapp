@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=TV show tracker
-version-regex=/download/([^/]+)
+version-regex=/download/(.+?)/
 version-url=https://github.com/SchizoDuckie/DuckieTV/releases/latest

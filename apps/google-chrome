@@ -15,5 +15,5 @@ note=Google Chrome will show an infobar with a warning which can be ignored as l
 package-repository=stretch
 packages=
 title=Chrome Web Browser
-version-regex=/google-chrome-stable_([^_]+)
+version-regex=/google-chrome-stable_(.+?)_
 version-url=https://dl.google.com/linux/chrome/deb/dists/stable/main/binary-amd64/Packages.gz

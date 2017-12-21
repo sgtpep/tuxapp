@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=A hackable text editor for the 21st Century
-version-regex=/download/v([^/]+)
+version-regex=/download/v(.+?)/
 version-url=https://github.com/atom/atom/releases/latest

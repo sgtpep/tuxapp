@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Desktop chat client for Google Hangouts
-version-regex=/download/v([^/]+)
+version-regex=/download/v(.+?)/
 version-url=https://github.com/yakyak/yakyak/releases/latest

@@ -139,15 +139,15 @@ detect_installed_app_executable = lambda app: \
   detect_app_distribution_executable(app)
 
 detect_version_regex = lambda html: \
-  r'/download/v([^/]+)' \
+  r'/download/v(.+?)/' \
     if re.search(r'/releases/download/v\d', html) else \
-  r'/download/([^/]+)' \
+  r'/download/(.+?)/' \
     if re.search(r'/releases/download/\d', html) else \
-  r'"softwareVersion"\s*:\s*"([^"]+)' \
+  r'"softwareVersion"\s*:\s*"(.+?)"' \
     if re.search(r'"softwareVersion"\s*:\s*"', html) else \
-  r'"softwareVersion" content="([^"]+)' \
+  r'"softwareVersion" content="(.+?)"' \
     if '"softwareVersion" content="' in html else \
-  r'"softwareVersion">([^<]+)' \
+  r'"softwareVersion">(.+?)<' \
     if '"softwareVersion">' in html else \
   ''
 

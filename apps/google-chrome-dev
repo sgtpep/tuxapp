@@ -15,5 +15,5 @@ note=This is a Dev channel of Google Chrome which provides early access to lates
 package-repository=stretch
 packages=
 title=Web browser
-version-regex=/google-chrome-unstable_([^_]+)
+version-regex=/google-chrome-unstable_(.+?)_
 version-url=https://dl.google.com/linux/chrome/deb/dists/stable/main/binary-amd64/Packages.gz

@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Streaming torrent app
-version-regex=/download/v([^/]+)
+version-regex=/download/v(.+?)/
 version-url=https://webtorrent.io/desktop/

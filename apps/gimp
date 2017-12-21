@@ -15,5 +15,5 @@ note=
 package-repository=xenial
 packages=
 title=GNU Image Manipulation Program
-version-regex=/gimp_([^-]+)
+version-regex=/gimp_(.+?)-0x0
 version-url=https://launchpad.net/~otto-kesselgulasch/+archive/ubuntu/gimp/+packages

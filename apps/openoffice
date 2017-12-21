@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=The free and open productivity suite
-version-regex=^DL.VERSION\s*=\s*"([^"]+)
+version-regex=DL\.VERSION\s*=\s*"(.+?)"
 version-url=https://www.openoffice.org/download/globalvars.js

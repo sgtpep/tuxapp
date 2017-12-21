@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Free office suite
-version-regex=&version=([^&"]+)
+version-regex=&version=(.+?)&
 version-url=https://www.libreoffice.org/download/download/

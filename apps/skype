@@ -15,5 +15,5 @@ note=GNOME Keyring needs to be installed on your system to enable automatic sign
 package-repository=stretch
 packages=
 title=Enhanced features for free calls and chat
-version-regex=/skypeforlinux_([^_]+)
+version-regex=/skypeforlinux_(.+?)_
 version-url=https://repo.skype.com/deb/dists/stable/main/binary-amd64/Packages.gz

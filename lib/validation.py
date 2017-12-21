@@ -128,7 +128,9 @@ validate_app_title = lambda app, title: \
 validate_app_version_regex = lambda app, pattern: \
   validate_text(pattern, True) and \
   validate_regex(pattern) and \
-  tuxapp.check('No grouping parentheses')(lambda: bool(re.search(r'\((?!\?)', pattern)) and ')' in pattern)() and \
+  tuxapp.check('No capturing group')(lambda: bool(re.search(r'\((?!\?)', pattern)) and ')' in pattern)() and \
+  tuxapp.check('No text before the capturing group')(lambda: '(.+?)' not in pattern or bool(pattern.partition('(.+?)')[0]))() and \
+  tuxapp.check('No text after the capturing group')(lambda: '(.+?)' not in pattern or bool(pattern.partition('(.+?)')[2]))() and \
   bool(tuxapp.request_app_version(app, pattern)) and \
   tuxapp.check(lambda *args, **kwargs: 'Extraneous character in the version number: {}'.format(tuxapp.request_app_version(app, pattern)))(lambda: not re.search(r'[\s<>"&]', tuxapp.request_app_version(app, pattern)))()
 

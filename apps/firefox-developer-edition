@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=The Firefox browser made for developers
-version-regex=/releases/([^/]+)
+version-regex=/releases/(.+?)/
 version-url=https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=linux64&lang=en-US

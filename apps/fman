@@ -15,5 +15,5 @@ note=
 package-repository=xenial
 packages=libgirepository-1.0-1
 title=Dual-pane file manager
-version-regex=Version ([^<]+)
+version-regex=\sVersion (.+?)$
 version-url=https://fman.io/download

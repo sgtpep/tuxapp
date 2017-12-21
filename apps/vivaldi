@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Fast & Flexible Web Browser
-version-regex=/vivaldi-stable_([^_]+)
+version-regex=/vivaldi-stable_(.+?)_
 version-url=https://vivaldi.com/download/

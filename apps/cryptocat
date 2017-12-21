@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Chat with your friends, securely
-version-regex=([^ ]+) Release
+version-regex=Cryptocat (.+?) Release
 version-url=https://crypto.cat/news.html

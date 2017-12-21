@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Watch videos, movies, TV series and TV channels instantly
-version-regex="Stremio ([^ "]+)(?! beta)"
+version-regex="Stremio ([^ ]+?)(?! beta)"
 version-url=https://www.strem.io/downloads

@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Free calls and messages
-version-regex=ETag:\s*"([^"]+)
+version-regex=ETag:\s*"(.+?)"
 version-url=https://download.cdn.viber.com/cdn/desktop/Linux/viber.deb

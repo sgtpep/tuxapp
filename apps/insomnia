@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=REST client
-version-regex=/download/v([^/]+)
+version-regex=/download/v(.+?)/
 version-url=https://github.com/getinsomnia/insomnia/releases/latest

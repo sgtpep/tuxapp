@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=libpulse0
 title=Fast, secure, easy-to-use browser
-version-regex=ver=([^&"]+)
+version-regex=;ver=(.+?)&
 version-url=https://www.opera.com/download/index.dml/?os=linux-x86-64&list=all

@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Music for everyone
-version-regex=/spotify-client_([^_]+)
+version-regex=/spotify-client_(.+?)_
 version-url=http://repository.spotify.com/dists/stable/non-free/binary-amd64/Packages

@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Bringing The torrent universe closer to you
-version-regex=/download/v([^/]+)
+version-regex=/download/v(.+?)/
 version-url=http://powder.media/

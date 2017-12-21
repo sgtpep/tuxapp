@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Messaging and emailing app that combines common web applications into one
-version-regex=/download/([^/]+)
+version-regex=/download/(.+?)/
 version-url=https://github.com/saenzramiro/rambox/releases/latest

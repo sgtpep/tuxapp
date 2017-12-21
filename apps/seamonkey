@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=All-in-one internet application suite
-version-regex==seamonkey-([^&"]+)
+version-regex==seamonkey-(.+?)&
 version-url=https://www.seamonkey-project.org/

@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=libgtk2.0-0
 title=A sophisticated text editor for code, markup and prose
-version-regex=\(Build ([^\)]+)
+version-regex=\(Build (.+?)\)
 version-url=https://www.sublimetext.com/

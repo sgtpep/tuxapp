@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Simple, cross platform tool for lossless trimming/cutting of video and audio files
-version-regex=/download/v([^/]+)
+version-regex=/download/v(.+?)/
 version-url=https://github.com/mifi/lossless-cut/releases/latest

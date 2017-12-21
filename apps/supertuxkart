@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=A 3D open-source arcade racer
-version-regex=/supertuxkart-([^-]+)-linux
+version-regex=/supertuxkart-(.+?)-linux
 version-url=https://supertuxkart.net/Download

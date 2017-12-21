@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Git GUI
-version-regex=Latest release: ([^<]+)
+version-regex= release: (.+?)<
 version-url=https://www.gitkraken.com/download

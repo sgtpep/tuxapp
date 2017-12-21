@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=A file manager with super powers
-version-regex=/download/v([^/]+)
+version-regex=/download/v(.+?)/
 version-url=https://github.com/JumpFm/jumpfm/releases/latest

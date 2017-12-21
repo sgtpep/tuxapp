@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Create a free website or blog
-version-regex=/download/v([^/]+)
+version-regex=/download/v(.+?)/
 version-url=https://github.com/Automattic/wp-desktop/releases/latest

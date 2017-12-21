@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=The simplest way to keep notes
-version-regex=/download/v([^/]+)
+version-regex=/download/v(.+?)/
 version-url=https://simplenote.com/

@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=libgl1-mesa-glx
 title=The next-gen web and EPUB editor
-version-regex=/([^/]+)/bluegriffon-
+version-regex=/freshmeat/(.+?)/bluegriffon
 version-url=http://bluegriffon.org/

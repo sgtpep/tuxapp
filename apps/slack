@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=Where Work Happens
-version-regex=Version ([^<]+)
+version-regex=>Version (.+?)<
 version-url=https://slack.com/downloads/linux

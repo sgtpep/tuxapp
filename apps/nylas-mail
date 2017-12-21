@@ -15,5 +15,5 @@ note=GNOME Keyring needs to be installed on your system for this app.
 package-repository=stretch
 packages=
 title=The open-source, extensible mail client
-version-regex=/download/([^/]+)
+version-regex=/download/(.+?)/
 version-url=https://github.com/nylas-mail-lives/nylas-mail/releases/latest

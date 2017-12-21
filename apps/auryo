@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=SoundCloud desktop client
-version-regex=/download/v([^/]+)
+version-regex=/download/v(.+?)/
 version-url=https://github.com/Superjo149/auryo/releases/latest

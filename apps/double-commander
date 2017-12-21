@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=~A file manager with two panels side by side
-version-regex=/doublecmd-(.+?).gtk2
+version-regex=/doublecmd-(.+?)\.gtk2
 version-url=https://sourceforge.net/p/doublecmd/wiki/Download/

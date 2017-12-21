@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=A free video editor designed for simple cutting, filtering and encoding tasks
-version-regex=avidemux_(.+?)\.appImage
+version-regex=/avidemux_(.+?)\.appImage
 version-url=http://fixounet.free.fr/avidemux/download.html
