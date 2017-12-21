@@ -241,10 +241,6 @@ is_app_library_ignored = lambda app, library: library in tuxapp.query_appfile(ap
 is_app_process_output_ignored = lambda app, distribution, output: \
   {
     'drl': 'EInOutError : Invalid input',
-    'qutebrowser': 'Could not initialize GLX',
-    'subsurface': 'Could not initialize GLX',
-    'supertuxkart': 'Fatal error, could not get visual.',
-    'viber': 'Could not initialize GLX',
   }.get(app, r'\0') in output or \
   distribution == 'jessie' and is_app_firefox_based(app)
 
