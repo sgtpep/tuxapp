@@ -472,7 +472,7 @@ build_app_package_list_urls = \
 build_app_runner_relative_path = lambda app, path: re.sub(r'/\.$', '', os.path.join('${0%/*}', quote_argument(os.path.relpath(path, os.path.dirname(get_app_runner_path(app))))))
 
 build_curl_request_arguments = lambda options, is_gzip=False: \
-  ('curl', '-#Lf', '-H', 'Accept-Language: en', '-m', '10', '--retry', '2') + \
+  ('curl', '-#Lf', '-H', 'Accept-Language: en', '--connect-timeout', '10', '--retry', '2') + \
   (() if parse_url(options[-1]).netloc == 'downloads.sourceforge.net' else ('-A', get_user_agent())) + \
   (('-H', 'Accept-Encoding: gzip') if is_gzip else ()) + \
   options
