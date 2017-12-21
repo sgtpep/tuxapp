@@ -227,22 +227,13 @@ install_missing_container = lambda distribution: \
   utilities.update_data((distribution, 'timestamp'), int(time.time())) and \
   distribution
 
-is_app_firefox_based = lambda app: \
-  app in (
-    'firefox',
-    'firefox-developer-edition',
-    'firefox-esr',
-    'seamonkey',
-    'thunderbird',
-  )
-
 is_app_library_ignored = lambda app, library: library in tuxapp.query_appfile(app, 'ignored-libraries') + ('libGL.so.1',)
 
 is_app_process_output_ignored = lambda app, distribution, output: \
   {
     'drl': 'Can\'t open SDL_Mixer!',
   }.get(app, r'\0') in output or \
-  distribution == 'jessie' and is_app_firefox_based(app)
+  distribution == 'jessie' and os.path.isfile(tuxapp.get_app_distribution_file_path(app, 'libxul.so'))
 
 request_arch_container_url = lambda: get_arch_mirror_url('iso/latest/') + tuxapp.request_grep_url(get_arch_mirror_url('iso/latest/'), ('-Po', '-m', '1', r'(?<=")archlinux-bootstrap-[^"]+'))
 
