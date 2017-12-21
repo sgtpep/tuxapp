@@ -383,7 +383,7 @@ update_appfile_title = lambda data: update_appfile(data, 'title', input_app_titl
 
 update_appfile_version_regex = lambda data: update_appfile(data, 'version-regex', input_app_version_regex(data['app'], data['version-regex'] if 'version-regex' in data else detect_version_regex(parsing.request_url_cached(data.get('version-url') or data['homepage-url']))))
 
-update_appfile_version_url = lambda data: update_appfile(data, 'version-url', input_version_url(data['version-url'] if 'version-url' in data else parsing.parse_version_url(data['homepage-url'])))
+update_appfile_version_url = lambda data: update_appfile(data, 'version-url', input_version_url(data['version-url'] if 'version-url' in data else parsing.parse_version_url(data['homepage-url']) or data['homepage-url']))
 
 write_appfile = lambda data: \
   tuxapp.remove_file(tuxapp.get_appfile_path(get_default_app())) and \
