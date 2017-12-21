@@ -202,9 +202,7 @@ filter_version_url = lambda url: re.sub(r'^.+({}/releases\b).*$'.format(utilitie
 
 generate_appfile = lambda data: ''.join('{}={}\n'.format(key, data[key]) for key in sorted(data) if key != 'app')
 
-get_app_execution_flag_path = lambda app: os.path.join(tuxapp.get_app_path(app), '.add-executed')
-
-get_app_test_flag_path = lambda app: os.path.join(tuxapp.get_app_path(app), '.add-tested')
+get_app_flag_path = lambda app, name: os.path.join(tuxapp.get_app_path(app), '.add', name)
 
 get_default_app = lambda: 'temp'
 
@@ -343,12 +341,12 @@ update_appfile_executable = lambda data: update_appfile(data, 'executable', inpu
 
 update_appfile_execute = lambda data: \
   update_appfile_test(data) \
-    if os.path.isfile(get_app_execution_flag_path(data['app'])) else \
+    if os.path.isfile(get_app_flag_path(data['app'], 'execute')) else \
   tuxapp.install_app_distribution(data['app']) and \
   tuxapp.install_app_appfile_packages(data['app']) and \
   tuxapp.install_app_runner(data['app']) and \
   execute_app(data['app']) and \
-  tuxapp.touch_file(get_app_execution_flag_path(data['app'])) and \
+  tuxapp.touch_file(get_app_flag_path(data['app'], 'execute')) and \
   update_appfile_test(data)
 
 update_appfile_free_license = lambda data: update_appfile(data, 'free-license', input_free_license(data.get('free-license', 'yes')))
@@ -374,9 +372,9 @@ update_appfile_packages = lambda data: \
 
 update_appfile_test = lambda data: \
   data \
-    if os.path.isfile(get_app_test_flag_path(data['app'])) else \
+    if os.path.isfile(get_app_flag_path(data['app'], 'test')) else \
   testing.test_app(data['app']) and \
-  tuxapp.touch_file(get_app_test_flag_path(data['app'])) and \
+  tuxapp.touch_file(get_app_flag_path(data['app'], 'test')) and \
   data
 
 update_appfile_title = lambda data: update_appfile(data, 'title', input_app_title(data['app'], data['title'] if data.get('title') else filter_title(parsing.parse_title(data['homepage-url']))))
