@@ -191,7 +191,7 @@ class GitHubScreenshotURLsParser(BaseParser):
       self.is_article = True
     elif tag == 'p' and self.is_article:
       self.paragraph_number += 1
-    elif tag == 'img' and attributes.get('src') and self.previous_tag == 'a' and is_image_url(self.previous_attributes.get('href', '')) and self.is_article and self.paragraph_number > 1:
+    elif tag == 'img' and attributes.get('src') and 'width' not in attributes and self.previous_tag == 'a' and is_image_url(self.previous_attributes.get('href', '')) and self.is_article and self.paragraph_number > 1:
       self.add_result(attributes['src'])
 
 class IconURLParser(BaseParser):
