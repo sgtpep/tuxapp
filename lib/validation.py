@@ -88,7 +88,6 @@ validate_app = lambda app: \
   tuxapp.check('Reserved identifier')(lambda: app not in (tuxapp.get_name(),) + testing.get_distributions())
 
 validate_app_description = lambda app, description: \
-  not description or \
   validate_text(description) and \
   validate_capitalization(description) and \
   validate_terminal_punctuation(description) and \
@@ -120,7 +119,6 @@ validate_app_packages = lambda app, packages: \
   tuxapp.update_app_package_lists(app) and all(tuxapp.query_app_package_url(app, package) for package in packages.split())
 
 validate_app_title = lambda app, title: \
-  not title or \
   validate_text(title) and \
   validate_capitalization(title) and \
   validate_no_terminal_punctuation(title) and \
