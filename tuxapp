@@ -469,6 +469,8 @@ build_app_package_list_urls = \
       ))
   )
 
+build_app_qt_configuration_path = lambda app: get_app_distribution_file_path(app, os.path.join(os.path.dirname(query_app_executable_path(app)), 'qt.conf'))
+
 build_app_runner_relative_path = lambda app, path: re.sub(r'/\.$', '', os.path.join('${0%/*}', quote_argument(os.path.relpath(path, os.path.dirname(get_app_runner_path(app))))))
 
 build_curl_request_arguments = lambda options, is_gzip=False: \
@@ -1304,11 +1306,11 @@ patch_app_elf_files_patchelf = \
 patch_app_package = lambda app, package: \
   symlink_file(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'libGL.so.1')), 'mesa/libGL.so.1') \
     if package == 'libgl1-mesa-glx' and not os.path.isfile(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'libGL.so.1'))) else \
-  write_app_qt_configuration(app, get_app_distribution_file_path(app, os.path.dirname(query_app_executable_path(app)))) \
-    if package == 'libqt5gui5' and not os.path.isfile(get_app_distribution_file_path(app, os.path.join(os.path.dirname(query_app_executable_path(app)), 'qt.conf'))) else \
+  write_app_qt_configuration(app, build_app_qt_configuration_path(app)) \
+    if package == 'libqt5gui5' and not os.path.isfile(build_app_qt_configuration_path(app)) else \
   all(write_app_qt_configuration(app, path) for path in (
-    get_app_root_file_path(app, 'usr/bin'),
-    get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5/libexec')),
+    get_app_root_file_path(app, 'usr/bin/qt.conf'),
+    get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5/libexec/qt.conf')),
   )) \
     if package in ('python-pyqt5', 'python3-pyqt5') else \
   True
@@ -1656,12 +1658,12 @@ update_data_items = lambda path, items, is_deferred=False: \
 write_app_package_file_version = lambda app, path: write_file(get_app_package_version_path(app, extract_package_name(path)), '{}\n'.format(extract_package_version(path)))
 
 write_app_qt_configuration = lambda app, path: \
-  write_file(os.path.join(path, 'qt.conf'), textwrap.dedent('''\
+  write_file(path, textwrap.dedent('''\
   [Paths]
   Data = ../../../share/qt5
   Prefix = {}
   Translations = ../../../share/qt5/translations
-  ''').format(os.path.relpath(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5')), path)))
+  ''').format(os.path.relpath(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5')), os.path.dirname(path))))
 
 write_app_version = lambda app: write_file(get_app_version_path(app), '{} {}\n'.format(request_app_version(app), hash_app_appfile(app)))
 
