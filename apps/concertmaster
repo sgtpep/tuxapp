@@ -1,0 +1,19 @@
+category=audio
+description=Concertmaster tries to bring the complex metadata of classical music to online music. It fetches information from several sources on the web to create a new classical-oriented player that works alongside with Spotify.
+desktop-entry=
+download-x86-64-url=http://getconcertmaster.com/latest/?os=linux
+download-x86-url=
+executable=./opt/Concertmaster/concertmaster
+firejail=
+free-license=no
+group=audio-streaming
+homepage-url=http://getconcertmaster.com/
+icon-url=http://getconcertmaster.com/favicon.ico
+ignored-libraries=
+name=Concertmaster
+note=
+package-repository=stretch
+packages=
+title=Classical music front-end for Spotify
+version-regex=/Concertmaster_(.+?)_
+version-url=http://getconcertmaster.com/latest/?os=linux
