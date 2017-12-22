@@ -34,6 +34,7 @@ get_groups = lambda: \
     'image-editors',
     'instant-messengers',
     'integrated-development-environments',
+    'markup-editors',
     'note-taking',
     'office-suits',
     'productivity-tools',
