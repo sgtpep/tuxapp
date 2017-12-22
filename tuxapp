@@ -909,6 +909,7 @@ install_app_distribution = lambda app: \
   patch_app_elf_files(app, get_app_distribution_path(app)) and \
   all(remove_file(path) for path in glob.iglob(get_app_temp_file_path(app, '*'))) and \
   install_app_packages(app, detect_app_library_packages(app, detect_missing_app_libraries(app))) and \
+  install_app_qt_configuration(app) and \
   remove_file(get_app_icon_path(app)) and \
   write_app_version(app) and \
   get_app_distribution_path(app)
@@ -945,6 +946,10 @@ install_app_patchelf = lambda app: \
     'usr/bin/patchelf',
     'usr/lib/{}/libstdc++.so.6',
   ))
+
+install_app_qt_configuration = lambda app: \
+  not is_app_package_installed(app, 'libqt5gui5') or \
+  write_app_qt_configuration(app, get_app_distribution_file_path(app, os.path.dirname(query_app_executable_path(app))))
 
 install_app_runner = lambda app: \
   write_bash_script(get_app_runner_path(app), r'''
@@ -1163,6 +1168,8 @@ is_app_installed = lambda app: \
   os.path.isfile(get_app_version_path(app)) and \
   os.path.isdir(get_app_distribution_path(app))
 
+is_app_package_installed = lambda app, package: bool(read_app_package_version(app, package))
+
 is_app_updated = lambda app: \
   is_app_installed(app) and \
   read_app_version(app) == request_app_version_cached(app) and \
@@ -1302,12 +1309,7 @@ patch_app_elf_files_patchelf = \
 patch_app_package = lambda app, package: \
   symlink_file(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'libGL.so.1')), 'mesa/libGL.so.1') \
     if package == 'libgl1-mesa-glx' and not os.path.isfile(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'libGL.so.1'))) else \
-  all(write_file(os.path.join(path, 'qt.conf'), textwrap.dedent('''\
-  [Paths]
-  Data = ../../../share/qt5
-  Prefix = {}
-  Translations = ../../../share/qt5/translations
-  ''').format(os.path.relpath(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5')), path))) for path in (
+  all(write_app_qt_configuration(app, path) for path in (
     get_app_root_file_path(app, 'usr/bin'),
     get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5/libexec')),
   )) \
@@ -1317,6 +1319,11 @@ patch_app_package = lambda app, package: \
 purge_cache = \
   log_after('Purged cache')(
     lambda: remove_directory(get_cache_path())
+  )
+
+query_app_executable_path = \
+  check('Failed to parse the executable path of {}')(
+    lambda app: next((argument for argument in split_command(query_appfile(app, 'executable')) if argument.startswith('./')), '').lstrip('./')
   )
 
 query_app_package_data = lambda app, key: query_data(get_app_package_data_path(app), key)
@@ -1650,6 +1657,14 @@ update_data_items = lambda path, items, is_deferred=False: \
   (is_deferred or commit_data(path))
 
 write_app_package_file_version = lambda app, path: write_file(get_app_package_version_path(app, extract_package_name(path)), '{}\n'.format(extract_package_version(path)))
+
+write_app_qt_configuration = lambda app, path: \
+  write_file(os.path.join(path, 'qt.conf'), textwrap.dedent('''\
+  [Paths]
+  Data = ../../../share/qt5
+  Prefix = {}
+  Translations = ../../../share/qt5/translations
+  ''').format(os.path.relpath(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5')), path)))
 
 write_app_version = lambda app: write_file(get_app_version_path(app), '{} {}\n'.format(request_app_version(app), hash_app_appfile(app)))
 
