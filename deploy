@@ -62,6 +62,7 @@ packages=(
   haveged
   htop
   imagemagick
+  man-db
   msmtp-mta
   nginx-light
   ranger
