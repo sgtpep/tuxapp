@@ -843,7 +843,7 @@ get_xdg_cache_path = lambda: os.environ.get('XDG_CACHE_HOME', os.path.expanduser
 
 get_xdg_data_path = lambda: os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share'))
 
-hash_app_download_urls = lambda app: hash_md5(' '.join(query_appfile_download_urls(app)))
+hash_app_appfile = lambda app: hash_md5(' '.join(query_appfile_download_urls(app) + (query_appfile(app, 'package-repository'),)))
 
 hash_md5 = lambda string: hashlib.md5(string.encode('utf-8', 'replace')).hexdigest()
 
@@ -904,7 +904,7 @@ install_app_desktop_entry = \
 install_app_distribution = lambda app: \
   get_app_distribution_path(app) \
     if is_app_updated(app) else \
-  (read_app_download_urls_hash(app) == hash_app_download_urls(app) or remove_directory(get_app_root_path(app))) and \
+  (read_app_appfile_hash(app) == hash_app_appfile(app) or remove_directory(get_app_root_path(app))) and \
   all(unpack_app_distribution(app, path) for path in tuple(download_missing_app_file(app, url, get_app_temp_file_path(app, build_app_distribution_filename(app, url))) for url in query_appfile(app, 'download-urls'))) and \
   patch_app_elf_files(app, get_app_distribution_path(app)) and \
   all(remove_file(path) for path in glob.iglob(get_app_temp_file_path(app, '*'))) and \
@@ -1166,7 +1166,7 @@ is_app_installed = lambda app: \
 is_app_updated = lambda app: \
   is_app_installed(app) and \
   read_app_version(app) == request_app_version_cached(app) and \
-  read_app_download_urls_hash(app) == hash_app_download_urls(app)
+  read_app_appfile_hash(app) == hash_app_appfile(app)
 
 is_debian_repository = lambda repository: \
   repository in (
@@ -1357,7 +1357,7 @@ query_data = lambda path, key: (connect_data(path).execute('SELECT value FROM it
 
 query_package_data_header = lambda path, key: parse_package_data_header(path).get(key)
 
-read_app_download_urls_hash = lambda app: read_app_version_components(app)[-1]
+read_app_appfile_hash = lambda app: read_app_version_components(app)[-1]
 
 read_app_firejail_options = lambda app: read_file(get_app_firejail_options_path(app)).rstrip()
 
@@ -1651,7 +1651,7 @@ update_data_items = lambda path, items, is_deferred=False: \
 
 write_app_package_file_version = lambda app, path: write_file(get_app_package_version_path(app, extract_package_name(path)), '{}\n'.format(extract_package_version(path)))
 
-write_app_version = lambda app: write_file(get_app_version_path(app), '{} {}\n'.format(request_app_version(app), hash_app_download_urls(app)))
+write_app_version = lambda app: write_file(get_app_version_path(app), '{} {}\n'.format(request_app_version(app), hash_app_appfile(app)))
 
 write_bash_script = lambda path, content: \
   write_executable_file(path, textwrap.dedent('''\
