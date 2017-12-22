@@ -368,7 +368,9 @@ filter_app_screenshot_url = lambda app, url: \
   '' \
     if re.search({
       'avidemux': r'/menu-screenshots-inactive\.png$',
+      'inboxer': r'/badge/',
       'jumpfm': r'/dev\.png$',
+      'remarkable': r'/QR',
       'skype': r'\bscreenshots\.debian\.net/',
       'visual-studio-code': r'\.svg$',
     }.get(app, r'^$'), url) else \
