@@ -266,12 +266,10 @@ input_app_title = \
   )
 
 input_app_version_regex = \
-  validate(lambda app, *args, **kwargs: \
-    validation.validate_app_version_regex(app, kwargs['result']) and \
-    print('Detected version: {}'.format(tuxapp.request_app_version(app, kwargs['result'])), file=sys.stderr)
-  )(
+  validate(lambda app, *args, **kwargs: validation.validate_app_version_regex(app, kwargs['result']))(
+  tuxapp.log_result(lambda app, prefill='', *args, **kwargs: not sys.argv[1:] and 'Detected version: {}'.format(tuxapp.request_app_version(app, kwargs['result'])))(
     lambda app, prefill='': input_text('Version regex', prefill, (), True)
-  )
+  ))
 
 input_boolean = lambda message, is_no=False: \
   'yes' \
