@@ -965,6 +965,23 @@ install_app_runner = lambda app: \
     ''' + '\n    '.join(quote_argument(path) for path in get_firejail_blacklisted_paths()) + r'''
   )
 
+  function build_command_arguments {
+    declare -n result_command_arguments=$1
+    shift
+
+    result_command_arguments=()
+
+    [[ ! ${TUXAPP_TRACE-} ]] || result_command_arguments+=(strace -f -e open,openat,stat)
+
+    arguments=("${executable_arguments[@]}")
+    arguments=("${arguments[@]/#.\//"$distribution_path"/}")
+    arguments=("${arguments[@]//{dist\}/"$distribution_path"}")
+    arguments=("${arguments[@]//{root\}/"$root_path"}")
+    result_command_arguments+=("${arguments[@]}")
+
+    readonly result_command_arguments
+  }
+
   function build_directory_list {
     declare -n result_directory_list=$1
     shift
@@ -1081,15 +1098,6 @@ install_app_runner = lambda app: \
     readonly result_gdk_pixbuf_path
   }
 
-  function build_strace_arguments {
-    declare -n result_strace_arguments=$1
-    shift
-
-    result_strace_arguments=()
-    [[ ! ${TUXAPP_TRACE-} ]] || result_strace_arguments+=(strace -f -e open,openat,stat)
-    readonly result_strace_arguments
-  }
-
   function check_firejail {
     if type firejail &> /dev/null; then
       declare app_firejail_options
@@ -1142,11 +1150,11 @@ install_app_runner = lambda app: \
       done
     fi
 
-    declare strace_arguments
-    build_strace_arguments strace_arguments
+    declare command_arguments
+    build_command_arguments command_arguments
 
     # shellcheck disable=SC2086
-    exec ${firejail_arguments+"${firejail_arguments[@]}"} ${strace_arguments+"${strace_arguments[@]}"} ${executable_arguments+"${executable_arguments[@]/.\//"$distribution_path"/}"} "$@"
+    exec ${firejail_arguments+"${firejail_arguments[@]}"} ${command_arguments+"${command_arguments[@]}"} "$@"
   }
 
   function read_firejail_options {
