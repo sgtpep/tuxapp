@@ -136,7 +136,8 @@ detect_installed_app_executable = lambda app: \
     if os.path.isdir(tuxapp.get_app_distribution_file_path(app, 'usr/bin')) else \
   detect_app_distribution_executable(app, 'opt/*') \
     if os.path.isdir(tuxapp.get_app_distribution_file_path(app, 'opt')) else \
-  detect_app_distribution_executable(app)
+  detect_app_distribution_executable(app) or \
+  next((path.replace(tuxapp.get_app_distribution_path(app), '.') for path in tuxapp.list_app_distribution(app) if tuxapp.is_file_executable(path) and os.path.basename(path).lower() == app.lower()), '')
 
 detect_version_regex = lambda html: \
   r'/download/v(.+?)/' \
