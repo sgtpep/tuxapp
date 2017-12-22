@@ -1,5 +1,5 @@
 category=game
-description=Itch, the best way to download and play indie games. Download free games and manage your library from your desktop.
+description=The itch.io app, itch, lets you effortlessly download and run games and software from itch.io. All of your downloads are kept in a single place and are automatically updated. Access your collections and purchases, or browse for new games via the in-app browser.
 desktop-entry=
 download-x86-64-url=https://github.com/itchio/itch/releases/download/v{version}/itch-{version}-amd64.tar.xz
 download-x86-url=https://github.com/itchio/itch/releases/download/v{version}/itch-{version}-386.tar.xz

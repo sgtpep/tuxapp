@@ -1,5 +1,5 @@
 category=network
-description=A fast and powerful file manager for Google Cloud Storage and Amazon S3 compatible services.
+description=DragonDisk is a powerful file manager for Amazon S3® and all cloud storage solutions that provide compatibility with S3 API. It allows you to organize and share your data thanks to an intuitive interface similar to Windows Explorer's.
 desktop-entry=
 download-x86-64-url=http://download.dragondisk.com/dragondisk_{version}-0ubuntu_amd64.deb
 download-x86-url=http://download.dragondisk.com/dragondisk_{version}-0ubuntu_i386.deb
