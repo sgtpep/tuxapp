@@ -316,7 +316,6 @@ build_card = lambda icon_url, name, title, url=None, name_tag='', title_tag='', 
             color: ''' + get_text_color() + ''';
             display: inline-block;
             font-weight: normal;
-            margin-left: 0.25em;
           }
           '''),
           build_tag('span.card-count', '({})'.format(count)) if count else '',
