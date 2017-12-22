@@ -1,19 +1,19 @@
-category=
-description=
+category=development
+description=Remarkable is a powerful markdown editor available for Linux. It is fully featured and customizable.
 desktop-entry=
 download-x86-64-url=https://remarkableapp.github.io/files/remarkable_{version}_all.deb
 download-x86-url=https://remarkableapp.github.io/files/remarkable_{version}_all.deb
 executable=sh -c 'sed -i "s/^import \(styles\)$/from remarkable import \1/" {dist}/usr/lib/python3/dist-packages/remarkable/RemarkableWindow.py && sed -i "s|^\(__remarkable_data_directory__ =\) .*|\1 \"{dist}/usr/share/remarkable\"|" {dist}/usr/lib/python3/dist-packages/remarkable_lib/remarkableconfig.py && exec "$@"' -- python3 ./usr/bin/remarkable
 firejail=
-free-license=
-group=
+free-license=yes
+group=markup-editors
 homepage-url=https://remarkableapp.github.io/linux.html
-icon-url=
+icon-url=https://remarkableapp.github.io/images/remarkable.png
 ignored-libraries=
 name=Remarkable
 note=
 package-repository=stretch
-packages=gir1.2-gtk-3.0 gir1.2-gtksource-3.0 gir1.2-webkit-3.0 python3-bs4 python3-gi python3-gtkspellcheck python3-markdown wkhtmltopdf
-title=
+packages=
+title=A fully featured markdown editor
 version-regex=/remarkable_(.+?)_
 version-url=https://remarkableapp.github.io/linux/download.html
