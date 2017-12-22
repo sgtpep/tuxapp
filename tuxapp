@@ -909,7 +909,6 @@ install_app_distribution = lambda app: \
   patch_app_elf_files(app, get_app_distribution_path(app)) and \
   all(remove_file(path) for path in glob.iglob(get_app_temp_file_path(app, '*'))) and \
   install_app_packages(app, detect_app_library_packages(app, detect_missing_app_libraries(app))) and \
-  install_app_qt_configuration(app) and \
   remove_file(get_app_icon_path(app)) and \
   write_app_version(app) and \
   get_app_distribution_path(app)
@@ -946,10 +945,6 @@ install_app_patchelf = lambda app: \
     'usr/bin/patchelf',
     'usr/lib/{}/libstdc++.so.6',
   ))
-
-install_app_qt_configuration = lambda app: \
-  not is_app_package_installed(app, 'libqt5gui5') or \
-  write_app_qt_configuration(app, get_app_distribution_file_path(app, os.path.dirname(query_app_executable_path(app))))
 
 install_app_runner = lambda app: \
   write_bash_script(get_app_runner_path(app), r'''
@@ -1309,6 +1304,8 @@ patch_app_elf_files_patchelf = \
 patch_app_package = lambda app, package: \
   symlink_file(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'libGL.so.1')), 'mesa/libGL.so.1') \
     if package == 'libgl1-mesa-glx' and not os.path.isfile(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'libGL.so.1'))) else \
+  write_app_qt_configuration(app, get_app_distribution_file_path(app, os.path.dirname(query_app_executable_path(app)))) \
+    if package == 'libqt5gui5' else \
   all(write_app_qt_configuration(app, path) for path in (
     get_app_root_file_path(app, 'usr/bin'),
     get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5/libexec')),
