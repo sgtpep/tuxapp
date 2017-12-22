@@ -316,14 +316,14 @@ class VideoPosterURLsParser(BaseParser):
   is_multiple = True
 
   def on_tag(self, tag, attributes):
-    if (tag == 'source' and self.previous_tag == 'video' or tag == 'video') and attributes.get('src') and os.path.splitext(tuxapp.parse_url(attributes['src']).path)[1] == '.mp4':
+    if (tag == 'source' and self.previous_tag in ('source', 'video') or tag == 'video') and attributes.get('src') and os.path.splitext(tuxapp.parse_url(attributes['src']).path)[1] == '.mp4':
       self.add_result((attributes if tag == 'video' else self.previous_attributes).get('poster', ''))
 
 class VideoURLsParser(BaseParser):
   is_multiple = True
 
   def on_tag(self, tag, attributes):
-    if (tag == 'source' and self.previous_tag == 'video' or tag == 'video') and attributes.get('src') and os.path.splitext(tuxapp.parse_url(attributes['src']).path)[1] == '.mp4':
+    if (tag == 'source' and self.previous_tag in ('source', 'video') or tag == 'video') and attributes.get('src') and os.path.splitext(tuxapp.parse_url(attributes['src']).path)[1] == '.mp4':
       self.add_result(attributes['src'])
 
 def parse_app_worker(app):
