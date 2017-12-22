@@ -996,6 +996,9 @@ install_app_runner = lambda app: \
     [[ ${executable_path-} ]] || get_executable_path executable_path
     [[ ${executable_path-} != ./AppRun ]] || result_environment[APPDIR]=$distribution_path
 
+    gconv_paths=("$root_path"/usr/lib/*-linux-gnu/gconv)
+    [[ ! ${gconv_paths-} ]] || result_environment[GCONV_PATH]=${gconv_paths[0]}
+
     build_gdk_pixbuf_path gdk_pixbuf_path
     [[ ! ${gdk_pixbuf_path-} ]] || result_environment[GDK_PIXBUF_MODULE_FILE]=$gdk_pixbuf_path
 
@@ -1212,7 +1215,7 @@ list_app_distribution = lambda app: (path for path in list_directory(get_app_dis
 
 list_directory = lambda path: (os.path.join(path, filename) for path, directories, filenames in os.walk(path) for filename in filenames)
 
-list_directory_elf_files = lambda path: tuple(path for path in list_directory(path) if (is_file_executable(path) or is_file_library(path) and '/gconv/' not in path and not os.path.basename(path).startswith('ld-')) and not os.path.islink(path) and is_file_magic_number(path, b'\x7fELF'))
+list_directory_elf_files = lambda path: tuple(path for path in list_directory(path) if (is_file_executable(path) or is_file_library(path) and not os.path.basename(path).startswith('ld-') and ('/gconv/' not in path or os.path.basename(path).startswith('UTF-'))) and not os.path.islink(path) and is_file_magic_number(path, b'\x7fELF'))
 
 list_installed_apps = \
   output(lambda *args, **kwargs: '\n'.join('{} {}'.format(app, version) for app, version in kwargs['result']))(
