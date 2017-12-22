@@ -192,7 +192,10 @@ class GitHubScreenshotURLsParser(BaseParser):
     elif tag == 'p' and self.is_article:
       self.paragraph_number += 1
     elif tag == 'img' and attributes.get('src') and 'width' not in attributes and self.previous_tag == 'a' and self.previous_attributes.get('href') and (is_image_url(self.previous_attributes['href']) or self.previous_attributes['href'] == attributes['src']) and self.is_article and self.paragraph_number > 1:
-      self.add_result(attributes['src'])
+      if attributes.get('data-canonical-src'):
+        self.add_result(attributes['data-canonical-src'] if validation.check_url_https(attributes['data-canonical-src']) else attributes['data-canonical-src'].replace('http://', 'https://', 1))
+      else:
+        self.add_result(attributes['src'])
 
 class IconURLParser(BaseParser):
   is_head = True
