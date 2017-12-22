@@ -1007,16 +1007,13 @@ install_app_runner = lambda app: \
     declare -n result_environment=$1
     shift
 
-    result_environment=()
-
-    result_environment[PATH]=$root_path/usr/bin:$root_path/bin:$PATH
-    result_environment[PYTHONHOME]=$root_path/usr
+    result_environment=(
+      [PATH]=$root_path/usr/bin:$root_path/bin:$PATH
+      [PYTHONHOME]=$root_path/usr
+    )
 
     [[ ${executable_path-} ]] || get_executable_path executable_path
     [[ ${executable_path-} != ./AppRun ]] || result_environment[APPDIR]=$distribution_path
-
-    build_gdk_pixbuf_path gdk_pixbuf_path
-    [[ ! ${gdk_pixbuf_path-} ]] || result_environment[GDK_PIXBUF_MODULE_FILE]=$gdk_pixbuf_path
 
     build_directory_list python_path "$distribution_path"/usr/lib/python*/dist-packages "$root_path"/usr/lib/python*{,/dist-packages,/plat-*}
     [[ ! ${python_path-} ]] || result_environment[PYTHONPATH]=${PYTHONPATH+$PYTHONPATH:}$python_path
@@ -1031,6 +1028,9 @@ install_app_runner = lambda app: \
       result_environment[GCONV_PATH]=${library_paths[0]}/gconv
       result_environment[GI_TYPELIB_PATH]=${library_paths[0]}/girepository-1.0
     fi
+
+    build_gdk_pixbuf_cache_path gdk_pixbuf_cache_path
+    [[ ! ${gdk_pixbuf_cache_path-} ]] || result_environment[GDK_PIXBUF_MODULE_FILE]=$gdk_pixbuf_cache_path
 
     readonly result_environment
   }
@@ -1085,20 +1085,27 @@ install_app_runner = lambda app: \
     readonly result_firejail_arguments
   }
 
-  function build_gdk_pixbuf_path {
-    declare -n result_gdk_pixbuf_path=$1
+  function build_gdk_pixbuf_cache_path {
+    declare -n result_gdk_pixbuf_cache_path=$1
     shift
 
     declare path
     for path in "$root_path"/usr/lib/*-linux-gnu/gdk-pixbuf-2.0/*; do
       if [[ -d $path ]]; then
-        result_gdk_pixbuf_path=$path/loaders.cache
-        [[ -f $result_gdk_pixbuf_path ]] || "${path%/*}"/gdk-pixbuf-query-loaders "$path"/loaders/* > "$result_gdk_pixbuf_path"
+        result_gdk_pixbuf_cache_path=$path/loaders.cache
+        if [[ ! -f $result_gdk_pixbuf_cache_path ]]; then
+          gdk_pixbuf_arguments=()
+          ! type firejail &> /dev/null || gdk_pixbuf_arguments+=(firejail --quiet)
+          gdk_pixbuf_arguments+=("${path%/*}"/gdk-pixbuf-query-loaders "$path"/loaders/*)
+          readonly gdk_pixbuf_arguments
+
+          "${gdk_pixbuf_arguments[@]}" > "$result_gdk_pixbuf_cache_path"
+        fi
         break
       fi
     done
 
-    readonly result_gdk_pixbuf_path
+    readonly result_gdk_pixbuf_cache_path
   }
 
   function check_firejail {
