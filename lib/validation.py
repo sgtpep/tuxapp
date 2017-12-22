@@ -228,7 +228,7 @@ validate_desktop_entry_value = lambda key, value: \
 validate_executable = lambda command: \
   validate_text(command) and \
   validate_command(command) and \
-  tuxapp.check('Does not contain ./')(lambda: './' in command)()
+  tuxapp.check('No argument starting with ./')(lambda: any(argument.startswith('./') for argument in tuxapp.split_command(command)))()
 
 validate_firejail = lambda options: \
   not options or \
