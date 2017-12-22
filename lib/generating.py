@@ -298,6 +298,8 @@ build_card = lambda icon_url, name, title, url=None, name_tag='', title_tag='', 
         .card-name {
           font-size: larger;
           font-weight: bold;
+          line-height: 1em;
+          margin-bottom: 0.2em;
         }
         .card.is-heading .card-name {
           font-size: x-large;
