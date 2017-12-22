@@ -10,6 +10,7 @@ import textwrap
 import time
 
 from lib import (
+  appfile,
   tuxapp,
   utilities,
 )
@@ -164,7 +165,7 @@ get_debian_container_url = lambda distribution: \
 
 get_debian_package_url = lambda distribution, package: 'https://{}/{}/{}/{}/download'.format('packages.debian.org' if tuxapp.is_debian_repository(distribution) else 'packages.ubuntu.com', distribution, tuxapp.detect_debian_architecture(), package)
 
-get_default_distribution = lambda: 'stretch'
+get_default_distribution = lambda: appfile.get_default_package_repository()
 
 get_distribution_cache_path = lambda distribution: \
   '/var/cache/pacman/pkg' \
