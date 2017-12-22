@@ -1,5 +1,5 @@
 category=development
-description=The next-gen Web and EPUB Editor based on the rendering engine of Firefox®.
+description=The next-gen Web and EPUB Editor based on the rendering engine of Firefox.
 desktop-entry=
 download-x86-64-url=http://bluegriffon.org/freshmeat/{version}/bluegriffon-{version}.Ubuntu16.04-x86_64.tar.bz2
 download-x86-url=
