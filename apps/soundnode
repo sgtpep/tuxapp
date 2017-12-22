@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=
 title=An opensource SoundCloud app for desktop
-version-regex=>What's new in v(.+?)<
+version-regex=What's new in v(.+?)\?
 version-url=http://www.soundnodeapp.com/
