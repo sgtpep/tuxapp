@@ -1345,7 +1345,7 @@ query_appfile = lambda app, key: \
 
 query_appfile_download_urls = \
   check('No download URL of {} for your architecture')(
-    lambda app: (uncheck(query_appfile_value)(app, 'download-{}-url'.format(detect_architecture())) or '').split()
+    lambda app: tuple((uncheck(query_appfile_value)(app, 'download-{}-url'.format(detect_architecture())) or '').split())
   )
 
 query_appfile_value = \
