@@ -10,6 +10,7 @@ import re
 import time
 
 from lib import (
+  testing,
   tuxapp,
   utilities,
   validation,
@@ -1128,7 +1129,7 @@ query_data_uri = lambda path, width=None: \
   utilities.update_data(build_data_uri_key(path, width), build_data_uri(path, width)) and \
   utilities.query_data(build_data_uri_key(path, width))
 
-query_updated_apps = lambda size: tuple((row[0].split(':', 1)[0], int(row[1])) for rows in iter(utilities.connect_data().execute('SELECT key, value FROM items WHERE key LIKE "%:timestamp" ORDER BY value DESC LIMIT ?', (size,)).fetchmany, []) for row in rows)
+query_updated_apps = lambda size: tuple((row[0].split(':', 1)[0], int(row[1])) for rows in iter(utilities.connect_data().execute('SELECT key, value FROM items WHERE key LIKE "%:timestamp" AND key NOT IN ({}) ORDER BY value DESC LIMIT ?'.format(', '.join('"{}:timestamp"'.format(distribution) for distribution in testing.get_distributions())), (size,)).fetchmany, []) for row in rows)
 
 remove_whitespace = lambda string: re.sub(r'^\s+', '', string, 0, re.M).replace('\n', '')
 
