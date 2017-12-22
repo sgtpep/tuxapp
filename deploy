@@ -80,6 +80,14 @@ sudo sed -i 's/^[\/ ]*\(Unattended-Upgrade::Automatic-Reboot\) .*/\1 "true";/' /
 
 sudo tee /etc/cron.d/"${github_repository##*/}" > /dev/null <<< "0 */3 * * * $USER ~/${github_repository##*/}/cron 2>&1 | mail -E -r cron@$hostname -s ${github_repository##*/} $USER"
 
+if ! grep -q '^/swap ' /etc/fstab; then
+  sudo fallocate -l 512M /swap
+  sudo chmod 600 /swap
+  sudo mkswap /swap
+  sudo swapon /swap
+  sudo tee -a /etc/fstab > /dev/null <<< '/swap none swap defaults 0 0'
+fi
+
 [[ -d /etc/letsencrypt/live ]] || sudo certbot certonly -d "$hostname" -m "$email" -w /var/www/html --agree-tos --webroot
 
 sudo tee /etc/msmtprc > /dev/null << EOF
