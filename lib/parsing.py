@@ -503,7 +503,8 @@ parse_image_url = lambda url: \
 parse_name = lambda url: \
   check_url_name(url, tuxapp.parse_url(url).path.lstrip('/').split('/', 1)[0]) \
     if tuxapp.parse_url(url).netloc.endswith('.github.io') and tuxapp.parse_url(url).path.lstrip('/') else \
-  parse_html(GitHubNameParser, request_url_cached(url)) \
+  parse_html(GitHubNameParser, request_url_cached(url)) or \
+  check_url_name(url, tuxapp.parse_url(url).path.split('/')[-1]) \
     if is_github_repository_url(url) else \
   parse_html(NameParser, request_url_cached(url)) or \
   check_url_name(url, extract_url_name(url))
