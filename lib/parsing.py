@@ -191,11 +191,14 @@ class GitHubScreenshotURLsParser(BaseParser):
       self.is_article = True
     elif tag == 'p' and self.is_article:
       self.paragraph_number += 1
-    elif tag == 'img' and attributes.get('src') and self.previous_tag == 'a' and self.previous_attributes.get('href') and (is_image_url(self.previous_attributes['href']) or self.previous_attributes['href'] == attributes.get('data-canonical-src', attributes['src'])) and self.is_article and self.paragraph_number > 1:
-      if attributes.get('data-canonical-src'):
-        self.add_result(attributes['data-canonical-src'] if validation.check_url_https(attributes['data-canonical-src']) else attributes['data-canonical-src'].replace('http://', 'https://', 1))
-      else:
+    elif tag == 'img' and attributes.get('src') and self.is_article and self.paragraph_number > 1:
+      if self.previous_tag == 'a' and self.previous_attributes.get('href') and (is_image_url(self.previous_attributes['href']) or self.previous_attributes['href'] == attributes['src']):
         self.add_result(attributes['src'])
+      elif if attributes.get('data-canonical-src') and is_image_url(attributes.get['data-canonical-src']):
+        if validation.check_url_https(attributes['data-canonical-src']):
+          self.add_result(attributes['data-canonical-src'])
+        else:
+          self.add_result(attributes['data-canonical-src'].replace('http://', 'https://', 1))
 
 class IconURLParser(BaseParser):
   is_head = True
