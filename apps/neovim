@@ -1,0 +1,19 @@
+category=development
+description=Neovim is a project that seeks to aggressively refactor Vim.
+desktop-entry=Terminal=true
+download-x86-64-url=https://github.com/neovim/neovim/releases/download/nightly/nvim-linux64.tar.gz
+download-x86-url=
+executable=./bin/nvim
+firejail=
+free-license=yes
+group=code-editors
+homepage-url=https://github.com/neovim/neovim
+icon-url=https://raw.githubusercontent.com/neovim/neovim/master/runtime/nvim.png
+ignored-libraries=
+name=Neovim
+note=
+package-repository=stretch
+packages=
+title=Vim-fork focused on extensibility and usability
+version-regex=/download/v(.+?)/
+version-url=https://github.com/neovim/neovim/releases/latest
