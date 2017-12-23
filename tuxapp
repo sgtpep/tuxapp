@@ -786,7 +786,7 @@ get_package_exclusions = lambda package: \
     '/var',
   ) + \
   (('/bin', '/usr/bin') if package.startswith('lib') and package not in ('libarchive-tools', 'libc-bin') else ()) + \
-  (() if package == 'libqt5webengine-data' else ('/usr/share',))
+  (() if package in ('libqt5webengine-data', 'shared-mime-info') else ('/usr/share',))
 
 get_package_install_command = lambda package, message='{}': \
   message.format('sudo apt install {}'.format(package)) \
@@ -1113,6 +1113,14 @@ install_app_runner = lambda app: \
     fi
   }
 
+  function generate_mime_cache {
+    if [[ ! -f /usr/share/mime/mime.cache && ! -f /usr/local/share/mime/mime.cache && ! -f ~/.local/share/mime/mime.cache && -x $root_path/usr/bin/update-mime-database.real ]]; then
+      run_firejail "$root_path"/usr/bin/update-mime-database.real "$root_path"/usr/share/mime &> /dev/null
+      mkdir -p ~/.local/share/mime
+      cp "$root_path"/usr/share/mime/mime.cache ~/.local/share/mime
+    fi
+  }
+
   function get_executable_path {
     declare -n result_executable_path=$1
     shift
@@ -1137,6 +1145,7 @@ install_app_runner = lambda app: \
 
   function main {
     check_firejail
+    generate_mime_cache
 
     declare -A environment
     build_environment environment
@@ -1523,7 +1532,7 @@ resolve_app_packages_recursive = lambda app, packages, resolved_packages=set(): 
   functools.reduce(lambda packages, package: \
     packages | \
     {package} | \
-    resolve_app_packages_recursive(app, tuple(dependency for dependency in query_app_package_depenencies(app, package) if (is_package_library(dependency) or not package.startswith('lib')) and dependency not in resolved_packages), # pylint: disable=undefined-variable
+    resolve_app_packages_recursive(app, tuple(dependency for dependency in query_app_package_depenencies(app, package) if (is_package_library(dependency) or dependency == 'shared-mime-info' or not package.startswith('lib')) and dependency not in resolved_packages), # pylint: disable=undefined-variable
   packages | {package}), packages, set())
 
 resolve_outdated_app_packages = lambda app, packages: tuple(package for package in resolve_app_packages(app, packages) if extract_package_version(parse_url(query_app_package_url(app, package)).path) != read_app_package_version(app, package))
