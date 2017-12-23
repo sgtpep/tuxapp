@@ -1093,14 +1093,7 @@ install_app_runner = lambda app: \
     for path in "$root_path"/usr/lib/*-linux-gnu/gdk-pixbuf-2.0/*; do
       if [[ -d $path ]]; then
         result_gdk_pixbuf_cache_path=$path/loaders.cache
-        if [[ ! -f $result_gdk_pixbuf_cache_path ]]; then
-          gdk_pixbuf_arguments=()
-          ! type firejail &> /dev/null || gdk_pixbuf_arguments+=(firejail --quiet)
-          gdk_pixbuf_arguments+=("${path%/*}"/gdk-pixbuf-query-loaders "$path"/loaders/*)
-          readonly gdk_pixbuf_arguments
-
-          "${gdk_pixbuf_arguments[@]}" > "$result_gdk_pixbuf_cache_path"
-        fi
+        [[ -f $result_gdk_pixbuf_cache_path ]] || run_firejail "${path%/*}"/gdk-pixbuf-query-loaders "$path"/loaders/* > "$result_gdk_pixbuf_cache_path"
         break
       fi
     done
@@ -1174,6 +1167,14 @@ install_app_runner = lambda app: \
     result_firejail_options=()
     [[ ! -f $firejail_options_path ]] || eval "result_firejail_options=($(< "$firejail_options_path"))"
     readonly result_firejail_options
+  }
+
+  function run_firejail {
+    if type firejail &> /dev/null; then
+      firejail --quiet "$@"
+    else
+      "$@"
+    fi
   }
 
   main "$@"
