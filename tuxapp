@@ -570,7 +570,7 @@ detect_app_library_packages = \
           update_app_package_data(app, (items[-1][0], 'package'), line) and \
           items[:-1] + ((items[-1][0], line),),
         request_app_library_packages(app, libraries), ())) + \
-        ('libudev1',)
+        (('libudev1',) if libraries else ())
       )))
   )
 
