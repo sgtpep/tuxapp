@@ -7,4 +7,5 @@ The following apps are not supported by `tuxapp` due to different issues which m
 - [Ring](https://ring.cx/): no GUI is appeared
 - [Seafile](https://www.seafile.com/en/home/): no GUI is appeared after the welcome screen
 - [Steam](http://store.steampowered.com/): requires x86 libraries on the x86-64 architecuture
+- [Vimiv](http://karlch.github.io/vimiv/): contains an extension that needs to be compiled
 - [k2pdfopt](http://www.willus.com/k2pdfopt/): requires solving a CAPTCHA to download
