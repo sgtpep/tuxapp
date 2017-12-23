@@ -378,6 +378,7 @@ filter_app_screenshot_urls = lambda app, urls: tuple(url for url in (filter_app_
 filter_app_video_url = lambda app, url, reference_url=None: \
   '' \
     if re.search({
+      'fman': r'/rocket\.mp4',
       'nylas-mail': r'\byoutube\.com/',
     }.get(app, r'^$'), reference_url or url) else \
   url
