@@ -194,11 +194,8 @@ class GitHubScreenshotURLsParser(BaseParser):
     elif tag == 'img' and attributes.get('src') and self.is_article and self.paragraph_number > 1:
       if self.previous_tag == 'a' and self.previous_attributes.get('href') and (is_image_url(self.previous_attributes['href']) or self.previous_attributes['href'] == attributes['src']):
         self.add_result(attributes['src'])
-      elif if attributes.get('data-canonical-src') and is_image_url(attributes.get['data-canonical-src']):
-        if validation.check_url_https(attributes['data-canonical-src']):
-          self.add_result(attributes['data-canonical-src'])
-        else:
-          self.add_result(attributes['data-canonical-src'].replace('http://', 'https://', 1))
+      elif attributes.get('data-canonical-src') and is_image_url(attributes.get['data-canonical-src']):
+        self.add_result(attributes['data-canonical-src'])
 
 class IconURLParser(BaseParser):
   is_head = True
@@ -458,8 +455,7 @@ parse_app_downloads_url = lambda app, url: \
 parse_app_screenshot_urls = lambda app, url: \
   filter_app_screenshot_urls(app, parse_github_screenshot_urls(url)) \
     if is_github_repository_url(url) else \
-  filter_app_screenshot_urls(app, parse_screenshot_urls(parse_screenshots_url(url) or url)) + \
-  (filter_app_screenshot_urls(app, parse_github_screenshot_urls(utilities.build_github_url(parse_github_repository(url)))) if parse_github_repository(url) else ()) + \
+  (filter_app_screenshot_urls(app, parse_screenshot_urls(parse_screenshots_url(url) or url)) or (filter_app_screenshot_urls(app, parse_github_screenshot_urls(utilities.build_github_url(parse_github_repository(url)))) if parse_github_repository(url) else ())) + \
   filter_app_screenshot_urls(app, parse_app_debian_screenshot_urls(app))
 
 parse_app_video_thumbnail_urls = lambda app, url: \
