@@ -184,11 +184,14 @@ class GitHubNameParser(BaseParser):
 class GitHubScreenshotURLsParser(BaseParser):
   is_article = False
   is_multiple = True
+  paragraph_number = 0
 
   def on_tag(self, tag, attributes):
     if tag == 'article':
       self.is_article = True
-    elif tag == 'img' and attributes.get('src') and self.previous_tag == 'a' and self.previous_attributes.get('href') and (is_image_url(self.previous_attributes['href']) or is_image_url(attributes.get('data-canonical-src', '')) or self.previous_attributes['href'] == attributes['src']) and self.is_article:
+    elif tag == 'p' and self.is_article:
+      self.paragraph_number += 1
+    elif tag == 'img' and attributes.get('src') and self.previous_tag == 'a' and self.previous_attributes.get('href') and (is_image_url(self.previous_attributes['href']) or is_image_url(attributes.get('data-canonical-src', '')) or self.previous_attributes['href'] == attributes['src']) and self.is_article and self.paragraph_number > 1:
       self.add_result(attributes['src'])
 
 class IconURLParser(BaseParser):
