@@ -191,11 +191,8 @@ class GitHubScreenshotURLsParser(BaseParser):
       self.is_article = True
     elif tag == 'p' and self.is_article:
       self.paragraph_number += 1
-    elif tag == 'img' and attributes.get('src') and self.is_article and self.paragraph_number > 1:
-      if self.previous_tag == 'a' and self.previous_attributes.get('href') and (is_image_url(self.previous_attributes['href']) or self.previous_attributes['href'] == attributes['src']):
-        self.add_result(attributes['src'])
-      elif attributes.get('data-canonical-src') and is_image_url(attributes.get['data-canonical-src']):
-        self.add_result(attributes['data-canonical-src'])
+    elif tag == 'img' and attributes.get('src') and self.previous_tag == 'a' and self.previous_attributes.get('href') and (is_image_url(self.previous_attributes['href']) or self.previous_attributes['href'] == attributes['src']) and self.is_article and self.paragraph_number > 1:
+      self.add_result(attributes['src'])
 
 class IconURLParser(BaseParser):
   is_head = True
@@ -368,10 +365,10 @@ filter_app_screenshot_url = lambda app, url: \
   '' \
     if re.search({
       'avidemux': r'/menu-screenshots-inactive\.png$',
-      'inboxer': r'\.githubusercontent\.com/',
+      'inboxer': r'\.(githubusercontent\.com|shields\.io)/',
       'jumpfm': r'/dev\.png$',
-      'remarkable': r'/QR',
-      'skype': r'\bscreenshots\.debian\.net/',
+      'rambox': r'/icons/',
+      'skype': r'/screenshots\.debian\.net/',
       'visual-studio-code': r'\.svg$',
     }.get(app, r'^$'), url) else \
   url
