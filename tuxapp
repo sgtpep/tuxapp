@@ -1575,7 +1575,7 @@ unpack_app_distribution = \
       unpack_app_appimage1_distribution(app, path) \
         if is_file_magic_number(path, b'\x7fELF\x02\x01\x01\x00AI\x01') else \
       unpack_app_appimage2_distribution(app, path) \
-        if is_file_magic_number(path, b'\x7fELF\x02\x01\x01\x00AI\x02') else \
+        if is_file_magic_number(path, b'\x7fELF\x02\x01\x01\x00AI\x02') or is_file_magic_number(path, b'\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02') else \
       unpack_app_package_distribution(app, path) \
         if is_file_magic_number(path, b'!<arch>\n') else \
       unpack_app_zip_distribution(app, path) \
