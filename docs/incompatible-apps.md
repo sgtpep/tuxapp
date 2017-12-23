@@ -2,6 +2,7 @@
 
 The following apps are not supported by `tuxapp` due to different issues which may require some significant modifications or workarounds:
 
+- [Discord](https://discordapp.com/): gray window on startup
 - [Dragonfire](http://dragon.computer/#dragonfire): installs many python packages from the .deb postinst script
 - [MySQL Workbench](https://www.mysql.com/products/workbench/): aborts with 'Gtk:ERROR:/build/gtk+3.0-Th_a5U/gtk+3.0-3.22.24/./gtk/gtkiconhelper.c:493:ensure_surface_for_gicon: assertion failed: (destination)'
 - [Ring](https://ring.cx/): no GUI is appeared
