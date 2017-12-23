@@ -786,7 +786,10 @@ get_package_exclusions = lambda package: \
     '/var',
   ) + \
   (('/bin', '/usr/bin') if package.startswith('lib') and package not in ('libarchive-tools', 'libc-bin') else ()) + \
-  (() if package in ('libqt5webengine-data', 'shared-mime-info') else ('/usr/share',))
+  (() if package in (
+    'libqt5webengine-data',
+    'shared-mime-info',
+  ) else ('/usr/share',))
 
 get_package_install_command = lambda package, message='{}': \
   message.format('sudo apt install {}'.format(package)) \
