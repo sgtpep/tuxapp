@@ -367,6 +367,7 @@ filter_app_screenshot_url = lambda app, url: \
       'avidemux': r'/menu-screenshots-inactive\.png$',
       'inboxer': r'\.(githubusercontent\.com|shields\.io)/',
       'jumpfm': r'/dev\.png$',
+      'mailspring': r'/(ic-|send-later@)',
       'rambox': r'/icons/',
       'skype': r'/screenshots\.debian\.net/',
       'visual-studio-code': r'\.svg$',
