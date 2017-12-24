@@ -41,6 +41,7 @@ get_groups = lambda: \
     'productivity-tools',
     'racing-games',
     'role-playing',
+    'screen-capture',
     'sports-utilities',
     'version-control',
     'video-editing',
