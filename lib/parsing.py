@@ -380,8 +380,7 @@ filter_app_video_url = lambda app, url, reference_url=None: \
   '' \
     if re.search({
       'fman': r'/rocket\.mp4',
-      'nylas-mail': r'\byoutube\.com/',
-    }.get(app, r'^$'), reference_url or url) else \
+    }.get(app, r'^$'), reference_url or url) or is_github_repository_url(tuxapp.query_appfile(app, 'homepage-url')) else \
   url
 
 filter_app_video_urls = lambda app, urls, reference_urls=None: tuple(url for url in (filter_app_video_url(app, url, reference_url) for url, reference_url in zip(urls, reference_urls or urls)) if url)
