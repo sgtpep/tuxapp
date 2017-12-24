@@ -1,19 +1,19 @@
-category=
-description=
+category=video
+description=Peek makes it easy to create short screencasts of a screen area. It was built for the specific use case of recording screen areas, e.g. for easily showing UI features of your own apps or for showing a bug in bug reports. With Peek you simply place the Peek window over the area you want to record and press "Record". Peek is optimized for generating animated GIFs, but you can also directly record to WebM or MP4 if you prefer.
 desktop-entry=
 download-x86-64-url=https://github.com/phw/peek/releases/download/{version}/peek-{version}-0-x86_64.AppImage
 download-x86-url=
-executable=./AppRun
+executable=env GDK_BACKEND=x11 ./AppRun
 firejail=
-free-license=
-group=
+free-license=yes
+group=screen-capture
 homepage-url=https://github.com/phw/peek
-icon-url=
+icon-url=https://raw.githubusercontent.com/phw/peek/master/data/icons/512x512/com.uploadedlobster.peek.png
 ignored-libraries=
 name=Peek
 note=
 package-repository=stretch
-packages=gsettings-desktop-schemas libgtk-3-common
-title=
+packages=
+title=Simple animated GIF screen recorder with an easy to use interface
 version-regex=/download/(.+?)/
 version-url=https://github.com/phw/peek/releases/latest
