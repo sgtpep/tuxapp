@@ -787,6 +787,8 @@ get_package_exclusions = lambda package: \
   ) + \
   (('/bin', '/usr/bin') if package.startswith('lib') and package not in ('libarchive-tools', 'libc-bin') else ()) + \
   (() if package in (
+    'gsettings-desktop-schemas',
+    'libgtk-3-common',
     'libqt5webengine-data',
     'shared-mime-info',
   ) else ('/usr/share',))
@@ -1113,6 +1115,19 @@ install_app_runner = lambda app: \
     fi
   }
 
+  function compile_glib_schemas {
+    declare -r distribution_schemas_path=$distribution_path/usr/share/glib-2.0/schemas
+    declare is_updated=
+    declare path
+    for path in "$root_path"/usr/share/glib-2.0/schemas/*.xml; do
+      if [[ ! -f $distribution_schemas_path/${path##*/} ]]; then
+        cp "$path" "$distribution_schemas_path"
+        is_updated=1
+      fi
+    done
+    [[ ! $is_updated && -f $distribution_schemas_path/gschemas.compiled || ! -x $library_path/glib-2.0/glib-compile-schemas ]] || run_firejail "$library_path"/glib-2.0/glib-compile-schemas "$distribution_schemas_path"
+  }
+
   function generate_mime_cache {
     if [[ ! -f /usr/share/mime/mime.cache && ! -f /usr/local/share/mime/mime.cache && ! -f ~/.local/share/mime/mime.cache && -x $root_path/usr/bin/update-mime-database.real ]]; then
       run_firejail "$root_path"/usr/bin/update-mime-database.real "$root_path"/usr/share/mime &> /dev/null
@@ -1145,6 +1160,7 @@ install_app_runner = lambda app: \
 
   function main {
     check_firejail
+    compile_glib_schemas
     generate_mime_cache
 
     declare -A environment
