@@ -1122,7 +1122,7 @@ install_app_runner = lambda app: \
     declare is_updated=
     declare path
     for path in "$root_path"/usr/share/glib-2.0/schemas/*.xml; do
-      if [[ ! -f $distribution_schemas_path/${path##*/} ]]; then
+      if [[ -f $path && ! -f $distribution_schemas_path/${path##*/} ]]; then
         cp "$path" "$distribution_schemas_path"
         is_updated=1
       fi
