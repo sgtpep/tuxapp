@@ -374,7 +374,7 @@ update_appfile_packages = lambda data: \
   update_appfile(data, 'packages', input_app_packages(data['app'], data.get('packages', ''))) \
     if os.path.isfile(get_app_flag_path(data['app'], 'packages')) else \
   tuxapp.touch_file(get_app_flag_path(data['app'], 'packages')) and \
-  update_appfile(data, 'packages', '')
+  update_appfile(data, 'packages', data.get('packages', ''))
 
 update_appfile_test = lambda data: \
   data \
