@@ -960,6 +960,7 @@ install_app_runner = lambda app: \
   declare -r executable_arguments=(''' + normalize_app_command(app, sanitize_command(query_appfile(app, 'executable'))) + r''')
   declare -r firejail_options=(''' + sanitize_command(query_appfile(app, 'firejail')) + r''')
   declare -r firejail_options_path=''' + build_app_runner_relative_path(app, get_app_firejail_options_path(app)) + r'''
+  declare -r library_path=''' + build_app_runner_relative_path(app, get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name()))) + r'''
   declare -r root_path=''' + build_app_runner_relative_path(app, get_app_root_path(app)) + r'''
   declare -r urls_path=''' + build_app_runner_relative_path(app, os.path.join(get_app_path(app), 'urls')) + r'''
 
@@ -1011,6 +1012,8 @@ install_app_runner = lambda app: \
     shift
 
     result_environment=(
+      [GCONV_PATH]=$library_path/gconv
+      [GI_TYPELIB_PATH]=$library_path/girepository-1.0
       [PATH]=$root_path/usr/bin:$root_path/bin:$PATH
       [PYTHONHOME]=$root_path/usr
     )
@@ -1024,12 +1027,6 @@ install_app_runner = lambda app: \
     if type firejail &> /dev/null; then
       result_environment[BROWSER]=$browser_path
       result_environment[TUXAPP_URLS]=$urls_path
-    fi
-
-    library_paths=("$root_path"/usr/lib/*-linux-gnu)
-    if [[ ${library_paths-} ]]; then
-      result_environment[GCONV_PATH]=${library_paths[0]}/gconv
-      result_environment[GI_TYPELIB_PATH]=${library_paths[0]}/girepository-1.0
     fi
 
     build_gdk_pixbuf_cache_path gdk_pixbuf_cache_path
