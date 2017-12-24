@@ -720,6 +720,8 @@ get_app_root_binary_path = lambda app, filename: get_app_root_file_path(app, os.
 
 get_app_root_file_path = lambda app, path: os.path.join(get_app_root_path(app), path)
 
+get_app_root_library_file_path = lambda app, path: get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), path))
+
 get_app_root_path = lambda app: os.path.join(get_app_path(app), 'root')
 
 get_app_runner_path = lambda app: os.path.join(get_app_path(app), 'run')
@@ -1348,13 +1350,13 @@ patch_app_elf_files_patchelf = \
   )
 
 patch_app_package = lambda app, package: \
-  symlink_file(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'libGL.so.1')), 'mesa/libGL.so.1') \
-    if package == 'libgl1-mesa-glx' and not os.path.isfile(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'libGL.so.1'))) else \
+  symlink_file(get_app_root_library_file_path(app, 'libGL.so.1'), 'mesa/libGL.so.1') \
+    if package == 'libgl1-mesa-glx' and not os.path.isfile(get_app_root_library_file_path(app, 'libGL.so.1')) else \
   write_app_qt_configuration(app, build_app_qt_configuration_path(app)) \
     if package == 'libqt5gui5' and not os.path.isfile(build_app_qt_configuration_path(app)) else \
   all(write_app_qt_configuration(app, path) for path in (
     get_app_root_file_path(app, 'usr/bin/qt.conf'),
-    get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5/libexec/qt.conf')),
+    get_app_root_library_file_path(app, 'qt5/libexec/qt.conf'),
   )) \
     if package in ('python-pyqt5', 'python3-pyqt5') else \
   True
@@ -1709,7 +1711,7 @@ write_app_qt_configuration = lambda app, path: \
   Data = ../../../share/qt5
   Prefix = {}
   Translations = ../../../share/qt5/translations
-  ''').format(os.path.relpath(get_app_root_file_path(app, os.path.join('usr/lib', detect_library_directory_name(), 'qt5')), os.path.dirname(path))))
+  ''').format(os.path.relpath(get_app_root_library_file_path(app, 'qt5'), os.path.dirname(path))))
 
 write_app_version = lambda app: write_file(get_app_version_path(app), '{} {}\n'.format(request_app_version(app), hash_app_appfile(app)))
 
