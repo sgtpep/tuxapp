@@ -525,7 +525,7 @@ check_app_installed = \
   )
 
 check_app_updated = \
-  log_after(lambda app, *args, **kwargs: not is_existing_command('firejail') and resolve_outdated_app_packages(app, query_appfile(app, 'packages')) and 'Warning: packages of {} are outdated'.format(app))(
+  log_after(lambda app, *args, **kwargs: not is_existing_command('firejail') and resolve_outdated_app_packages(app, get_installed_app_packages(app)) and 'Warning: packages of {} are outdated'.format(app))(
   log_result(lambda app, *args, **kwargs: \
     '{} {} is up to date'.format(app, read_app_version(app)) \
       if kwargs['result'] else \
@@ -766,6 +766,8 @@ get_firejail_message = lambda name: \
   }[name]
 
 get_github_repository = lambda: 'sgtpep/{}'.format(get_name())
+
+get_installed_app_packages = lambda app: tuple(os.path.basename(path) for path in glob.iglob(get_app_package_version_path(app, '*')))
 
 get_installed_apps = \
   check('No apps are installed')(
