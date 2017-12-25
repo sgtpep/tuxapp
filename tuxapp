@@ -517,6 +517,15 @@ build_wget_request_arguments = lambda options, is_gzip=False: \
   (('--header', 'Accept-Encoding: gzip') if is_gzip else ()) + \
   options
 
+cache_app_gdk_pixbuf_loaders = lambda app: \
+  os.path.isfile(get_app_gdk_pixbuf_file_path(app, 'loaders.cache')) or \
+  not os.path.isdir(get_app_gdk_pixbuf_file_path(app, 'loaders')) or \
+  write_file(get_app_gdk_pixbuf_file_path(app, 'loaders.cache'), read_process(
+    build_firejail_arguments() + \
+    (get_app_gdk_pixbuf_file_path(app, '../gdk-pixbuf-query-loaders'),) + \
+    tuple(glob.iglob(os.path.join(get_app_gdk_pixbuf_file_path(app, 'loaders'), '*')))
+  ))
+
 check_app_installed = \
   check('{} is not installed')(
     lambda app, is_soft=False: \
@@ -546,6 +555,16 @@ check_apps_updated = \
 check_detected_app_library_packages = \
   log_after(lambda items, *args, **kwargs: any(not package for library, package in items) and 'Unable to detect packages for libraries: {}'.format(', '.join(library for library, package in items if not package)))(
     lambda items: tuple(package for library, package in items if package)
+  )
+
+compile_app_glib_schemas = lambda app: \
+  os.path.isfile(get_app_distribution_glib_schema_path(app, 'gschemas.compiled')) and \
+  set(os.path.basename(path) for path in glob.iglob(get_app_distribution_glib_schema_path(app, '*.xml'))) >= set(os.path.basename(path) for path in glob.iglob(get_app_root_glib_schema_path(app, '*.xml'))) or \
+  not is_file_executable(get_app_library_file_path(app, 'glib-2.0/glib-compile-schemas')) or \
+  all(copy_file(path, get_app_distribution_glib_schema_path(app, os.path.basename(path))) for path in glob.iglob(get_app_root_glib_schema_path(app, '*.xml'))) and \
+  call_process(
+    build_firejail_arguments() + \
+    (get_app_library_file_path(app, 'glib-2.0/glib-compile-schemas'), get_app_distribution_glib_schema_path(app, ''))
   )
 
 connect_data = lambda path: \
@@ -692,6 +711,8 @@ get_app_distribution_binary_path = lambda app, filename: get_app_distribution_fi
 
 get_app_distribution_file_path = lambda app, path: os.path.join(get_app_distribution_path(app), path)
 
+get_app_distribution_glib_schema_path = lambda app, path: get_app_distribution_file_path(app, os.path.join('usr/share/glib-2.0/schemas', path))
+
 get_app_distribution_path = lambda app: os.path.join(get_app_path(app), 'dist')
 
 get_app_downloads_path = lambda app: os.path.join(get_app_path(app), 'downloads')
@@ -723,6 +744,8 @@ get_app_path = lambda app: os.path.join(os.path.expanduser('~/.{}'.format(get_na
 get_app_root_binary_path = lambda app, filename: get_app_root_file_path(app, os.path.join('usr/bin', filename))
 
 get_app_root_file_path = lambda app, path: os.path.join(get_app_root_path(app), path)
+
+get_app_root_glib_schema_path = lambda app, path: get_app_root_file_path(app, os.path.join('usr/share/glib-2.0/schemas', path))
 
 get_app_root_path = lambda app: os.path.join(get_app_path(app), 'root')
 
@@ -950,7 +973,9 @@ install_app_packages = lambda app, packages: \
   install_app_package_files(app, download_app_packages(app, resolve_outdated_app_packages(app, packages))) and \
   (not packages or 'patchelf' in packages or patch_app_elf_files(app, get_app_root_path(app))) and \
   all(remove_file(path) if os.path.isfile(get_app_cached_file_path(app, path)) else rename_file(path, get_app_cached_file_path(app, path)) for path in glob.iglob(get_app_temp_file_path(app, '*.deb'))) and \
-  remove_old_files(get_app_cached_file_path(app, '*.deb'))
+  remove_old_files(get_app_cached_file_path(app, '*.deb')) and \
+  cache_app_gdk_pixbuf_loaders(app) and \
+  compile_app_glib_schemas(app)
 
 install_app_patchelf = lambda app: \
   install_app_packages(app, ('patchelf',)) and \
@@ -1040,8 +1065,8 @@ install_app_runner = lambda app: \
       result_environment[TUXAPP_URLS]=$urls_path
     fi
 
-    build_gdk_pixbuf_cache_path gdk_pixbuf_cache_path
-    [[ ! ${gdk_pixbuf_cache_path-} ]] || result_environment[GDK_PIXBUF_MODULE_FILE]=$gdk_pixbuf_cache_path
+    declare -r gdk_pixbuf_cache_paths=("$library_path"/gdk-pixbuf-2.0/*/loaders.cache)
+    [[ ! ${gdk_pixbuf_cache_paths-} ]] || result_environment[GDK_PIXBUF_MODULE_FILE]=${gdk_pixbuf_cache_paths[0]}
 
     readonly result_environment
   }
@@ -1096,22 +1121,6 @@ install_app_runner = lambda app: \
     readonly result_firejail_arguments
   }
 
-  function build_gdk_pixbuf_cache_path {
-    declare -n result_gdk_pixbuf_cache_path=$1
-    shift
-
-    declare path
-    for path in "$root_path"/usr/lib/*-linux-gnu/gdk-pixbuf-2.0/*; do
-      if [[ -d $path ]]; then
-        result_gdk_pixbuf_cache_path=$path/loaders.cache
-        [[ -f $result_gdk_pixbuf_cache_path ]] || run_firejail "${path%/*}"/gdk-pixbuf-query-loaders "$path"/loaders/* > "$result_gdk_pixbuf_cache_path"
-        break
-      fi
-    done
-
-    readonly result_gdk_pixbuf_cache_path
-  }
-
   function check_firejail {
     if type firejail &> /dev/null; then
       declare app_firejail_options
@@ -1121,21 +1130,6 @@ install_app_runner = lambda app: \
       [[ ! ${firejail_options-} ]] || echo ''' + quote_argument(get_firejail_message('options')).format('\'"${firejail_options[*]}"\'') + r''' >&2
     else
       [[ ${TUXAPP_TEST-} ]] || echo ''' + quote_argument(get_firejail_message('missing')) + r''' >&2
-    fi
-  }
-
-  function compile_glib_schemas {
-    declare -r distribution_schemas_path=$distribution_path/usr/share/glib-2.0/schemas
-    if [[ -d $distribution_schemas_path ]]; then
-      declare is_updated=
-      declare path
-      for path in "$root_path"/usr/share/glib-2.0/schemas/*.xml; do
-        if [[ -f $path && ! -f $distribution_schemas_path/${path##*/} ]]; then
-          cp "$path" "$distribution_schemas_path"
-          is_updated=1
-        fi
-      done
-      [[ ! $is_updated && -f $distribution_schemas_path/gschemas.compiled || ! -x $library_path/glib-2.0/glib-compile-schemas ]] || run_firejail "$library_path"/glib-2.0/glib-compile-schemas "$distribution_schemas_path"
     fi
   }
 
@@ -1171,7 +1165,6 @@ install_app_runner = lambda app: \
 
   function main {
     check_firejail
-    compile_glib_schemas
     generate_mime_cache
 
     declare -A environment
