@@ -517,15 +517,6 @@ build_wget_request_arguments = lambda options, is_gzip=False: \
   (('--header', 'Accept-Encoding: gzip') if is_gzip else ()) + \
   options
 
-cache_app_gdk_pixbuf_loaders = lambda app: \
-  os.path.isfile(get_app_gdk_pixbuf_file_path(app, 'loaders.cache')) or \
-  not os.path.isdir(get_app_gdk_pixbuf_file_path(app, 'loaders')) or \
-  write_file(get_app_gdk_pixbuf_file_path(app, 'loaders.cache'), read_process(
-    build_firejail_arguments() + \
-    (get_app_gdk_pixbuf_file_path(app, '../gdk-pixbuf-query-loaders'),) + \
-    tuple(glob.iglob(os.path.join(get_app_gdk_pixbuf_file_path(app, 'loaders'), '*')))
-  ))
-
 check_app_installed = \
   check('{} is not installed')(
     lambda app, is_soft=False: \
@@ -702,6 +693,15 @@ extract_package_name = lambda path: os.path.basename(path).split('_', 1)[0]
 extract_package_version = lambda path: path.split('_', 2)[1]
 
 filter_app_download_url = lambda app, url: url.replace('{debian}', '{}debian/pool'.format(get_debian_mirror_url())).replace('{ubuntu}', '{}ubuntu/pool'.format(get_ubuntu_mirror_url())).replace('{version}', request_app_version(app))
+
+generate_app_gdk_pixbuf_cache = lambda app: \
+  os.path.isfile(get_app_gdk_pixbuf_file_path(app, 'loaders.cache')) or \
+  not os.path.isdir(get_app_gdk_pixbuf_file_path(app, 'loaders')) or \
+  write_file(get_app_gdk_pixbuf_file_path(app, 'loaders.cache'), read_process(
+    build_firejail_arguments() + \
+    (get_app_gdk_pixbuf_file_path(app, '../gdk-pixbuf-query-loaders'),) + \
+    tuple(glob.iglob(os.path.join(get_app_gdk_pixbuf_file_path(app, 'loaders'), '*')))
+  ))
 
 get_app_cached_file_path = lambda app, path: os.path.join(get_cache_path(), query_appfile(app, 'package-repository'), os.path.basename(path))
 
@@ -974,8 +974,8 @@ install_app_packages = lambda app, packages: \
   (not packages or 'patchelf' in packages or patch_app_elf_files(app, get_app_root_path(app))) and \
   all(remove_file(path) if os.path.isfile(get_app_cached_file_path(app, path)) else rename_file(path, get_app_cached_file_path(app, path)) for path in glob.iglob(get_app_temp_file_path(app, '*.deb'))) and \
   remove_old_files(get_app_cached_file_path(app, '*.deb')) and \
-  cache_app_gdk_pixbuf_loaders(app) and \
-  compile_app_glib_schemas(app)
+  compile_app_glib_schemas(app) and \
+  generate_app_gdk_pixbuf_cache(app)
 
 install_app_patchelf = lambda app: \
   install_app_packages(app, ('patchelf',)) and \
