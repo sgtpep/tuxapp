@@ -1,8 +1,8 @@
 category=audio
 description=Spotify is a digital music service that gives you access to millions of songs.
 desktop-entry=
-download-x86-64-url=http://repository.spotify.com/pool/non-free/s/spotify-client/spotify-client_{version}_amd64.deb {debian}/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u7_amd64.deb
-download-x86-url=http://repository.spotify.com/pool/non-free/s/spotify-client/spotify-client_{version}_i386.deb {debian}/main/o/openssl/libssl1.0.0_1.0.1t-1+deb8u7_i386.deb
+download-x86-64-url=http://repository.spotify.com/pool/non-free/s/spotify-client/spotify-client_{version}_amd64.deb
+download-x86-url=http://repository.spotify.com/pool/non-free/s/spotify-client/spotify-client_{version}_i386.deb
 executable=./usr/bin/spotify
 firejail=
 free-license=yes
