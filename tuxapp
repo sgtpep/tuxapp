@@ -988,7 +988,7 @@ install_app_runner = lambda app: \
 
     [[ ! ${TUXAPP_TRACE-} ]] || result_command_arguments+=(strace -f -e open,openat,stat)
 
-    arguments=("${executable_arguments[@]}")
+    declare arguments=("${executable_arguments[@]}")
     arguments=("${arguments[@]/#.\//"$distribution_path"/}")
     arguments=("${arguments[@]//{dist\}/"$distribution_path"}")
     arguments=("${arguments[@]//{root\}/"$root_path"}")
