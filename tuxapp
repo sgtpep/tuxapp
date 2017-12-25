@@ -676,7 +676,7 @@ execute_app = lambda app, arguments=(): execute_process((get_app_runner_path(app
 
 execute_process = lambda arguments: os.execvp(arguments[0], arguments)
 
-extract_app = lambda string: os.path.basename(string)
+extract_app = lambda string: os.path.basename(string.rstrip('/'))
 
 extract_package_name = lambda path: os.path.basename(path).split('_', 1)[0]
 
