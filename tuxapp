@@ -1033,7 +1033,7 @@ install_app_runner = lambda app: \
     [[ ${executable_path-} != ./AppRun ]] || result_environment[APPDIR]=$distribution_path
 
     build_directory_list python_path "$distribution_path"/usr/lib/python*/dist-packages "$root_path"/usr/lib/python*{,/dist-packages,/plat-*}
-    [[ ! ${python_path-} ]] || result_environment[PYTHONPATH]=${PYTHONPATH+$PYTHONPATH:}$python_path
+    [[ ! ${python_path-} ]] || result_environment[PYTHONPATH]=$python_path${PYTHONPATH+:$PYTHONPATH}
 
     if type firejail &> /dev/null; then
       result_environment[BROWSER]=$browser_path
