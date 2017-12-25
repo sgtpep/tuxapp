@@ -933,7 +933,7 @@ install_app_desktop_entry = \
       {appendix}''').format(
         appendix=query_appfile(app, 'desktop-entry'),
         category=build_desktop_entry_category(query_appfile(app, 'category')),
-        icon_path=install_app_icon(app),
+        icon_path=get_app_icon_path(app),
         name=query_appfile(app, 'name'),
         runner_path=get_app_runner_path(app),
         title=query_appfile(app, 'title'),
@@ -948,13 +948,13 @@ install_app_distribution = lambda app: \
   patch_app_elf_files(app, get_app_distribution_path(app)) and \
   all(remove_file(path) for path in glob.iglob(get_app_temp_file_path(app, '*'))) and \
   install_app_packages(app, detect_app_library_packages(app, detect_missing_app_libraries(app))) and \
-  remove_file(get_app_icon_path(app)) and \
+  install_app_icon(app) and \
   write_app_version(app) and \
   get_app_distribution_path(app)
 
 install_app_icon = lambda app: \
   not query_appfile(app, 'icon-url') or \
-  uncheck(download_missing_app_file)(app, query_appfile(app, 'icon-url'), get_app_icon_path(app))
+  uncheck(download_app_file)(app, query_appfile(app, 'icon-url'), get_app_icon_path(app))
 
 install_app_package_file = lambda app, path: \
   silence(unpack_package)(path, get_app_root_path(app), tuple('--exclude=.{}'.format(exclusion) for exclusion in get_package_exclusions(extract_package_name(path)))) and \
