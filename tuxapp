@@ -1119,15 +1119,17 @@ install_app_runner = lambda app: \
 
   function compile_glib_schemas {
     declare -r distribution_schemas_path=$distribution_path/usr/share/glib-2.0/schemas
-    declare is_updated=
-    declare path
-    for path in "$root_path"/usr/share/glib-2.0/schemas/*.xml; do
-      if [[ -f $path && ! -f $distribution_schemas_path/${path##*/} ]]; then
-        cp "$path" "$distribution_schemas_path"
-        is_updated=1
-      fi
-    done
-    [[ ! $is_updated && -f $distribution_schemas_path/gschemas.compiled || ! -x $library_path/glib-2.0/glib-compile-schemas ]] || run_firejail "$library_path"/glib-2.0/glib-compile-schemas "$distribution_schemas_path"
+    if [[ -d $distribution_schemas_path ]]; then
+      declare is_updated=
+      declare path
+      for path in "$root_path"/usr/share/glib-2.0/schemas/*.xml; do
+        if [[ -f $path && ! -f $distribution_schemas_path/${path##*/} ]]; then
+          cp "$path" "$distribution_schemas_path"
+          is_updated=1
+        fi
+      done
+      [[ ! $is_updated && -f $distribution_schemas_path/gschemas.compiled || ! -x $library_path/glib-2.0/glib-compile-schemas ]] || run_firejail "$library_path"/glib-2.0/glib-compile-schemas "$distribution_schemas_path"
+    fi
   }
 
   function generate_mime_cache {
