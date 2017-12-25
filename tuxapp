@@ -552,10 +552,10 @@ compile_app_glib_schemas = lambda app: \
   os.path.isfile(get_app_distribution_glib_schema_path(app, 'gschemas.compiled')) and set(os.path.basename(path) for path in glob.iglob(get_app_distribution_glib_schema_path(app, '*.xml'))) >= set(os.path.basename(path) for path in glob.iglob(get_app_root_glib_schema_path(app, '*.xml'))) or \
   not is_file_executable(get_app_library_file_path(app, 'glib-2.0/glib-compile-schemas')) or \
   all(copy_file(path, get_app_distribution_glib_schema_path(app, os.path.basename(path))) for path in glob.iglob(get_app_root_glib_schema_path(app, '*.xml'))) and \
-  call_process(
+  (not any(glob.iglob(get_app_distribution_glib_schema_path(app, '*.xml'))) or call_process(
     build_firejail_arguments() + \
     (get_app_library_file_path(app, 'glib-2.0/glib-compile-schemas'), get_app_distribution_glib_schema_path(app, ''))
-  )
+  ))
 
 connect_data = lambda path: \
   (os.path.isfile(path) or connect_data_memoized.remove(path)) and \
