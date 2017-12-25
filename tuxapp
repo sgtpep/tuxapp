@@ -791,7 +791,10 @@ get_package_exclusions = lambda package: \
     '/usr/sbin',
     '/var',
   ) + \
-  (('/bin', '/usr/bin') if package.startswith('lib') and package not in ('libarchive-tools', 'libc-bin') else ()) + \
+  (('/bin', '/usr/bin') if package.startswith('lib') and package not in (
+    'libarchive-tools',
+    'libc-bin',
+  ) else ()) + \
   (() if package in (
     'gsettings-desktop-schemas',
     'libgtk-3-common',
