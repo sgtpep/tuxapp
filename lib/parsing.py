@@ -483,6 +483,7 @@ parse_github_latest_release_url = lambda url: utilities.build_github_url(check_g
 parse_github_releases_url = lambda url: utilities.build_github_url(check_github_releases(parse_github_repository(url)), 'releases')
 
 parse_github_repository = lambda url: \
+  is_github_repository_url(url) and tuxapp.search(utilities.get_github_url_pattern(), url, 0, 1) or \
   filter_github_repository(tuxapp.search(r'{}/releases\b'.format(utilities.get_github_url_pattern()), request_url_cached(url), 0, 1)) or \
   filter_github_repository(tuxapp.search(utilities.get_github_url_pattern(), request_url_cached(url), 0, 1))
 
