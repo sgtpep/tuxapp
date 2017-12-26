@@ -184,7 +184,7 @@ filter_name = lambda name: name.rstrip(''.join(validation.get_punctuation()))
 filter_packages = lambda packages: ' '.join(sorted(set(packages.split())))
 
 filter_text = lambda string, is_whitespacy=False: \
-  string.strip() \
+  string \
     if is_whitespacy else \
   re.sub(r'\s+', ' ', string.replace('\t', ' ')).strip()
 
