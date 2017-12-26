@@ -700,7 +700,8 @@ generate_app_gdk_pixbuf_cache = lambda app: \
     build_firejail_arguments() + \
     (get_app_gdk_pixbuf_file_path(app, '../gdk-pixbuf-query-loaders'),) + \
     tuple(glob.iglob(os.path.join(get_app_gdk_pixbuf_file_path(app, 'loaders'), '*')))
-  ))
+  )) and \
+  True
 
 get_app_cached_file_path = lambda app, path: os.path.join(get_cache_path(), query_appfile(app, 'package-repository'), os.path.basename(path))
 
