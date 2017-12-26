@@ -579,6 +579,7 @@ detect_app_library_packages = \
           update_app_package_data(app, (items[-1][0], 'package'), line) and \
           items[:-1] + ((items[-1][0], line),),
         request_app_library_packages(app, libraries), ())) + \
+        (('gsettings-desktop-schemas', 'libgtk-3-common') if os.path.isdir(get_app_distribution_file_path(app, 'usr/share/glib-2.0/schemas')) else ()) + \
         (('libudev1',) if libraries else ())
       )))
   )
@@ -1059,6 +1060,7 @@ install_app_runner = lambda app: \
       [GI_TYPELIB_PATH]=$library_path/girepository-1.0
       [PATH]=$root_path/usr/bin:$root_path/bin:$PATH
       [PYTHONHOME]=$root_path/usr
+      [XDG_DATA_DIRS]=$distribution_path/usr/share:${XDG_DATA_DIRS-/usr/local/share/:/usr/share/}
     )
 
     [[ ${executable_path-} ]] || get_executable_path executable_path
