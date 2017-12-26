@@ -955,6 +955,9 @@ install_app_distribution = lambda app: \
   patch_app_elf_files(app, get_app_distribution_path(app)) and \
   all(remove_file(path) for path in glob.iglob(get_app_temp_file_path(app, '*'))) and \
   install_app_packages(app, detect_app_library_packages(app, detect_missing_app_libraries(app))) and \
+  compile_app_glib_schemas(app) and \
+  generate_app_gdk_pixbuf_cache(app) and \
+  generate_app_qt_configuration(app) and \
   install_app_icon(app) and \
   write_app_version(app) and \
   get_app_distribution_path(app)
@@ -980,10 +983,7 @@ install_app_packages = lambda app, packages: \
   install_app_package_files(app, download_app_packages(app, resolve_outdated_app_packages(app, packages))) and \
   (not packages or 'patchelf' in packages or patch_app_elf_files(app, get_app_root_path(app))) and \
   all(remove_file(path) if os.path.isfile(get_app_cached_file_path(app, path)) else rename_file(path, get_app_cached_file_path(app, path)) for path in glob.iglob(get_app_temp_file_path(app, '*.deb'))) and \
-  remove_old_files(get_app_cached_file_path(app, '*.deb')) and \
-  compile_app_glib_schemas(app) and \
-  generate_app_gdk_pixbuf_cache(app) and \
-  generate_app_qt_configuration(app)
+  remove_old_files(get_app_cached_file_path(app, '*.deb'))
 
 install_app_patchelf = lambda app: \
   install_app_packages(app, ('patchelf',)) and \
