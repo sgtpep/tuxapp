@@ -76,7 +76,7 @@ build_actions = lambda *children: \
 
 build_added_feed = lambda: build_feed(get_added_feed_url(), get_added_feed_name(), read_added_apps(1)[0][1], (build_app_feed_entry(app, timestamp) for app, timestamp in read_added_apps(25)))
 
-build_app_card = lambda app, is_heading=False: build_card(query_data_uri(get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url')), 96 if is_heading else 64), tuxapp.query_appfile(app, 'name'), tuxapp.query_appfile(app, 'title'), get_app_url(app), utilities.query_data((app, 'version')), 'free license' if tuxapp.query_appfile(app, 'free-license') else '', is_heading)
+build_app_card = lambda app, is_heading=False: build_card(query_data_uri(get_app_icon_path(app, tuxapp.query_appfile(app, 'icon-url')), 96 if is_heading else 64), tuxapp.query_appfile(app, 'name'), tuxapp.query_appfile(app, 'title'), get_app_url(app), utilities.query_data((app, 'version')), '', is_heading)
 
 build_app_feed_entry = \
   tuxapp.memoize(
