@@ -635,7 +635,7 @@ build_lightbox_script = lambda: \
       onURL(event.newURL, event.oldURL);
     });
     addEventListener('keydown', function(event) {
-      if (onKeyCode(event.keyCode)) event.preventDefault();
+      if (!event.altKey) onKeyCode(event.keyCode);
     });
     addEventListener('scroll', updateScrollTop);
   }
@@ -645,7 +645,6 @@ build_lightbox_script = lambda: \
       if (keyCode == 27) location = getElement('.lightbox-action.is-close').href;
       else if (keyCode == 37 && getElement('.lightbox-action.is-previous').hash) location = getElement('.lightbox-action.is-previous').href;
       else if (keyCode == 39 && getElement('.lightbox-action.is-next').hash) location = getElement('.lightbox-action.is-next').href;
-      else return true;
     }
   }
 
