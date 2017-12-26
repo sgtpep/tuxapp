@@ -77,7 +77,6 @@ build_root_bwrap_arguments = lambda distribution: \
     '--proc', '/proc',
     '--tmpfs', '/tmp',
   ) + \
-  (('--ro-bind', '/etc/machine-id', '/etc/machine-id') if distribution == 'xenial' else ()) + \
   ('env', '-u', 'LANG') + \
   (() if tuxapp.is_debian_repository(distribution) else ('PATH=/usr/sbin:/usr/bin:/sbin:/bin',)) + \
   get_distribution_fakeroot_arguments(distribution) + \
@@ -126,6 +125,7 @@ configure_debian_container = lambda distribution: \
   DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
   ''') and \
   (tuxapp.is_debian_repository(distribution) or tuxapp.write_file(tuxapp.get_app_root_file_path(distribution, 'etc/bash.bashrc'), tuxapp.read_file(tuxapp.get_app_root_file_path(distribution, 'etc/bash.bashrc')).replace('(groups)', '(true)', 1))) and \
+  (tuxapp.change_file_mode(tuxapp.get_app_root_file_path(distribution, 'etc/machine-id'), lambda mode: mode | stat.S_IWUSR) and tuxapp.copy_file('/etc/machine-id', tuxapp.get_app_root_file_path(distribution, 'etc/machine-id')) if distribution in ('artful', 'xenial') else True) and \
   True
 
 detect_missing_app_libraries = \
