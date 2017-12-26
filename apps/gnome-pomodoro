@@ -1,0 +1,19 @@
+category=office
+description=This GNOME app helps to manage time according to Pomodoro Technique. It intends to improve productivity and quality of work by reminding you to take short breaks.
+desktop-entry=
+download-x86-64-url=https://download.opensuse.org/repositories/home:/kamilprusko/Debian_9.0/amd64/gnome-pomodoro_{version}_amd64.deb
+download-x86-url=https://download.opensuse.org/repositories/home:/kamilprusko/Debian_9.0/i386/gnome-pomodoro_{version}_i386.deb
+executable=./usr/bin/gnome-pomodoro
+firejail=
+free-license=yes
+group=productivity-tools
+homepage-url=http://gnomepomodoro.org/
+icon-url=http://gnomepomodoro.org/images/icons/256x256.png
+ignored-libraries=
+name=Pomodoro Timer for GNOME
+note=
+package-repository=stretch
+packages=
+title=Helps to manage time according to Pomodoro Technique
+version-regex=/gnome-pomodoro_(.+?)_
+version-url=https://software.opensuse.org/download.json?project=home:kamilprusko&package=gnome-pomodoro
