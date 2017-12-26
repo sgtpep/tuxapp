@@ -1,0 +1,19 @@
+category=office
+description=Litecoin is a cryptocurrency that enables instant payments to anyone in the world and that can be efficiently mined with consumer-grade hardware.
+desktop-entry=
+download-x86-64-url=https://download.litecoin.org/litecoin-{version}/linux/litecoin-{version}-x86_64-linux-gnu.tar.gz
+download-x86-url=https://download.litecoin.org/litecoin-{version}/linux/litecoin-{version}-i686-pc-linux-gnu.tar.gz
+executable=./bin/litecoin-qt
+firejail=--noblacklist=~/.litecoin
+free-license=yes
+group=cryptocurrency-wallets
+homepage-url=https://litecoin.org/
+icon-url=https://litecoin.org/img/litecoin.png
+ignored-libraries=
+name=Litecoin
+note=
+package-repository=stretch
+packages=libdbus-1-3
+title=Open source P2P digital currency
+version-regex=/linux/litecoin-(.+?)-x86_64
+version-url=https://litecoin.org/
