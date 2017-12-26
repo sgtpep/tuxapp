@@ -1,0 +1,19 @@
+category=office
+description=Emercoin is a digital currency and blockchain service platform you can use today.
+desktop-entry=
+download-x86-64-url=http://downloads.sourceforge.net/project/emercoin/{version}/emercoin-{version}-linux64.tar.gz
+download-x86-url=http://downloads.sourceforge.net/project/emercoin/{version}/emercoin-{version}-linux32.tar.gz
+executable=./bin/emercoin-qt
+firejail=--noblacklist=~/.emercoin
+free-license=yes
+group=cryptocurrency-wallets
+homepage-url=https://emercoin.com/
+icon-url=https://emercoin.com/favicon.ico
+ignored-libraries=
+name=Emercoin
+note=
+package-repository=stretch
+packages=libdbus-1-3
+title=Distributed blockchain services for business and personal use
+version-regex=/emercoin-(.+?)-linux
+version-url=https://sourceforge.net/projects/emercoin/

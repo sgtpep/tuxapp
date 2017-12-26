@@ -380,6 +380,7 @@ filter_app_screenshot_urls = lambda app, urls: tuple(url for url in (filter_app_
 filter_app_video_url = lambda app, url, reference_url=None: \
   '' \
     if re.search({
+      'emercoin': r'=HdmfJLa6iRg$',
       'fman': r'/rocket\.mp4',
     }.get(app, r'^$'), reference_url or url) or is_github_repository_url(tuxapp.query_appfile(app, 'homepage-url')) else \
   url
