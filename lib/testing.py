@@ -231,10 +231,10 @@ install_missing_container = lambda distribution: \
 is_app_library_ignored = lambda app, library: library in tuxapp.query_appfile(app, 'ignored-libraries') + ('libGL.so.1',)
 
 is_app_process_output_ignored = lambda app, distribution, output: \
-  {
+  bool(re.search({
     'drl': r"Can't open SDL_Mixer!",
     'gnome-pomodoro': r'Failed to execute child process "dbus-launch"|The name org\.freedesktop\.Notifications was not provided by any \.service files',
-  }.get(app, r'\0') in output
+  }.get(app, r'\0'), output))
 
 request_arch_container_url = lambda: get_arch_mirror_url('iso/latest/') + tuxapp.request_grep_url(get_arch_mirror_url('iso/latest/'), ('-Po', '-m', '1', r'(?<=")archlinux-bootstrap-[^"]+'))
 
