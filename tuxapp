@@ -703,6 +703,12 @@ generate_app_gdk_pixbuf_cache = lambda app: \
   )) and \
   True
 
+generate_app_qt_configuration = lambda app: \
+  not is_app_package_installed(app, 'libqt5gui5') or \
+  not uncheck(build_app_qt_configuration_path)(app) or \
+  os.path.isfile(build_app_qt_configuration_path(app)) or \
+  write_app_qt_configuration(app, build_app_qt_configuration_path(app))
+
 get_app_cached_file_path = lambda app, path: os.path.join(get_cache_path(), query_appfile(app, 'package-repository'), os.path.basename(path))
 
 get_app_desktop_entry_path = lambda app: os.path.join(get_xdg_data_path(), 'applications/{}-{}.desktop'.format(get_name(), app))
@@ -975,7 +981,8 @@ install_app_packages = lambda app, packages: \
   all(remove_file(path) if os.path.isfile(get_app_cached_file_path(app, path)) else rename_file(path, get_app_cached_file_path(app, path)) for path in glob.iglob(get_app_temp_file_path(app, '*.deb'))) and \
   remove_old_files(get_app_cached_file_path(app, '*.deb')) and \
   compile_app_glib_schemas(app) and \
-  generate_app_gdk_pixbuf_cache(app)
+  generate_app_gdk_pixbuf_cache(app) and \
+  generate_app_qt_configuration(app)
 
 install_app_patchelf = lambda app: \
   install_app_packages(app, ('patchelf',)) and \
@@ -1354,8 +1361,6 @@ patch_app_elf_files_patchelf = \
 patch_app_package = lambda app, package: \
   symlink_file(get_app_library_file_path(app, 'libGL.so.1'), 'mesa/libGL.so.1') \
     if package == 'libgl1-mesa-glx' and not os.path.isfile(get_app_library_file_path(app, 'libGL.so.1')) else \
-  write_app_qt_configuration(app, build_app_qt_configuration_path(app)) \
-    if package == 'libqt5gui5' else \
   all(write_app_qt_configuration(app, path) for path in (
     get_app_root_file_path(app, 'usr/bin/qt.conf'),
     get_app_library_file_path(app, 'qt5/libexec/qt.conf'),
