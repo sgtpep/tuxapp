@@ -42,11 +42,11 @@ def validate(validate_function):
 def execute_app(app):
   print('Executing {} with firejail'.format(app), file=sys.stderr)
   utilities.install_missing_package('firejail')
-  tuxapp.call_process((tuxapp.get_app_runner_path(app),))
+  tuxapp.uncheck(tuxapp.call_process)((tuxapp.get_app_runner_path(app),))
   if not confirm_message('Continue?'):
     raise AssertionError
   print('Executing {} on {}'.format(app, testing.get_default_distribution()), file=sys.stderr)
-  tuxapp.call_process(testing.build_bwrap_arguments(testing.get_default_distribution(), app))
+  tuxapp.uncheck(tuxapp.call_process)(testing.build_bwrap_arguments(testing.get_default_distribution(), app))
   if not confirm_message('Continue?'):
     raise AssertionError
   return True
