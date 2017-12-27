@@ -368,6 +368,7 @@ filter_app_screenshot_url = lambda app, url: \
       'inboxer': r'\.(githubusercontent\.com|shields\.io)/',
       'jumpfm': r'/dev\.png$',
       'mailspring': r'/(ic-|send-later@)',
+      'pencil': r'/(000/010/630|000/010/632)/large\.png$',
       'qupzilla': r'/(other|win(|xp))_',
       'rambox': r'/icons/',
       'skype': r'/screenshots\.debian\.net/',
