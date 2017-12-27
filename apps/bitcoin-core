@@ -1,0 +1,19 @@
+category=office
+description=
+desktop-entry=
+download-x86-64-url=https://bitcoincore.org/bin/bitcoin-core-{version}/bitcoin-{version}-x86_64-linux-gnu.tar.gz
+download-x86-url=https://bitcoincore.org/bin/bitcoin-core-{version}/bitcoin-{version}-i686-pc-linux-gnu.tar.gz
+executable=./bin/bitcoin-qt
+firejail=--noblacklist=~/.bitcoin
+free-license=yes
+group=cryptocurrency-wallets
+homepage-url=https://bitcoincore.org/
+icon-url=https://bitcoincore.org/assets/images/apple-touch-icon-144x144-precomposed.png
+ignored-libraries=
+name=Bitcoin Core
+note=
+package-repository=stretch
+packages=libdbus-1-3
+title=Bitcoin Core
+version-regex=/bitcoin-core-(.+?)/
+version-url=https://bitcoincore.org/en/download/
