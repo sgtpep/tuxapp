@@ -25,7 +25,7 @@ get_groups = lambda: \
     'cloud-storage',
     'code-editors',
     'content-management',
-    'cryptocurrency mining',
+    'cryptocurrency-mining',
     'cryptocurrency-wallets',
     'database-management',
     'diagramming-software',
