@@ -384,6 +384,8 @@ filter_app_video_url = lambda app, url, reference_url=None: \
       'emercoin': r'=HdmfJLa6iRg$',
       'fman': r'/rocket\.mp4',
     }.get(app, r'^$'), reference_url or url) or is_github_repository_url(tuxapp.query_appfile(app, 'homepage-url')) else \
+  re.sub(r'\.pagespeed\.ce\..+$', '', url) \
+    if app == 'fman' else \
   url
 
 filter_app_video_urls = lambda app, urls, reference_urls=None: tuple(url for url in (filter_app_video_url(app, url, reference_url) for url, reference_url in zip(urls, reference_urls or urls)) if url)
@@ -395,8 +397,6 @@ filter_github_repository = lambda repository: \
       'mozilla/bedrock',
     ) else \
   repository
-
-filter_image_url = lambda url: re.sub(r'\.pagespeed\.ce\..+$', '', url)
 
 filter_unique = lambda items, reference_items=None: tuple(collections.OrderedDict((reference_item, item) for reference_item, item in zip(reference_items or items, items)).values())
 
@@ -440,7 +440,7 @@ parse_app_changelog_url = lambda app, url: \
   parse_app_downloads_url(app, url) and parse_changelog_url(parse_app_downloads_url(app, url)) or \
   parse_github_releases_url(url)
 
-parse_app_debian_screenshot_urls = lambda app: tuple(filter_image_url(normalize_url(get_debian_screenshots_url(app), screenshot_url)) for screenshot_url in parse_screenshot_urls(get_debian_screenshots_url(app)) if os.path.basename(tuxapp.parse_url(screenshot_url).path) != 'no-screenshots-available.svg')
+parse_app_debian_screenshot_urls = lambda app: tuple(normalize_url(get_debian_screenshots_url(app), screenshot_url) for screenshot_url in parse_screenshot_urls(get_debian_screenshots_url(app)) if os.path.basename(tuxapp.parse_url(screenshot_url).path) != 'no-screenshots-available.svg')
 
 parse_app_download_formats = lambda app, url: ' '.join(sorted(set(format.lower() for format in re.findall(r'\b(appimage|deb|flatpak|rpm|snap|tar)\b', request_url_cached(parse_app_download_formats_url(app, url)), re.I))))
 
@@ -489,7 +489,7 @@ parse_github_repository = lambda url: \
   filter_github_repository(tuxapp.search(r'{}/releases\b'.format(utilities.get_github_url_pattern()), request_url_cached(url), 0, 1)) or \
   filter_github_repository(tuxapp.search(utilities.get_github_url_pattern(), request_url_cached(url), 0, 1))
 
-parse_github_screenshot_urls = lambda url: tuple(filter_image_url(normalize_url(url, screenshot_url)) for screenshot_url in parse_html(GitHubScreenshotURLsParser, request_url_cached(url)))
+parse_github_screenshot_urls = lambda url: tuple(normalize_url(url, screenshot_url) for screenshot_url in parse_html(GitHubScreenshotURLsParser, request_url_cached(url)))
 
 parse_icon_url = lambda url: \
   '' \
@@ -499,7 +499,7 @@ parse_icon_url = lambda url: \
 parse_image_url = lambda url: \
   '' \
     if is_github_url(url) else \
-  filter_image_url(normalize_url(url, parse_html(ImageURLParser, request_url_cached(url))))
+  normalize_url(url, parse_html(ImageURLParser, request_url_cached(url)))
 
 parse_name = lambda url: \
   check_url_name(url, tuxapp.parse_url(url).path.lstrip('/').split('/', 1)[0]) \
@@ -510,7 +510,7 @@ parse_name = lambda url: \
   parse_html(NameParser, request_url_cached(url)) or \
   check_url_name(url, extract_url_name(url))
 
-parse_screenshot_urls = lambda url: tuple(filter_image_url(normalize_url(url, screenshot_url)) for screenshot_url in parse_html(ScreenshotURLsParser, request_url_cached(url)))
+parse_screenshot_urls = lambda url: tuple(normalize_url(url, screenshot_url) for screenshot_url in parse_html(ScreenshotURLsParser, request_url_cached(url)))
 
 parse_screenshots_url = lambda url: normalize_url(url, parse_html(ScreenshotsURLParser, request_url_cached(url)))
 
@@ -526,9 +526,9 @@ parse_version_url = lambda url: \
     if parse_github_repository(url) else \
   ''
 
-parse_video_poster_urls = lambda url: tuple(filter_image_url(normalize_url(url, poster_url)) or '-' for video_url, poster_url in zip(parse_html(VideoURLsParser, request_url_cached(url)), parse_html(VideoPosterURLsParser, request_url_cached(url))))
+parse_video_poster_urls = lambda url: tuple(normalize_url(url, poster_url) or '-' for video_url, poster_url in zip(parse_html(VideoURLsParser, request_url_cached(url)), parse_html(VideoPosterURLsParser, request_url_cached(url))))
 
-parse_video_src_urls = lambda url: tuple(filter_image_url(normalize_url(url, video_url)) for video_url in parse_html(VideoURLsParser, request_url_cached(url)))
+parse_video_src_urls = lambda url: tuple(normalize_url(url, video_url) for video_url in parse_html(VideoURLsParser, request_url_cached(url)))
 
 parse_youtube_ids = lambda url: tuple(set(re.findall(r'\b(?:youtu\.be/|youtube\.com/(?:(?:embed|v)/|watch\?v=))([\w-]+)', request_url_cached(url))))
 
