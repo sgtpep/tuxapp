@@ -566,6 +566,8 @@ copy_updated_file = lambda path, destination_path: \
     if is_file_newer(path, destination_path) else \
   destination_path
 
+count_tarball_common_components = lambda path: os.path.commonprefix(read_process(('tar', '-t', '-f', path)).splitlines()).count('/')
+
 detect_app_library_packages = \
   log(lambda app, libraries, *args, **kwargs: libraries and 'Detecting library packages')(
     lambda app, libraries: \
@@ -1245,8 +1247,6 @@ is_file_library = lambda path: \
   os.path.isfile(path) and \
   (os.path.splitext(path)[1] in ('.node', '.so') or '.so.' in path)
 
-is_file_list_nested = lambda paths: all(path.lstrip('./').split('/', 1)[0] == paths[0].lstrip('./').split('/', 1)[0] for path in paths)
-
 is_file_magic_number = lambda path, magic_number: read_file_binary(path, len(magic_number)) == magic_number
 
 is_file_newer = lambda path, reference_path: get_file_mtime(path) > get_file_mtime(reference_path)
@@ -1262,9 +1262,7 @@ is_package_library = lambda package: \
 
 is_silent = lambda: getattr(silence, 'is_silent', False)
 
-is_tarball_nested = lambda path: is_file_list_nested(read_process(('tar', '-t', '-f', path)).splitlines())
-
-is_zip_file_nested = lambda path: is_file_list_nested(zipfile.ZipFile(path).namelist())
+is_zip_file_nested = lambda path: '/' in os.path.commonprefix(zipfile.ZipFile(path).namelist())
 
 join_arguments = lambda arguments: ' '.join(quote_argument(argument) for argument in arguments)
 
@@ -1621,7 +1619,7 @@ unpack_app_package_distribution = lambda app, path: \
 unpack_app_tarball_distribution = \
   log(lambda app, path, *args, **kwargs: 'Preparing to unpack {}'.format(os.path.basename(path)))(
     lambda app, path: \
-      unpack_tarball(path, get_app_distribution_path(app), ('--strip-components=1',) if is_tarball_nested(path) else ()) and \
+      unpack_tarball(path, get_app_distribution_path(app), ('--strip-components={}'.format(count_tarball_common_components(path)),)) and \
       unpack_nested_app_distributions(app)
   )
 
