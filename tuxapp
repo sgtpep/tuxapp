@@ -786,6 +786,7 @@ get_file_mtime = lambda path: \
 get_firejail_blacklisted_paths = lambda: \
   (
     '~/.electron-cash',
+    '~/.ethereum',
     '~/.passwd-s3fs',
     '~/.s3cmd',
   )

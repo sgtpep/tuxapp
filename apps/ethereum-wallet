@@ -4,7 +4,7 @@ desktop-entry=
 download-x86-64-url=https://github.com/ethereum/mist/releases/download/v{version}/Ethereum-Wallet-linux64-0-9-3.zip
 download-x86-url=https://github.com/ethereum/mist/releases/download/v{version}/Ethereum-Wallet-linux32-0-9-3.zip
 executable=./ethereumwallet
-firejail=
+firejail=--noblacklist=~/.ethereum
 free-license=yes
 group=cryptocurrency-wallets
 homepage-url=https://www.ethereum.org/
