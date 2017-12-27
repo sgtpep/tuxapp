@@ -499,7 +499,7 @@ parse_icon_url = lambda url: \
 parse_image_url = lambda url: \
   '' \
     if is_github_url(url) else \
-  normalize_url(url, parse_html(ImageURLParser, request_url_cached(url)))
+  filter_url_accessibility(normalize_url(url, parse_html(ImageURLParser, request_url_cached(url))))
 
 parse_name = lambda url: \
   check_url_name(url, tuxapp.parse_url(url).path.lstrip('/').split('/', 1)[0]) \
