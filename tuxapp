@@ -791,6 +791,7 @@ get_firejail_blacklisted_paths = lambda: \
     '~/.ethereum',
     '~/.passwd-s3fs',
     '~/.s3cmd',
+    '~/Monero/wallets',
   )
 
 get_firejail_message = lambda name: \

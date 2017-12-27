@@ -4,7 +4,7 @@ desktop-entry=
 download-x86-64-url=https://downloads.getmonero.org/gui/linux64
 download-x86-url=https://downloads.getmonero.org/gui/linux32
 executable=./monero-wallet-gui
-firejail=
+firejail=--noblacklist=~/Monero/wallets
 free-license=yes
 group=cryptocurrency-wallets
 homepage-url=https://getmonero.org/
