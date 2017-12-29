@@ -677,10 +677,10 @@ build_main_page = lambda: \
       build_tag('a', filter_group_name(group), href=get_group_url(group)),
       build_tag('span', ' ({})'.format(count)),
     ) for group, count in get_groups())),
-    build_tag('h2', get_updated_feed_name(), build_feed_link(get_updated_feed_url())),
-    build_columns(*(build_app_card(app) for app, timestamp in query_updated_apps(15))),
     build_tag('h2', get_added_feed_name(), build_feed_link(get_added_feed_url())),
     build_columns(*(build_app_card(app) for app, timestamp in read_added_apps(15))),
+    build_tag('h2', get_updated_feed_name(), build_feed_link(get_updated_feed_url())),
+    build_columns(*(build_app_card(app) for app, timestamp in query_updated_apps(15))),
     build_footer(),
   )
 
