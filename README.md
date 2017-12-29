@@ -1,10 +1,8 @@
 # tuxapp
 
-[TuxApp](https://tuxapp.org/) is an effort to build an open, community-driven and independent catalog of Linux® applications. We believe that apps should be easily installable, work effortlessly on any Linux® distribution and up-to-date. And being distributed in the binary form they should run sandboxed, isolated from system and user's sensitive files. That's why we've also built a tool, [tuxapp](https://github.com/sgtpep/tuxapp), that takes care of it.
+[**TuxApp**](https://tuxapp.org/) is an effort to build an open, community-driven and independent catalog of *Linux®* applications. We believe that apps should be easily installable, up-to-date and work effortlessly on any *Linux®* distribution of any version. Being distributed in the binary form it's more secure to run them sandboxed, isolated from system and user's sensitive files. To seamlessly solve these longstanding problems we've built a tool, [**tuxapp**](https://github.com/sgtpep/tuxapp), that downloads and installs the latest official releases of *Linux®* applications including dependencies without root permissions and allows to run them sandboxed.
 
 ## Usage
-
-`tuxapp` downloads and installs the latest official releases of Linux® applications including dependencies without root permissions and allows to run them sandboxed.
 
 ### Install, execute, update and remove an app
 

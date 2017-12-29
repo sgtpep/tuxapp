@@ -671,7 +671,7 @@ build_main_page = lambda: \
     build_title(),
     build_header(),
     build_tag('h2', 'About'),
-    build_tag('p', None, '<strong>{}</strong> is an effort to build an open, community-driven and independent catalog of <em>Linux®</em> applications. We believe that apps should be easily installable, work effortlessly on any <em>Linux®</em> distribution and up-to-date. And being distributed in the binary form they should run sandboxed, isolated from system and user\'s sensitive files. That\'s why we\'ve also built a tool, <a href="{}"><strong>{}</strong></a>, that takes care of it.'.format(get_name(), tuxapp.build_github_url(), tuxapp.get_name())),
+    build_tag('p', None, '<strong>{}</strong> is an effort to build an open, community-driven and independent catalog of <em>Linux®</em> applications. We believe that apps should be easily installable, up-to-date and work effortlessly on any <em>Linux®</em> distribution of any version. Being distributed in the binary form it\'s more secure to run them sandboxed, isolated from system and user\'s sensitive files. To seamlessly solve these longstanding problems we\'ve built a tool, <a href="{}"><strong>{}</strong></a>, that {}'.format(get_name(), tuxapp.build_github_url(), tuxapp.get_name(), tuxapp.get_description()[0].lower() + re.sub(r'Linux®', r'<em>\g<0></em>', tuxapp.get_description()[1:]))),
 #     build_tag('h2', 'Features'),
 #     build_tag('ul', None,
 #       build_tag('li', 'TODO'),
