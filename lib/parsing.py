@@ -402,7 +402,7 @@ filter_unique = lambda items, reference_items=None: tuple(collections.OrderedDic
 
 filter_url_accessibility = lambda url: \
   url \
-    if validation.check_url(url) else \
+    if url and validation.check_url(url) else \
   ''
 
 get_debian_screenshots_url = lambda package: 'https://screenshots.debian.net/package/{}'.format(package)
