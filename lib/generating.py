@@ -205,11 +205,13 @@ build_app_info = lambda app: \
     '',
   )
 
+build_app_install_command = lambda app: r'python <(url={}; wget -O - $url || curl $url) {}'.format(tuxapp.build_github_raw_url(tuxapp.get_name()), app)
+
 build_app_instructions = lambda app: \
   join_elements(
     build_tag('h2', 'How to install on Linux®'),
     build_tag('p', None, 'Run this command in the terminal to install {} using the {} script hosted on {}:'.format(build_tag('code', app), build_tag('code', tuxapp.get_name()), build_tag('a', 'GitHub', href=tuxapp.build_github_url('blob/master/tuxapp')))),
-    build_tag('pre', None, build_command(r'python <(url={}; wget -O - $url || curl $url) {}'.format(tuxapp.build_github_raw_url(tuxapp.get_name()), app))),
+    build_tag('pre', None, build_command(build_app_install_command(app))),
     build_tag('p', None, 'Alternatively, you may also download the {} script and run it locally to install {}:'.format(build_tag('code', tuxapp.get_name()), build_tag('code', app))),
     build_tag('pre', None, '\n'.join(build_command(command) for command in (
       r'url={}; wget $url || curl -o {} $url'.format(tuxapp.build_github_raw_url(tuxapp.get_name()), tuxapp.get_name()),
@@ -706,7 +708,7 @@ build_main_page = lambda: \
       build_feature('Leaves the system intact', '<code>tuxapp</code> doesn\'t clutter the system, and files of installed apps aren\'t scattered throughout the file system.'),
       build_feature('One command install',
         'E.g. to install <code>firefox</code> run in the terminal: ',
-        build_command('python <(url={}; wget -O - $url || curl $url) firefox'.format(tuxapp.build_github_raw_url(tuxapp.get_name()))),
+        build_command(build_app_install_command('firefox')),
       ),
       build_feature('Community maintained', 'To add an app to the catalog anyone can create an <a href="{}">appfile</a> which contains app metadata and information how to download the latest version.'.format(tuxapp.build_github_url('tree/master/apps'))),
     ),
