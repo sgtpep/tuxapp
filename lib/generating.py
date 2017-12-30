@@ -208,7 +208,7 @@ build_app_info = lambda app: \
 build_app_instructions = lambda app: \
   join_elements(
     build_tag('h2', 'How to install on Linux®'),
-    build_tag('p', None, 'Run this command from the terminal to install {} using the {} script hosted on {}:'.format(build_tag('code', app), build_tag('code', tuxapp.get_name()), build_tag('a', 'GitHub', href=tuxapp.build_github_url('blob/master/tuxapp')))),
+    build_tag('p', None, 'Run this command in the terminal to install {} using the {} script hosted on {}:'.format(build_tag('code', app), build_tag('code', tuxapp.get_name()), build_tag('a', 'GitHub', href=tuxapp.build_github_url('blob/master/tuxapp')))),
     build_tag('pre', None, build_command(r'python <(url={}; wget -O - $url || curl $url) {}'.format(tuxapp.build_github_raw_url(tuxapp.get_name()), app))),
     build_tag('p', None, 'Alternatively, you may also download the {} script and run it locally to install {}:'.format(build_tag('code', tuxapp.get_name()), build_tag('code', app))),
     build_tag('pre', None, '\n'.join(build_command(command) for command in (
@@ -216,7 +216,7 @@ build_app_instructions = lambda app: \
       r'chmod +x ./{}'.format(tuxapp.get_name()),
       r'./{} {}'.format(tuxapp.get_name(), app),
     ))),
-    build_tag('p', None, 'The app will run sandboxed (isolated from your system and sensitive files) if {} is installed. For example, use this command to install it on Debian/Ubuntu:'.format(build_tag('a', 'Firejail', href='https://firejail.wordpress.com/'))),
+    build_tag('p', None, 'The app will run sandboxed (isolated from your system and sensitive files) if {} is installed. For example, use this command to install it on Ubuntu or Debian:'.format(build_tag('a', 'Firejail', href='https://firejail.wordpress.com/'))),
     build_tag('pre', None, build_command(r'sudo apt install firejail')),
   )
 
