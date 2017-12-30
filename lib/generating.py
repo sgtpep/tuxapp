@@ -417,6 +417,26 @@ build_command = lambda command: \
 
 build_data_uri_key = lambda path, width=None: ('data-uri', tuxapp.hash_md5(os.path.basename(path)), str(width))
 
+build_feature = lambda title, *description: \
+  join_elements(
+    build_style('''
+    .feature {
+      margin: 1em 0;
+    }
+    .feature-description {
+      font-size: smaller;
+    }
+    .feature-title {
+      font-weight: bold;
+      margin-bottom: 0.5em;
+    }
+    '''),
+    build_tag('.feature', None,
+      build_tag('.feature-title', title),
+      build_tag('.feature-description', None, *description),
+    ),
+  )
+
 build_feed = lambda url, name, timestamp, entries: \
   join_elements(
     '<?xml version="1.0" encoding="utf-8"?>',
@@ -672,12 +692,24 @@ build_main_page = lambda: \
     build_header(),
     build_tag('h2', 'About'),
     build_tag('p', None, '<strong>{}.org</strong> is an effort to build an open, community-driven and independent catalog of <em>Linux®</em> applications. We believe that apps should be easily installable, up-to-date and work effortlessly on any <em>Linux®</em> distribution of any version. Being distributed in the binary form it\'s more secure to run them sandboxed, isolated from system and user\'s sensitive files. To seamlessly solve these longstanding problems we\'ve built a tool, <a href="{}"><strong>{}</strong></a>, that {}'.format(get_name(), tuxapp.build_github_url(), tuxapp.get_name(), tuxapp.get_description()[0].lower() + re.sub(r'Linux®', r'<em>\g<0></em>', tuxapp.get_description()[1:]))),
-#     build_tag('h2', 'Features'),
-#     build_tag('ul', None,
-#       build_tag('li', 'TODO'),
-#       build_tag('li', 'TODO'),
-#       build_tag('li', 'TODO'),
-#     ),
+    build_tag('h2', 'Features'),
+    build_columns(
+      build_feature('Works on any distribution', 'Apps from this catalog can be installed and run on almost any <em>Linux®</em> distribution. <code>tuxapp</code> and installed apps don\'t rely on any distribution specific features.'),
+      build_feature('Latest app versions', '<code>tuxapp</code> parses the version information online from the app homepages and installs the latest up-to-date versions.'),
+      build_feature('Independent from system libraries', 'App authors don\'t include some libraries they assume are present on your system but they may not. <code>tuxapp</code> just detects and downloads all required libraries and tells apps to use them.'),
+      build_feature('Sandboxed and isolated',
+        'To prevent apps accessing your system and sensitive files install <a href="https://firejail.wordpress.com/">Firejail</a> (run in the terminal on Ubuntu or Debian: ',
+        build_command('sudo apt install firejail'),
+        '), and it will be automatically used to sandbox installed apps.',
+      ),
+      build_feature('No root permissions needed', '<code>tuxapp</code> operates with user permissions and doesn\'t ask for <code>sudo</code>. Apps are installed in the home directory at <code>~/.tuxapp</code>.'),
+      build_feature('Leaves the system intact', '<code>tuxapp</code> doesn\'t clutter the system, and files of installed apps aren\'t scattered throughout the file system.'),
+      build_feature('One command install',
+        'E.g. to install <code>firefox</code> run in the terminal: ',
+        build_command('python <(url={}; wget -O - $url || curl $url) firefox'.format(tuxapp.build_github_raw_url(tuxapp.get_name()))),
+      ),
+      build_feature('Community maintained', 'To add an app to the catalog anyone can create an <a href="{}">appfile</a> which contains app metadata and information how to download the latest version.'.format(tuxapp.build_github_url('tree/master/apps'))),
+    ),
     build_tag('h2', 'Categories'),
     build_columns(*(build_card(query_data_uri(get_category_icon_path(category)), filter_category_name(category), get_category_description(category), get_category_url(category), '', '', False, count) for category, count in get_categories())),
     build_tag('h2', 'Groups'),
