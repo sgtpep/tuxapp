@@ -707,7 +707,7 @@ build_main_page = lambda: \
       build_feature('No root permissions needed', '<code>tuxapp</code> operates with user permissions and doesn\'t ask for <code>sudo</code>. Apps are installed in the home directory at <code>~/.tuxapp</code>.'),
       build_feature('Leaves the system intact', '<code>tuxapp</code> doesn\'t clutter the system, and files of installed apps aren\'t scattered throughout the file system.'),
       build_feature('One command install',
-        'E.g. to install <code>firefox</code> run in the terminal: ',
+        '<code>tuxapp</code> is just a single <code>Python</code> script doing all the job. E.g. to install <code>firefox</code> run in the terminal: ',
         build_command(build_app_install_command('firefox')),
       ),
       build_feature('Community maintained', 'To add an app to the catalog anyone can create an <a href="{}">appfile</a> which contains app metadata and information how to download the latest version.'.format(tuxapp.build_github_url('tree/master/apps'))),
