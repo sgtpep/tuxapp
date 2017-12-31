@@ -1,0 +1,19 @@
+category=office
+description=Use Dash to make instant, private payments online or in-store using our secure open-source platform hosted by thousands of users around the world.
+desktop-entry=
+download-x86-64-url=https://github.com/dashpay/dash/releases/download/v{version}/dashcore-{version}-linux64.tar.gz
+download-x86-url=https://github.com/dashpay/dash/releases/download/v{version}/dashcore-{version}-linux32.tar.gz
+executable=./bin/dash-qt
+firejail=--noblacklist=~/.dashcore
+free-license=yes
+group=cryptocurrency-wallets
+homepage-url=https://www.dash.org/
+icon-url=https://raw.githubusercontent.com/dashpay/dash/master/src/qt/res/icons/bitcoin.png
+ignored-libraries=
+name=~Dash Core
+note=
+package-repository=stretch
+packages=libdbus-1-3
+title=Dash crypto currency
+version-regex=/download/v(.+?)/
+version-url=https://github.com/dashpay/dash/releases/latest
