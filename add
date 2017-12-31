@@ -363,11 +363,7 @@ update_appfile_icon_url = lambda data: update_appfile(data, 'icon-url', input_ic
 
 update_appfile_name = lambda data: update_appfile(data, 'name', input_app_name(data['app'], data['name'] if 'name' in data else filter_name(parsing.parse_name(data['homepage-url']))))
 
-update_appfile_package_repository = lambda data: \
-  update_appfile(data, 'package-repository', input_package_repository(data['package-repository'] if 'package-repository' in data else appfile.get_default_package_repository())) \
-    if os.path.isfile(get_app_flag_path(data['app'], 'package-repository')) else \
-  tuxapp.touch_file(get_app_flag_path(data['app'], 'package-repository')) and \
-  update_appfile(data, 'package-repository', appfile.get_default_package_repository())
+update_appfile_package_repository = lambda data: update_appfile(data, 'package-repository', input_package_repository(data['package-repository'] if 'package-repository' in data else appfile.get_default_package_repository()))
 
 update_appfile_packages = lambda data: \
   tuxapp.update_app_package_lists(data['app']) and \
