@@ -48,7 +48,7 @@ connect_data = lambda: tuxapp.connect_data(get_data_path())
 
 get_data_path = lambda: os.path.join(tuxapp.get_app_path(tuxapp.get_name()), 'data')
 
-get_github_url_pattern = lambda: r'\bgithub\.com/([\w-]+/[\w-]+)'
+get_github_url_pattern = lambda: r'(?<!\.)\bgithub\.com/([\w-]+/[\w-]+)'
 
 install_missing_package = lambda package, command=None: \
   tuxapp.is_existing_command(command or package) or \
