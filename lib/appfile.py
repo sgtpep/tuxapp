@@ -41,6 +41,7 @@ get_groups = lambda: \
     'monitoring-applications',
     'note-taking',
     'office-suits',
+    'podcast-clients',
     'productivity-tools',
     'racing-games',
     'role-playing',
