@@ -1387,8 +1387,11 @@ query_app_package_data = lambda app, key: query_data(get_app_package_data_path(a
 query_app_package_data_lock = lambda app: int(query_app_package_data(app, 'lock') or '0')
 
 query_app_package_depenencies = lambda app, package: \
-  tuple(query_app_package_data(app, (package, 'dependencies')).split()) + \
-  (('libgl1-mesa-dri',) if package == 'libgl1-mesa-glx' else ())
+  tuple(sorted(set(
+    tuple(query_app_package_data(app, (package, 'dependencies')).split()) + \
+    (('libasound2-plugins',) if package == 'libasound2' else ()) + \
+    (('libgl1-mesa-dri',) if package == 'libgl1-mesa-glx' else ())
+  )))
 
 query_app_package_url = \
   check('Unknown package: {1}')(
