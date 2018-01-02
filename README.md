@@ -4,19 +4,24 @@
 
 ## Usage
 
+Clone the repository:
+
+    git clone https://github.com/sgtpep/tuxapp.git
+    cd ./tuxapp
+
 ### Install, execute, update and remove an app
 
-- Install or update Firefox: `tuxapp firefox`
-- Execute Firefox: `tuxapp -e firefox`
-- Check Firefox for updates: `tuxapp -c firefox`
-- Update Firefox: tuxapp -u firefox
-- Remove Firefox: `tuxapp -r firefox`
+- Install or update Firefox: `./tuxapp firefox`
+- Execute Firefox: `./tuxapp -e firefox`
+- Check Firefox for updates: `./tuxapp -c firefox`
+- Update Firefox: `./tuxapp -u firefox`
+- Remove Firefox: `./tuxapp -r firefox`
 
 ### Other actions
 
-- List apps available for installation: `tuxapp -a`
-- Check installed apps for updates: `tuxapp -c`
-- Show help: `tuxapp -h`
-- List installed apps: `tuxapp -l`
-- Purge cache: `tuxapp -p`
-- Update installed apps: `tuxapp -u`
+- List apps available for installation: `./tuxapp -a`
+- Check installed apps for updates: `./tuxapp -c`
+- Show help: `./tuxapp -h`
+- List installed apps: `./tuxapp -l`
+- Purge cache: `./tuxapp -p`
+- Update installed apps: `./tuxapp -u`
