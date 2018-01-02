@@ -158,7 +158,7 @@ class DownloadsURLParser(BaseParser):
     return re.sub(r'^.+({}/releases\b).*$'.format(utilities.get_github_url_pattern()), r'https://\1', url, 1)
 
   def on_content(self, tag, attributes, content):
-    if tag == 'a' and attributes.get('href') and tuxapp.parse_url(attributes['href']).netloc not in ('itunes.apple.com', 'play.google.com'):
+    if tag == 'a' and attributes.get('href') and tuxapp.parse_url(attributes['href']).netloc not in ('itunes.apple.com', 'play.google.com') and os.path.splitext(tuxapp.parse_url(attributes['href']).path)[1] not in ('.dmg', '.gz', '.zip'):
       if re.search(r'^(desktop\s+apps|downloads?)$|\s+(downloads|platforms)$|\bsystems\b.+\blanguages\b', content, re.I | re.S):
         self.add_result((self.priority.index('downloads'), self.filter_url(attributes['href'])))
       elif re.match(r'[Dd]ownload\s+[A-Z]', content, re.S) and not content.endswith(' ZIP'):
