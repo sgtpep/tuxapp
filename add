@@ -348,7 +348,7 @@ update_appfile_execute = lambda data: \
   tuxapp.touch_file(get_app_flag_path(data['app'], 'execute')) and \
   update_appfile_test(data)
 
-update_appfile_free_license = lambda data: update_appfile(data, 'free-license', input_free_license(data.get('free-license', 'yes')))
+update_appfile_free_license = lambda data: update_appfile(data, 'free-license', input_free_license(data['free-license'] if data.get('free-license') else utilities.open_url(parse_github_repository(data['homepage-url'])) and 'yes'))
 
 update_appfile_generate = lambda data: \
   parsing.parse_app(data['app']) and \
