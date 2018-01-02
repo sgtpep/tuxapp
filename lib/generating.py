@@ -213,6 +213,7 @@ build_app_instructions = lambda app: \
     build_tag('h3', None, 'Install automatically using {}'.format(build_tag('a', tuxapp.get_name(), href=''))),
     build_tag('p', None, 'Run this command in the terminal to install {} using the {} script hosted on {}:'.format(build_code(app), build_code(tuxapp.get_name()), build_tag('a', 'GitHub', href=tuxapp.build_github_url('blob/master/tuxapp')))),
     build_tag('pre', None, build_command(build_app_install_command(app))),
+    build_tag('p', None, 'Now you can run {} from your main menu or app launcher.'.format(tuxapp.query_appfile(app, 'name'))),
     build_tag('p', None, 'Alternatively, you may also download the {} script and run it locally to install {}:'.format(build_code(tuxapp.get_name()), build_code(app))),
     build_tag('pre', None, '\n'.join(build_command(command) for command in (
       r'url={}; wget $url || curl -o {} $url'.format(tuxapp.build_github_raw_url(tuxapp.get_name()), tuxapp.get_name()),
