@@ -1,0 +1,19 @@
+category=office
+description=Bitcoin2x is a new star of the cryptocurrency world.
+desktop-entry=
+download-x86-64-url=https://b2x-segwit.io/static/files/Linux.zip
+download-x86-url=
+executable=./bitcoin2x-qt
+firejail=--noblacklist=~/.bitcoin
+free-license=yes
+group=cryptocurrency-wallets
+homepage-url=https://b2x-segwit.io/
+icon-url=https://b2x-segwit.io/static/img/favicon/android-icon-192x192.png
+ignored-libraries=
+name=~Bitcoin2X Core
+note=
+package-repository=stretch
+packages=libdbus-1-3
+title=Hard Fork Bitcoin
+version-regex=/download/v(.+?)/
+version-url=https://github.com/SegwitB2X/bitcoin2x/releases/latest
