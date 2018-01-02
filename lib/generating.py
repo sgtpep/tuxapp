@@ -189,9 +189,7 @@ build_app_info = lambda app: \
     build_tag('dd', utilities.query_data((app, 'version')), utilities.query_data((app, 'changelog-url')) and ' ({})'.format(build_tag('a', 'changelog', href=utilities.query_data((app, 'changelog-url'))))),
     build_tag('dt', 'Downloads:'),
     build_tag('dd', None,
-      build_tag('a', utilities.query_data((app, 'downloads-url')), href=utilities.query_data((app, 'downloads-url'))) \
-        if utilities.query_data((app, 'downloads-url')) else \
-      build_tag('a', tuxapp.query_appfile(app, 'homepage-url'), href=tuxapp.query_appfile(app, 'homepage-url')),
+      build_tag('a', query_app_downloads_url(app), href=query_app_downloads_url(app)),
       escape_html(' ({})'.format(', '.join(re.findall(r'^download-(.+)-url=.', tuxapp.read_appfile(app), re.M)))),
     ),
     join_elements(
@@ -209,16 +207,19 @@ build_app_install_command = lambda app: r'python <(url={}; wget -O - $url || cur
 
 build_app_instructions = lambda app: \
   join_elements(
-    build_tag('h2', 'How to install on Linux®'),
-    build_tag('p', None, 'Run this command in the terminal to install {} using the {} script hosted on {}:'.format(build_tag('code', app), build_tag('code', tuxapp.get_name()), build_tag('a', 'GitHub', href=tuxapp.build_github_url('blob/master/tuxapp')))),
+    build_tag('h2', 'How to install {} on Linux®'.format(tuxapp.query_appfile(app, 'name'))),
+    build_tag('h3', 'Install manually'),
+    build_tag('p', None, 'Download and install an appropriate package from {}.'.format(build_tag('a', query_app_downloads_url(app), href=query_app_downloads_url(app)))),
+    build_tag('h3', None, 'Install automatically using {}'.format(build_tag('a', tuxapp.get_name(), href=''))),
+    build_tag('p', None, 'Run this command in the terminal to install {} using the {} script hosted on {}:'.format(build_code(app), build_code(tuxapp.get_name()), build_tag('a', 'GitHub', href=tuxapp.build_github_url('blob/master/tuxapp')))),
     build_tag('pre', None, build_command(build_app_install_command(app))),
-    build_tag('p', None, 'Alternatively, you may also download the {} script and run it locally to install {}:'.format(build_tag('code', tuxapp.get_name()), build_tag('code', app))),
+    build_tag('p', None, 'Alternatively, you may also download the {} script and run it locally to install {}:'.format(build_code(tuxapp.get_name()), build_code(app))),
     build_tag('pre', None, '\n'.join(build_command(command) for command in (
       r'url={}; wget $url || curl -o {} $url'.format(tuxapp.build_github_raw_url(tuxapp.get_name()), tuxapp.get_name()),
       r'chmod +x ./{}'.format(tuxapp.get_name()),
       r'./{} {}'.format(tuxapp.get_name(), app),
     ))),
-    build_tag('p', None, 'The app will run sandboxed (isolated from your system and sensitive files) if {} is installed. For example, use this command to install it on Ubuntu or Debian:'.format(build_tag('a', 'Firejail', href='https://firejail.wordpress.com/'))),
+    build_tag('p', None, 'The app will run sandboxed (isolated from your system and sensitive files) if {} is installed. For example, use this command to install it on Ubuntu or Debian:'.format(build_firejail_link())),
     build_tag('pre', None, build_command(r'sudo apt install firejail')),
   )
 
@@ -371,6 +372,8 @@ build_category_page = lambda category: \
     build_tag('p', 'Groups: ', ', '.join(build_tag('a', filter_group_name(group), href=get_group_url(group)) for group in sorted(set(tuxapp.query_appfile(app, 'group') for app in get_apps() if tuxapp.query_appfile(app, 'category') == category)))),
   )
 
+build_code = lambda text: build_tag('code', text)
+
 build_columns = lambda *children: \
   join_elements(
     # https://stackoverflow.com/q/7785374
@@ -467,6 +470,8 @@ build_feed_link = lambda url: \
     '''),
     build_tag('a.feed-link', 'Feed', href=url),
   )
+
+build_firejail_link = lambda: build_tag('a', 'Firejail', href='https://firejail.wordpress.com/')
 
 build_flag = lambda selector, *children, **attributes: \
   join_elements(
@@ -693,24 +698,22 @@ build_main_page = lambda: \
     build_title(),
     build_header(),
     build_tag('h2', 'About'),
-    build_tag('p', None, '<strong>{}.org</strong> is an effort to build an open, community-driven and independent catalog of <em>Linux®</em> applications. We believe that apps should be easily installable, up-to-date and work effortlessly on any <em>Linux®</em> distribution of any version. Being distributed in the binary form it\'s more secure to run them sandboxed, isolated from system and user\'s sensitive files. To seamlessly solve these longstanding problems we\'ve built a tool, <a href="{}"><strong>{}</strong></a>, that {}'.format(get_name(), tuxapp.build_github_url(), tuxapp.get_name(), tuxapp.get_description()[0].lower() + re.sub(r'Linux®', r'<em>\g<0></em>', tuxapp.get_description()[1:]))),
+    build_tag('p', None, '{site} is an effort to build an open, community-driven and independent catalog of {linux} applications. We believe that apps should be easily installable, up-to-date and work effortlessly on any {linux} distribution of any version. Being distributed in the binary form it\'s more secure to run them sandboxed, isolated from system and user\'s sensitive files. To seamlessly solve these longstanding problems we\'ve built a tool, {tool}, that {description}'.format(
+      description=tuxapp.get_description()[0].lower() + re.sub(r'Linux®', build_tag('em', None, r'\g<0>'), tuxapp.get_description()[1:]),
+      linux=build_tag('em', 'Linux®'),
+      site=build_tag('strong', '{}.org'.format(get_name())),
+      tool=build_tag('a', None, build_tag('strong', tuxapp.get_name()), href=tuxapp.build_github_url()),
+    )),
     build_tag('h2', 'Features'),
     build_columns(
-      build_feature('Works on any distribution', 'Apps from this catalog can be installed and run on almost any <em>Linux®</em> distribution. <code>tuxapp</code> and installed apps don\'t rely on any distribution specific features.'),
-      build_feature('Latest app versions', '<code>tuxapp</code> parses the version information online from the app homepages and installs the latest up-to-date versions.'),
-      build_feature('Independent from system libraries', 'App authors don\'t include some libraries they assume are present on your system but they may not. <code>tuxapp</code> just detects and downloads all required libraries and tells apps to use them.'),
-      build_feature('Sandboxed and isolated',
-        'To prevent apps accessing your system and sensitive files install <a href="https://firejail.wordpress.com/">Firejail</a> (run in the terminal on Ubuntu or Debian: ',
-        build_command('sudo apt install firejail'),
-        '), and it will be automatically used to sandbox installed apps.',
-      ),
-      build_feature('No root permissions needed', '<code>tuxapp</code> operates with user permissions and doesn\'t ask for <code>sudo</code>. Apps are installed in the home directory at <code>~/.tuxapp</code>.'),
-      build_feature('Leaves the system intact', '<code>tuxapp</code> doesn\'t clutter the system, and files of installed apps aren\'t scattered throughout the file system.'),
-      build_feature('One command install',
-        '<code>tuxapp</code> is just a single <code>Python</code> script doing all the job. E.g. to install <code>firefox</code> run in the terminal: ',
-        build_command(build_app_install_command('firefox')),
-      ),
-      build_feature('Community maintained', 'To add an app to the catalog anyone can create an <a href="{}">appfile</a> which contains app metadata and information how to download the latest version.'.format(tuxapp.build_github_url('tree/master/apps'))),
+      build_feature('Works on any distribution', 'Apps from this catalog can be installed and run on almost any {} distribution. The {} and installed apps don\'t rely on any distribution specific features.'.format(build_tag('em', 'Linux®'), build_code(tuxapp.get_name()))),
+      build_feature('Latest app versions', 'The {} parses the version information online from the app homepages and installs the latest up-to-date versions.'.format(build_code(tuxapp.get_name()))),
+      build_feature('Independent from system libraries', 'App authors don\'t include some libraries they assume are present on your system but they may not. The {} just detects and downloads all required libraries and tells apps to use them.'.format(build_code(tuxapp.get_name()))),
+      build_feature('Sandboxed and isolated', 'To prevent apps accessing your system and sensitive files install {} (run in the terminal on Ubuntu or Debian: {}), and it will be automatically used to sandbox installed apps.'.format(build_firejail_link(), build_command('sudo apt install firejail'))),
+      build_feature('No root permissions needed', 'The {} operates with user permissions and doesn\'t ask for {}. Apps are installed in the home directory at {}.'.format(build_code(tuxapp.get_name()), build_code('sudo'), build_code('~/.tuxapp'))),
+      build_feature('Leaves the system intact', 'The {} doesn\'t clutter the system, and files of installed apps aren\'t scattered throughout the file system.'.format(build_code(tuxapp.get_name()))),
+      build_feature('One command install', 'The {} is just a single {} script doing all the job. E.g. to install {} run in the terminal: {}'.format(build_code(tuxapp.get_name()), build_code('Python'), build_code('firefox'), build_command(build_app_install_command('firefox')))),
+      build_feature('Community maintained', 'To add an app to the catalog anyone can create an {} which contains app metadata and information how to download the latest version.'.format(build_tag('a', 'appfile', href=tuxapp.build_github_url('tree/master/apps')))),
     ),
     build_tag('h2', 'Categories'),
     build_columns(*(build_card(query_data_uri(get_category_icon_path(category)), filter_category_name(category), get_category_description(category), get_category_url(category), '', '', False, count) for category, count in get_categories())),
@@ -1166,6 +1169,10 @@ process_lightbox_next = lambda html: re.sub(r' class="lightbox-action is-next" h
 process_lightbox_previous = lambda html: re.sub(r' class="lightbox-action is-previous" href=".*?#(?=")', lambda match: match.group() + ([''] + re.compile(r'(?<= class="lightbox" id=")[^"]+').findall(html, 0, match.start()))[-2], html) # pylint: disable=undefined-variable
 
 process_styles = lambda html: get_style_regex().sub('', html).replace(build_combined_styles(), build_tag('style', None, *functools.reduce(lambda styles, style: styles if style in styles else styles + (style,), get_style_regex().findall(html), ())))
+
+query_app_downloads_url = lambda app: \
+  utilities.query_data((app, 'downloads-url')) or \
+  tuxapp.query_appfile(app, 'homepage-url')
 
 query_data_uri = lambda path, width=None: \
   utilities.query_data(build_data_uri_key(path, width)) or \
