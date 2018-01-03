@@ -1,5 +1,5 @@
 category=development
-description=The note-taking app for programmers focusing on markdown, snippet and customizability. Your best codes and wikis are always with you and edit from anywhere.
+description=The note-taking app for programmers that focuses on markdown, snippets and customizability. Edit your code and wikis from anywhere.
 desktop-entry=
 download-x86-64-url=https://github.com/BoostIO/boost-releases/releases/download/v{version}/boostnote_{version}_amd64.deb
 download-x86-url=
@@ -14,6 +14,6 @@ name=Boostnote
 note=
 package-repository=stretch
 packages=
-title=Note-taking for developer
+title=Note-taking for developers
 version-regex=/download/v(.+?)/
 version-url=https://github.com/BoostIO/boost-releases/releases/latest
