@@ -303,7 +303,7 @@ build_card = lambda icon_url, name, title, url=None, name_tag='', title_tag='', 
           font-size: larger;
           font-weight: bold;
           line-height: 1em;
-          margin-bottom: 0.2em;
+          margin-bottom: 0.1em;
         }
         .card.is-heading .card-name {
           font-size: x-large;
