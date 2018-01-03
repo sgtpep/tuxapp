@@ -1,0 +1,19 @@
+category=office
+description=Writefull is an app that gives feedback on your writing by checking your text against databases of correct language. You can use Writefull in any writing tool - from MS Word to Gmail.
+desktop-entry=
+download-x86-64-url=https://s3-eu-west-1.amazonaws.com/writefull-binaries/{version}/writefull_{version}_amd64.zip
+download-x86-url=https://s3-eu-west-1.amazonaws.com/writefull-binaries/{version}/writefull_{version}_ia32.zip
+executable=./Writefull
+firejail=
+free-license=no
+group=dictionary-software
+homepage-url=https://writefullapp.com/
+icon-url=https://s3-eu-west-1.amazonaws.com/writefull-webimages/icon512.png
+ignored-libraries=
+name=Writefull
+note=
+package-repository=stretch
+packages=
+title=A new way of writing with confidence
+version-regex= latestVersion = '(.+?)'
+version-url=https://writefullapp.com/js/download-urls.js

@@ -29,6 +29,7 @@ get_groups = lambda: \
     'cryptocurrency-wallets',
     'database-management',
     'diagramming-software',
+    'dictionary-software'
     'download-managers',
     'ebook-utilities',
     'email-clients',
