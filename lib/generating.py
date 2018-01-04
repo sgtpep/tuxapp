@@ -1002,7 +1002,7 @@ get_app_json_ld = lambda app: \
     ('name', '{} on {}'.format(tuxapp.query_appfile(app, 'name'), get_name())),
     ('operatingSystem', 'Linux'),
     ('releaseNotes', utilities.query_data((app, 'changelog-url'))),
-    ('screenshot', utilities.query_data((app, 'screenshot-urls')) and build_absolute_url(get_app_screenshot_path(app, utilities.query_data((app, 'screenshot-urls')).split()[0]))),
+    ('screenshot', utilities.query_data((app, 'screenshot-urls')) and build_absolute_url(get_file_url(get_app_screenshot_path(app, utilities.query_data((app, 'screenshot-urls')).split()[0])))),
     ('softwareVersion', utilities.query_data((app, 'version'))),
     ('url', tuxapp.query_appfile(app, 'homepage-url')),
   ) if value)
