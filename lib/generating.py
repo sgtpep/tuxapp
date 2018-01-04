@@ -231,8 +231,7 @@ build_app_og_image_url = lambda app: \
 
 build_app_page = lambda app: \
   join_elements(
-    build_head(description=tuxapp.query_appfile(app, 'description') or tuxapp.query_appfile(app, 'title'), image=build_app_og_image_url(app), title='Install {} with {}'.format(tuxapp.query_appfile(app, 'name'), get_name()), url=get_app_url(app)),
-    build_base(get_app_page_path(app)),
+    build_head(get_app_page_path(app), description=tuxapp.query_appfile(app, 'description') or tuxapp.query_appfile(app, 'title'), image=build_app_og_image_url(app), title='Install {} with {}'.format(tuxapp.query_appfile(app, 'name'), get_name()), url=get_app_url(app)),
     build_title(tuxapp.query_appfile(app, 'name'), filter_category_name(tuxapp.query_appfile(app, 'category'))),
     build_header(),
     build_json_ld(get_app_json_ld(app)),
@@ -255,8 +254,6 @@ build_app_page = lambda app: \
   )
 
 build_atom_datetime = lambda timestamp: '{}Z'.format(datetime.datetime.fromtimestamp(timestamp).isoformat())
-
-build_base = lambda path: build_tag('base', href=os.path.relpath(get_build_path(), os.path.dirname(path)))
 
 build_breadcrumbs = lambda *children: \
   join_elements(
@@ -364,8 +361,7 @@ build_card_tag = lambda text: \
 
 build_category_page = lambda category: \
   join_elements(
-    build_head(description=' - '.join((filter_category_name(category), get_category_description(category), get_description()))),
-    build_base(get_category_page_path(category)),
+    build_head(get_category_page_path(category), description=' - '.join((filter_category_name(category), get_category_description(category), get_description()))),
     build_title(filter_category_name(category)),
     build_header(),
     build_breadcrumbs(build_tag('h1', filter_category_name(category))),
@@ -533,8 +529,7 @@ build_footer = \
 
 build_group_page = lambda group: \
   join_elements(
-    build_head(description=' - '.join((filter_group_name(group), get_description()))),
-    build_base(get_group_page_path(group)),
+    build_head(get_group_page_path(group), description=' - '.join((filter_group_name(group), get_description()))),
     build_title(filter_group_name(group)),
     build_header(),
     build_breadcrumbs(build_tag('h1', filter_group_name(group))),
@@ -543,10 +538,11 @@ build_group_page = lambda group: \
 
 build_head = \
   tuxapp.memoize(
-    lambda **overrides: \
+    lambda path, **overrides: \
       join_elements(
         '<!DOCTYPE html>',
         '<html lang="en">',
+        build_tag('base', href=os.path.relpath(get_build_path(), os.path.dirname(path))),
         build_tag('meta', charset='utf-8'),
         build_tag('meta', content=get_name(), name='application-name'),
         build_tag('meta', content=overrides.get('description', get_description()), name='description'),
@@ -694,8 +690,7 @@ build_logo_url = lambda: get_file_url(tuxapp.copy_updated_file(get_logo_path(), 
 
 build_main_page = lambda: \
   join_elements(
-    build_head(),
-    build_base(get_main_page_path()),
+    build_head(get_main_page_path()),
     build_title(),
     build_header(),
     build_tag('h2', 'About'),
@@ -734,8 +729,7 @@ build_script = lambda script, type=None: \
 
 build_search_page = lambda: \
   join_elements(
-    build_head(),
-    build_base(get_search_page_path()),
+    build_head(get_search_page_path()),
     build_title('Search results'),
     build_header(),
     build_breadcrumbs(build_tag('h1', 'Search results')),
