@@ -98,7 +98,7 @@ validate_app_download_url = lambda app, architecture, urls: \
   architecture != 'x86-64' and not urls or \
   validate_text(urls) and \
   tuxapp.check('Duplicated item')(lambda: sorted(set(urls.split())) == sorted(urls.split()))() and \
-  tuxapp.check('Contains the version number')(lambda: all(tuxapp.request_app_version(app) not in url for url in urls.split()))() and \
+  tuxapp.check('Contains the version number')(lambda: all(tuxapp.request_app_version(app) not in url for url in urls.split()[:1]))() and \
   all(validate_url(tuxapp.filter_app_download_url(app, url)) for url in urls.split())
 
 validate_app_homepage_containing = \
