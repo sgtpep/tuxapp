@@ -1,8 +1,8 @@
 category=office
 description=Bitcoin Gold is a Hard Fork that allows you to mine Bitcoin with GPU. BTG implements a new PoW algorithm, Equihash, that makes mining decentralized again.
 desktop-entry=
-download-x86-64-url=https://github.com/BTCGPU/BTCGPU/releases/download/{version}/bitcoingold-0.15.0-x86_64-pc-linux-gnu.zip
-download-x86-url=
+download-x86-64-url=https://github.com/BTCGPU/BTCGPU/releases/download/v{version}/bitcoin-gold-0.15.0-x86_64-linux-gnu.tar.gz
+download-x86-url=https://github.com/BTCGPU/BTCGPU/releases/download/v{version}/bitcoin-gold-0.15.0-i686-pc-linux-gnu.tar.gz
 executable=./bitcoin-qt
 firejail=--noblacklist=~/.bitcoingold
 free-license=yes
@@ -15,5 +15,5 @@ note=
 package-repository=stretch
 packages=libdbus-1-3
 title=GPU Bitcoin mining
-version-regex=/download/(.+?)/
+version-regex=/download/v(.+?)/
 version-url=https://github.com/BTCGPU/BTCGPU/releases/latest
