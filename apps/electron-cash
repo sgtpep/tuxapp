@@ -1,9 +1,9 @@
 category=office
 description=Electron Cash gives you what you love about the popular Electrum Bitcoin wallet, but for Bitcoin Cash. Control your own private keys. Back up your wallet easily with a mnemonic seed phrase. SPV technology provides high security without having to download the blockchain or run a full node.
 desktop-entry=
-download-x86-64-url=https://electroncash.org/downloads/{version}/win-linux/ElectronCash-{version}.tar.gz {debian}/main/j/jsonrpclib-pelix/jsonrpclib-pelix_0.3.1.orig.tar.gz
-download-x86-url=https://electroncash.org/downloads/{version}/win-linux/ElectronCash-{version}.tar.gz {debian}/main/j/jsonrpclib-pelix/jsonrpclib-pelix_0.3.1.orig.tar.gz
-executable=sh -c 'rm -fr {dist}/packages/jsonrpclib && sed -i "s/ PyQt4 / PyQt5 /; s/ = \"/ = b\"/" {dist}/gui/qt/icons_rc.py && exec "$@"' -- ./electron-cash
+download-x86-64-url=https://electroncash.org/downloads/{version}/win-linux/ElectronCash-{version}.tar.gz {debian}/main/p/pyaes/python3-pyaes_1.6.0-1_all.deb {debian}/main/j/jsonrpclib-pelix/jsonrpclib-pelix_0.3.1.orig.tar.gz
+download-x86-url=https://electroncash.org/downloads/{version}/win-linux/ElectronCash-{version}.tar.gz {debian}/main/p/pyaes/python3-pyaes_1.6.0-1_all.deb {debian}/main/j/jsonrpclib-pelix/jsonrpclib-pelix_0.3.1.orig.tar.gz
+executable=./electron-cash
 firejail=--noblacklist=~/.electron-cash
 free-license=yes
 group=cryptocurrency-wallets
