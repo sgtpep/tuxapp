@@ -3,7 +3,7 @@ description=Bitcoin Gold is a Hard Fork that allows you to mine Bitcoin with GPU
 desktop-entry=
 download-x86-64-url=https://github.com/BTCGPU/BTCGPU/releases/download/v{version}/bitcoin-gold-0.15.0-x86_64-linux-gnu.tar.gz
 download-x86-url=https://github.com/BTCGPU/BTCGPU/releases/download/v{version}/bitcoin-gold-0.15.0-i686-pc-linux-gnu.tar.gz
-executable=./bitcoin-qt
+executable=./bin/bitcoin-qt
 firejail=--noblacklist=~/.bitcoingold
 free-license=yes
 group=cryptocurrency-wallets
