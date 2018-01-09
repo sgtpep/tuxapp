@@ -30,6 +30,7 @@ get_groups = lambda: \
     'database-management',
     'diagramming-software',
     'dictionary-software',
+    'disk-utilities',
     'download-managers',
     'ebook-utilities',
     'email-clients',
