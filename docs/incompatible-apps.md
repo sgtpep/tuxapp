@@ -4,6 +4,7 @@ The following apps are not supported by `tuxapp` due to different issues which m
 
 - [Discord](https://discordapp.com/): gray window on startup
 - [Dragonfire](http://dragon.computer/#dragonfire): installs many python packages from the .deb postinst script
+- [Movie Monad](https://github.com/lettier/movie-monad): video is not shown
 - [MySQL Workbench](https://www.mysql.com/products/workbench/): aborts with 'Gtk:ERROR:/build/gtk+3.0-Th_a5U/gtk+3.0-3.22.24/./gtk/gtkiconhelper.c:493:ensure_surface_for_gicon: assertion failed: (destination)'
 - [Ring](https://ring.cx/): no GUI is appeared
 - [Sayonara Player](http://sayonara-player.com/): accesses files by hardcoded paths starting with /usr/share/sayonara
