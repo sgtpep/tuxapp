@@ -332,7 +332,7 @@ update_appfile_category = lambda data: update_appfile(data, 'category', input_ca
 
 update_appfile_description = lambda data: update_appfile(data, 'description', input_app_description(data['app'], data['description'] if data.get('description') else filter_description(parsing.parse_description(data['homepage-url']))))
 
-update_appfile_download_x86_64_url = lambda data: update_appfile(data, 'download-x86-64-url', input_app_download_url(data['app'], 'x86-64', data['download-x86-64-url'] if data.get('download-x86-64-url') else utilities.open_url(parsing.parse_downloads_url(data['homepage-url']) or data['homepage-url']) and ''))
+update_appfile_download_x86_64_url = lambda data: update_appfile(data, 'download-x86-64-url', input_app_download_url(data['app'], 'x86-64', data['download-x86-64-url'] if data.get('download-x86-64-url') else utilities.open_url(parsing.parse_app_downloads_url(data['app'], data['homepage-url']) or data['homepage-url']) and ''))
 
 update_appfile_download_x86_url = lambda data: update_appfile(data, 'download-x86-url', input_app_download_url(data['app'], 'x86', data.get('download-x86-url', '')))
 
