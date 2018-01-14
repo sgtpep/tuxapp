@@ -15,5 +15,5 @@ note=GNOME Keyring needs to be installed on your system for this app.
 package-repository=xenial
 packages=
 title=The open-source, extensible email app
-version-regex=/linux/mailspring-(.+?)-amd64
+version-regex=/mailspring-(.+?)-amd64
 version-url=https://updates.getmailspring.com/download?platform=linuxDeb
