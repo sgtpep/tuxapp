@@ -373,6 +373,7 @@ filter_app_screenshot_url = lambda app, url: \
       'rambox': r'/icons/',
       'skype': r'/screenshots\.debian\.net/',
       'visual-studio-code': r'\.svg$',
+      'vnote': '/vnote\.png$|/camo\.githubusercontent\.com/|/vnote_(md|qq)\.jpg$',
     }.get(app, r'^$'), url) else \
   url
 
