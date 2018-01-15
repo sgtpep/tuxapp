@@ -114,6 +114,7 @@ configure_debian_container = lambda distribution: \
   deb http://deb.debian.org/debian {0} main
   deb http://deb.debian.org/debian-security {0}/updates main
   ''').format(distribution))) and \
+  (distribution not in ('artful', 'xenial') or tuxapp.change_file_mode(tuxapp.get_app_root_file_path(distribution, 'etc/machine-id'), lambda mode: mode | stat.S_IWUSR) and tuxapp.copy_file('/etc/machine-id', tuxapp.get_app_root_file_path(distribution, 'etc/machine-id'))) and \
   update_debian_container(distribution) and \
   call_root_script(distribution, r'''
   packages=(
@@ -126,7 +127,6 @@ configure_debian_container = lambda distribution: \
   DEBIAN_FRONTEND=noninteractive apt install -y "${packages[@]}"
   ''') and \
   (tuxapp.is_debian_repository(distribution) or tuxapp.write_file(tuxapp.get_app_root_file_path(distribution, 'etc/bash.bashrc'), tuxapp.read_file(tuxapp.get_app_root_file_path(distribution, 'etc/bash.bashrc')).replace('(groups)', '(true)', 1))) and \
-  (tuxapp.change_file_mode(tuxapp.get_app_root_file_path(distribution, 'etc/machine-id'), lambda mode: mode | stat.S_IWUSR) and tuxapp.copy_file('/etc/machine-id', tuxapp.get_app_root_file_path(distribution, 'etc/machine-id')) if distribution in ('artful', 'xenial') else True) and \
   True
 
 detect_missing_app_libraries = \
