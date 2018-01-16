@@ -31,11 +31,13 @@ def reword_assertion(message):
 @tuxapp.log('Checking {}')
 def check_url(url):
   try:
-    from urllib.request import Request, urlopen
+    from urllib.request import HTTPError, Request, urlopen
   except ImportError:
-    from urllib2 import Request, urlopen
+    from urllib2 import HTTPError, Request, urlopen
   try:
     return urlopen(Request(url, headers={'User-Agent': tuxapp.get_user_agent()}), timeout=10).getcode() == 200
+  except HTTPError as exception:
+    return '.cloudflare.com/' in exception.read()
   except: # pylint: disable=bare-except
     return False
 
