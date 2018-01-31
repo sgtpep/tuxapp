@@ -1,7 +1,7 @@
 category=system
 description=
 desktop-entry=
-download-x86-64-url=https://github.com/oguzhaninan/Stacer/releases/download/v{version}/stacer_{version}_amd64.deb
+download-x86-64-url=https://github.com/oguzhaninan/Stacer/releases/download/v{version}/Stacer_x64_v{version}.deb
 download-x86-url=
 executable=./usr/share/stacer/stacer
 firejail=
