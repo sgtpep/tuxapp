@@ -16,4 +16,4 @@ package-repository=stretch
 packages=
 title=An open source note taking and to-do application with synchronisation capabilities
 version-regex=/download/v(.+?)/
-version-url=http://joplin.cozic.net/
+version-url=https://github.com/laurent22/joplin/releases/latest
